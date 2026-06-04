@@ -1,0 +1,647 @@
+You are an experienced Enterprise Solution Architect.
+
+Using the provided use case, requirement, scope, or functional specification documents, create a practical and implementation-ready **System Architecture Document** for the application described below.
+
+---
+
+## Special Instructions
+
+* Make the application suitable for **minimal hardware and infrastructure usage**.
+* Assume the **user load is very minimal**.
+* Avoid over-engineering the MVP.
+* Clearly separate **MVP**, **full-scope**, and **future architecture**.
+* Mark optional sections as applicable only if required.
+* Include tables and Mermaid diagrams wherever useful.
+* Do not implement code.
+* Do not invent unsupported features.
+* Clearly mention assumptions where details are missing.
+
+---
+
+## Application Details
+
+### Application Name
+
+**ArogyaM Patient Management System**
+
+### Files to Refer
+
+* `Docs/usecases.md`
+
+### Output File
+
+* `Docs/SYSTEM_ARCHITECTURE_DOCUMENT.md`
+
+---
+
+## Preferred Technology Stack
+
+* **UI:** React
+* **Backend:** FastAPI
+* **API:** REST
+* **Database:** PostgreSQL
+* **Authentication:** JWT
+* **Storage:** S3 / MinIO
+* **Search:** Database Full-text Search
+* **Cache / Queue:** Redis
+* **Deployment:** Docker
+* **AI / RAG:** Optional
+
+---
+
+# Document Structure
+
+Create the System Architecture Document with the following sections.
+
+---
+
+## 1. Executive Summary
+
+Include:
+
+* Purpose of the solution
+* Business context
+* Key business problems addressed
+* Expected benefits
+* Target users / stakeholders
+* High-level solution summary
+
+---
+
+## 2. Scope, Assumptions, Constraints, and Dependencies
+
+Include:
+
+* In-scope modules
+* Out-of-scope items
+* MVP scope
+* Future scope
+* Assumptions
+* Constraints and dependencies
+
+---
+
+## 3. Architecture Goals and Principles
+
+Cover:
+
+* Scalability
+* Security by design
+* Modular architecture
+* API-first design
+* Maintainability
+* Observability
+* Performance optimization
+* Cloud/on-premise readiness
+* Cost-conscious design
+* AI-readiness, if applicable
+
+---
+
+## 4. Proposed Technology Stack with Reason for Selection
+
+Provide a table with the following columns:
+
+| Layer | Recommended Technology | Purpose | Reason for Selection | MVP / Future / Optional |
+| ----- | ---------------------- | ------- | -------------------- | ----------------------- |
+
+Cover the following layers where applicable:
+
+* Frontend
+* Backend
+* API Gateway
+* Authentication
+* Database
+* Cache
+* Search
+* File/Object Storage
+* Queue/Messaging
+* Notification
+* Reporting/Analytics
+* AI/ML/RAG
+* Logging/Monitoring
+* Deployment
+* CI/CD
+
+---
+
+## 5. High-Level Architecture Overview
+
+Describe the complete system at a high level.
+
+Include:
+
+* User-facing applications
+* Admin console
+* Backend API layer
+* Authentication and authorization
+* Business services/modules
+* Database layer
+* File storage
+* Search layer
+* Notification layer
+* Reporting layer
+* External integrations
+* Optional AI/ML/RAG layer
+* Audit and observability layer
+
+---
+
+## 6. Mermaid Architecture Diagram
+
+Provide a Mermaid diagram using `flowchart` syntax.
+
+The diagram should show:
+
+* Users
+* UI layer
+* API/backend layer
+* Authentication service
+* Core business services
+* Database
+* File storage
+* Search engine
+* Notification service
+* External systems
+* Optional AI/RAG layer
+* Monitoring/logging/audit components
+
+Use the following format as a starting point:
+
+```mermaid
+flowchart LR
+    User[End User] --> UI[Web / Mobile UI]
+    Admin[Admin User] --> AdminUI[Admin Console]
+
+    UI --> API[Backend API Layer]
+    AdminUI --> API
+
+    API --> Auth[Authentication / IAM]
+    API --> DB[(Primary Database)]
+    API --> Storage[File / Object Storage]
+    API --> Search[Search Engine]
+    API --> Notify[Notification Service]
+    API --> Audit[Audit Log]
+    API --> External[External Systems / APIs]
+```
+
+---
+
+## 7. Module-wise Architecture
+
+Identify all major modules from the requirement/use case document.
+
+For each module, explain:
+
+* Purpose
+* Key responsibilities
+* Main features
+* APIs required
+* Database entities involved
+* Security considerations
+* Integration dependencies
+* MVP or Future classification
+
+Common module examples:
+
+* User Management
+* Role and Access Control
+* Dashboard
+* Master Data Management
+* Core Business Workflow
+* Document Management
+* Search and Filtering
+* Notification
+* Reports and Analytics
+* Audit Trail
+* Admin Configuration
+* External Integration
+* AI/ML/RAG, if applicable
+
+---
+
+## 8. Data Architecture and Mermaid ERD
+
+Explain the proposed data architecture.
+
+Include:
+
+* Core entities
+* Master tables
+* Transactional tables
+* Audit/log tables
+* Configuration tables
+* Reporting/analytics tables, if required
+* File metadata tables, if document upload is involved
+* Tenant-related tables, if multi-tenancy is required
+
+Provide an initial ERD using Mermaid syntax.
+
+Example:
+
+```mermaid
+erDiagram
+    USER ||--o{ USER_ROLE : has
+    ROLE ||--o{ USER_ROLE : assigned_to
+    USER ||--o{ AUDIT_LOG : performs
+    ORGANIZATION ||--o{ USER : owns
+    DOCUMENT ||--o{ DOCUMENT_VERSION : has
+```
+
+---
+
+## 9. API Architecture and API Groups
+
+Provide a high-level API architecture.
+
+Include:
+
+* API design approach
+* REST/GraphQL/gRPC recommendation
+* API versioning
+* Authentication and authorization for APIs
+* Error handling standard
+* Request/response standard
+* Pagination, sorting, and filtering
+* File upload/download APIs
+* Audit logging for sensitive APIs
+
+Provide API groups such as:
+
+* Auth APIs
+* User APIs
+* Role/Permission APIs
+* Master Data APIs
+* Core Business APIs
+* Workflow APIs
+* Document APIs
+* Search APIs
+* Notification APIs
+* Report APIs
+* Admin APIs
+* Integration APIs
+
+---
+
+## 10. Security Architecture
+
+Explain how security will be implemented.
+
+Cover:
+
+* Authentication
+* Authorization
+* Role-based access control
+* Attribute-based access control, if required
+* Multi-factor authentication, if required
+* Token management
+* Session management
+* API security
+* Input validation
+* File upload security
+* Data encryption in transit
+* Data encryption at rest
+* Secrets management
+* Audit logging
+* Admin activity tracking
+* Secure configuration management
+* OWASP best practices
+* Compliance requirements, if applicable
+
+---
+
+## 11. User, Role, and Access Control Architecture
+
+Include:
+
+* User types
+* Role types
+* Permission model
+* Access control flow
+* Admin privileges
+* Approval/moderation flow, if applicable
+* Organization/tenant-level access, if applicable
+
+---
+
+## 12. Workflow Architecture, if Applicable
+
+Include this section only if the application has approval, review, lifecycle, or process workflows.
+
+Explain:
+
+* Workflow states
+* State transitions
+* Approval levels
+* Reviewer/moderator roles
+* Escalation rules
+* Notifications
+* Audit trail
+* Configurable workflow support
+
+Provide a Mermaid state diagram if useful.
+
+---
+
+## 13. Search Architecture, if Applicable
+
+Include this section if the application requires search functionality.
+
+Cover:
+
+* Keyword search
+* Full-text search
+* Filter-based search
+* Advanced search
+* Faceted search
+* Search indexing strategy
+* Search result ranking
+* Access-controlled search results
+* Optional semantic/vector search
+
+---
+
+## 14. AI/ML/RAG Architecture, if Applicable
+
+Include this section only if AI, ML, NLP, LLM, semantic search, document intelligence, or RAG is part of the requirement.
+
+Cover:
+
+* AI use cases
+* Document ingestion
+* Text extraction
+* Chunking strategy
+* Embedding generation
+* Vector storage
+* Retrieval flow
+* LLM integration
+* Prompt management
+* Citation-based response generation
+* Human review requirement
+* Guardrails
+* AI audit logging
+* Cost and rate-limit considerations
+* External LLM vs local LLM option
+
+---
+
+## 15. Integration Architecture, if Applicable
+
+Include:
+
+* External systems
+* Integration patterns
+* API-based integration
+* Batch integration
+* Webhook/event-based integration
+* Authentication with external systems
+* Retry and failure handling
+* Circuit breaker pattern
+* Data transformation
+* Integration audit logs
+
+---
+
+## 16. Notification Architecture, if Applicable
+
+Explain the notification architecture.
+
+Include:
+
+* Notification types
+* Email notifications
+* SMS/WhatsApp notifications, if applicable
+* In-app notifications, if applicable
+* Notification templates
+* Trigger events
+* Delivery tracking
+* Retry mechanism
+* Failure handling
+* Audit logging
+
+---
+
+## 17. Reporting and Analytics Architecture
+
+Include:
+
+* Operational reports
+* Dashboard requirements
+* Role-based dashboards
+* Export options
+* Report filters
+* Aggregation strategy
+* Analytics database/view strategy, if required
+* Future BI/AI analytics options
+
+---
+
+## 18. Deployment Architecture with Mermaid Diagram
+
+Explain the deployment approach.
+
+Cover:
+
+* Development environment
+* Testing environment
+* UAT environment
+* Production environment
+* Docker-based deployment
+* Kubernetes-ready deployment
+* Environment-specific configuration
+* Reverse proxy / ingress
+* SSL/TLS
+* Scaling approach
+* Backup and restore
+* Disaster recovery basics
+
+Provide a deployment diagram using Mermaid syntax.
+
+---
+
+## 19. DevOps and CI/CD Architecture
+
+Include:
+
+* Source code branching strategy
+* Build pipeline
+* Test pipeline
+* Security scanning
+* Docker image build
+* Deployment pipeline
+* Environment promotion
+* Rollback strategy
+* Release management
+
+---
+
+## 20. Observability Architecture
+
+Cover:
+
+* Application logging
+* API request logging
+* Error logging
+* Audit logging
+* Metrics
+* Health checks
+* Distributed tracing, if required
+* Alerting
+* Monitoring dashboard
+
+---
+
+## 21. Non-Functional Architecture
+
+Explain how the solution addresses:
+
+* Scalability
+* Performance
+* Security
+* Availability
+* Reliability
+* Maintainability
+* Extensibility
+* Observability
+* Backup and recovery
+* Compliance
+* Usability
+* Accessibility
+* Data privacy
+
+---
+
+## 22. MVP Architecture
+
+Explain the minimum viable architecture required to implement the first version.
+
+Include:
+
+* Minimum required modules
+* Minimum infrastructure
+* Recommended MVP deployment model
+* MVP database design approach
+* MVP authentication and security
+* MVP reporting and dashboard scope
+* MVP backup and monitoring approach
+* Areas intentionally deferred to future phases
+
+---
+
+## 23. Production / Full-Scale Architecture
+
+Explain the architecture needed for enterprise-grade production deployment.
+
+Include:
+
+* High availability
+* Horizontal scaling
+* Load balancing
+* Separate services
+* Advanced monitoring
+* Advanced security
+* Backup and disaster recovery
+* Performance optimization
+
+---
+
+## 24. Future Architecture Enhancements
+
+Include possible future improvements such as:
+
+* Online patient registration
+* Appointment management
+* Patient portal
+* Doctor portal
+* Mobile application
+* Advanced reporting
+* AI-assisted case history summarization
+* Semantic search
+* Integration with lab/pharmacy systems
+* Telemedicine integrations
+* Multi-branch support, if required
+
+---
+
+## 25. Risks and Mitigation
+
+Provide a table with the following columns:
+
+| Risk | Impact | Probability | Mitigation |
+| ---- | ------ | ----------- | ---------- |
+
+Cover risks related to:
+
+* Security
+* Data privacy
+* User adoption
+* Infrastructure limitations
+* Backup failure
+* Data quality
+* Integration failures
+* Scope creep
+* Performance
+* Operational support
+
+---
+
+## 26. Architecture Decisions
+
+Provide an Architecture Decision Record table with the following columns:
+
+| Decision | Options Considered | Recommended Option | Reason | Impact |
+| -------- | ------------------ | ------------------ | ------ | ------ |
+
+---
+
+## 27. Open Questions
+
+List open questions that require clarification from the client or business team.
+
+Examples:
+
+* Expected number of users
+* Expected number of patients
+* Required reports
+* Required roles
+* Data retention policy
+* Backup frequency
+* Hosting preference
+* Email/SMS provider preference
+* Existing website integration details
+* Document upload requirements
+* Compliance expectations
+
+---
+
+## 28. Conclusion
+
+Summarize:
+
+* Recommended architecture
+* MVP feasibility
+* Production readiness path
+* Key benefits
+* Major assumptions
+* Next steps
+
+---
+
+# Final Output Instructions
+
+Generate a complete, practical, implementation-ready System Architecture Document for:
+
+**ArogyaM Patient Management System**
+
+Save the output as:
+
+`Docs/SYSTEM_ARCHITECTURE_DOCUMENT.md`
+
+Ensure the document is suitable for review by:
+
+* Business stakeholders
+* Project managers
+* Technical architects
+* Developers
+* DevOps team
+* Security reviewers
