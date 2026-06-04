@@ -949,9 +949,11 @@ Expected output structure:
 
 Files to refer:
 ---------------
-1. Docs/PHASE_IMPLEMENTATION_PLAN.md
-2. Docs/PHASE_1_UI_TASK_CHECKLIST.md
-3. Docs/PHASE_1_API_TASK_CHECKLIST.md
+1. Docs/SYSTEM_ARCHITECTURE_DOCUMENT
+2. Docs/PHASE1_IMPLEMENTATION_PLAN.md
+3. Docs/API_SPECIFICATION_OPENAPI.md
+4. Docs/PHASE_1_UI_TASK_CHECKLIST.md
+5. Docs/PHASE_1_API_TASK_CHECKLIST.md
 
 Objective:
 ----------
@@ -965,7 +967,65 @@ Instructions:
 4. Do not modify the task checklist unless explicitly instructed.
 5. Provide a validation report for review.
 
-====================================================================================================================================
+
+===================================================================================================================================
+
+
+>>> Sprint-wise task planning
+
+Files to refer (if required - lazy loading):
+---------------
+1. Docs/PHASE1_IMPLEMENTATION_PLAN.md
+2. Docs/PHASE_1_UI_TASK_CHECKLIST.md
+3. Docs/PHASE_1_API_TASK_CHECKLIST.md
+
+Can you provide a two weeks springt plan to provide a usable modules in each sprint in the order of workflow? 
+
+Special isntructions: 
+----------------------
+Total duration for - 3 months
+
+===================================================================================================================================
+
+>>=> API Task implementation
+
+Files to refer (if required - lazy loading):
+---------------
+1. Docs/implementation-plan.md
+2. Docs/DDL_DATAMODEL.sql
+3. Docs/PHASE_1_API_TASK_CHECKLIST.md
+4. Docs/PHASE_1_SPRINT_PLAN.md
+5. docker-compose-lite.yml
+6. docker-compose-db.yml
+
+Objective:
+----------
+Implement the following task from the task list. If any task is already implemented, please validate the feature:
+
+Notifications spine (moved up from S5): T-B10.1, T-B10.2, T-B10.3, T-I4.13 (Module 1–4 event types only)
+
+
+Instructions:
+-------------
+1. Review the referenced files before implementation.
+2. Follow the existing project architecture and coding standards.
+3. Add or update required backend, frontend, API, database, validation, security, logging, and test files as needed.
+4. When creating a new Alembic migration, set down_revision to the current single head by running alembic heads first and chaining to it   never hardcode a revision without verifying it is the actual head.
+5. When creating a new Alembic migration, make sure that - these migration will be executed during docker startup.
+6. Create related test cases to cover the new feature changes. Show me the test execution output.
+7. Mark the completed tasks [x] after all changes & testing are completed successfully.
+
+
+8. Run the test case and show the output report to makes ure that 100% coverage & no failure.
+9. After successful implementation, mark only this task as completed [x] 
+10. Provide a completion summary with:
+   - Task ID
+   - Files changed
+   - Summary of changes
+   - Tests added or updated
+   - Pending assumptions or limitations
+
+3. Docs\DDL - AI Agents & Workflow Management.sql
 
 ====================================================================================================================================
 
