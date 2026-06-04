@@ -1,0 +1,25 @@
+# =============================================================================
+# ArogyaM PMS — version-control ignore rules
+# =============================================================================
+
+# --- Secrets / environment (NEVER commit) ----------------------------------
+# Only the *.example templates are tracked; real env files are local-only.
+.env
+.env.*
+!.env.dev.example
+!.env.prod.example
+
+# --- Backups & TLS material -------------------------------------------------
+/backups/
+*.dump
+*.sql.gz
+letsencrypt/
+*.pem
+*.key
+
+# --- OS / editor noise ------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
