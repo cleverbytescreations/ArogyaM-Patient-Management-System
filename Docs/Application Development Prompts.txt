@@ -1,3 +1,7 @@
+====================================================================================================================================
+
+>>> Prompt to Generate System Architecture Document:
+
 You are an experienced Enterprise Solution Architect.
 
 Using the provided use case, requirement, scope, or functional specification documents, create a practical and implementation-ready **System Architecture Document** for the application described below.
@@ -645,3 +649,95 @@ Ensure the document is suitable for review by:
 * Developers
 * DevOps team
 * Security reviewers
+
+
+====================================================================================================================================
+
+>>> Generate or Validate DDL / Data Model :
+
+Files to refer:
+---------------
+1. Docs/usecases.md
+2. Docs/SYSTEM_ARCHITECTURE_DOCUMENT.md
+
+Objective:
+----------
+Generate or validate the database DDL required for the current Phase.
+
+Instructions:
+-------------
+1. Review the scope, implementation plan, and architecture documents.
+2. Identify all required tables, columns, primary keys, foreign keys, indexes, constraints, audit columns, and lookup/reference tables.
+3. Ensure naming conventions are consistent.
+4. Ensure the DDL supports features completely.
+5. Include comments wherever required.
+6. Do not implement application code in this step.
+7. Save the generated or updated DDL under the following location:
+
+Output file:
+------------
+Docs/DDL_DATAMODEL.sql
+
+Expected output:
+----------------
+A clean SQL DDL file containing:
+1. Table creation scripts
+2. Alter scripts, if required
+3. Primary keys
+4. Foreign keys
+5. Indexes
+6. Unique constraints
+7. Audit columns
+8. Default values
+9. Lookup/reference data inserts, if required
+
+====================================================================================================================================
+
+>>> Generate Implementation Plan:
+
+Files to refer:
+---------------
+1. Docs/usecases.md
+2. Docs/SYSTEM_ARCHITECTURE_DOCUMENT.md
+3. Docs/DDL_DATAMODEL.sql
+
+Objective:
+----------
+Create a detailed implementation plan for Phase 1.
+
+Instructions:
+-------------
+1. Review the referenced scope, architecture, and database files.
+2. Create a practical implementation plan for developers.
+3. Break the implementation into logical work streams.
+4. Include backend, frontend, database, API, integration, validation, security, logging, testing, and deployment considerations.
+5. Mention technical dependencies and sequencing.
+6. Do not implement any code in this step.
+7. Save the implementation plan under the following location:
+
+Output file:
+------------
+Docs/PHASE_IMPLEMENTATION_PLAN.md
+
+Expected output format:
+-----------------------
+# Phase 1 Implementation Plan
+
+## 1. Overview
+## 2. Implementation Approach
+## 3. Module-wise Implementation Plan
+## 4. Backend Implementation
+## 5. Frontend Implementation
+## 6. API Implementation
+## 7. Database Implementation
+## 8. Authentication and Authorization
+## 9. Validation and Error Handling
+## 10. Logging and Audit Trail
+## 11. Integration Requirements
+## 12. Testing Strategy
+## 13. Deployment Considerations
+## 14. Implementation Sequence
+## 15. Risks and Mitigation
+
+====================================================================================================================================
+
