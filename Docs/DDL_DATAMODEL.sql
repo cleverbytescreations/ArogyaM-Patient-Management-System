@@ -35,7 +35,8 @@
 --
 -- Execution order is dependency-safe (extensions → lookups → users → patients →
 -- visits → clinical → documents → follow-ups → audit → indexes → seed data).
--- The script is re-runnable (IF NOT EXISTS / ON CONFLICT DO NOTHING) for dev use.
+-- The script is re-runnable: IF NOT EXISTS (tables/indexes/extensions),
+-- CREATE OR REPLACE (function/triggers), and ON CONFLICT DO NOTHING (seed data).
 -- =============================================================================
 
 -- =============================================================================
@@ -118,7 +119,7 @@ COMMENT ON TABLE  master_data IS 'Typed reference/lookup values configurable by 
 COMMENT ON COLUMN master_data.type IS 'Lookup domain (e.g. visit_type, document_type, follow_up_status).';
 COMMENT ON COLUMN master_data.is_active IS 'Inactive values stay visible on old records but are hidden from new entry.';
 
-CREATE TRIGGER trg_master_data_updated_at
+CREATE OR REPLACE TRIGGER trg_master_data_updated_at
     BEFORE UPDATE ON master_data
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -149,7 +150,7 @@ COMMENT ON TABLE  op_sequence IS 'Per-category OP number counters; row-locked du
 COMMENT ON COLUMN op_sequence.last_sequence IS 'Last issued sequence value; never reused even if a record is cancelled.';
 COMMENT ON COLUMN op_sequence.padding_width IS 'Zero-pad width applied to the sequence number (e.g. width 4 => OPN0012).';
 
-CREATE TRIGGER trg_op_sequence_updated_at
+CREATE OR REPLACE TRIGGER trg_op_sequence_updated_at
     BEFORE UPDATE ON op_sequence
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -190,7 +191,7 @@ COMMENT ON COLUMN users.password_hash IS 'Bcrypt/argon2 hash only — plaintext 
 COMMENT ON COLUMN users.is_doctor IS 'Marks accounts eligible to be selected as the consulting doctor on visits/notes.';
 COMMENT ON COLUMN users.status IS 'ACTIVE | DISABLED | LOCKED. Disabled/locked users cannot authenticate.';
 
-CREATE TRIGGER trg_users_updated_at
+CREATE OR REPLACE TRIGGER trg_users_updated_at
     BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -272,7 +273,7 @@ COMMENT ON COLUMN patients.merged_into IS 'When status=MERGED, points to the sur
 COMMENT ON COLUMN patients.is_historical IS 'TRUE for records migrated from paper/old system from 2022 onward (UC-16).';
 COMMENT ON COLUMN patients.search_vector IS 'Generated full-text vector over name/OP/mobile for search (SAD §13).';
 
-CREATE TRIGGER trg_patients_updated_at
+CREATE OR REPLACE TRIGGER trg_patients_updated_at
     BEFORE UPDATE ON patients
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -329,7 +330,7 @@ COMMENT ON TABLE  merge_requests IS 'Two-step merge workflow: staff request, Adm
 COMMENT ON COLUMN merge_requests.status IS 'PENDING (requested) -> APPROVED (merge executed) | REJECTED | CANCELLED.';
 COMMENT ON COLUMN merge_requests.merged_at IS 'Timestamp when the approved merge transaction completed.';
 
-CREATE TRIGGER trg_merge_requests_updated_at
+CREATE OR REPLACE TRIGGER trg_merge_requests_updated_at
     BEFORE UPDATE ON merge_requests
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -367,7 +368,7 @@ CREATE TABLE IF NOT EXISTS visits (
 COMMENT ON TABLE  visits IS 'Patient encounters (consultation/review/online/camp). One row per visit; never overwritten (UC-08).';
 COMMENT ON COLUMN visits.is_scheduled IS 'TRUE permits a future visit_date for scheduled/planned visits (UC-08 BR4).';
 
-CREATE TRIGGER trg_visits_updated_at
+CREATE OR REPLACE TRIGGER trg_visits_updated_at
     BEFORE UPDATE ON visits
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -403,7 +404,7 @@ CREATE TABLE IF NOT EXISTS case_sheets (
 );
 COMMENT ON TABLE case_sheets IS 'Structured online consultation case sheet, one per visit; edits are audited (UC-09).';
 
-CREATE TRIGGER trg_case_sheets_updated_at
+CREATE OR REPLACE TRIGGER trg_case_sheets_updated_at
     BEFORE UPDATE ON case_sheets
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -437,7 +438,7 @@ CREATE TABLE IF NOT EXISTS consultation_notes (
 COMMENT ON TABLE  consultation_notes IS 'Doctor consultation notes (diagnosis, advice, review date) per visit; date/time stamped (UC-10).';
 COMMENT ON COLUMN consultation_notes.review_date IS 'Advised review/follow-up date; may drive a follow_ups record.';
 
-CREATE TRIGGER trg_consultation_notes_updated_at
+CREATE OR REPLACE TRIGGER trg_consultation_notes_updated_at
     BEFORE UPDATE ON consultation_notes
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -467,7 +468,7 @@ CREATE TABLE IF NOT EXISTS prescriptions (
 );
 COMMENT ON TABLE prescriptions IS 'Prescription header linked to a visit; includes doctor and date (UC-11).';
 
-CREATE TRIGGER trg_prescriptions_updated_at
+CREATE OR REPLACE TRIGGER trg_prescriptions_updated_at
     BEFORE UPDATE ON prescriptions
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -536,7 +537,7 @@ CREATE TABLE IF NOT EXISTS discharge_summaries (
 COMMENT ON TABLE  discharge_summaries IS 'Discharge summary per visit/programme; immutable after finalization (UC-13).';
 COMMENT ON COLUMN discharge_summaries.amends_id IS 'Links an amendment to the discharge summary it supersedes (controlled amendment).';
 
-CREATE TRIGGER trg_discharge_summaries_updated_at
+CREATE OR REPLACE TRIGGER trg_discharge_summaries_updated_at
     BEFORE UPDATE ON discharge_summaries
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -579,7 +580,7 @@ COMMENT ON TABLE  documents IS 'Metadata for uploaded files; binaries live in Mi
 COMMENT ON COLUMN documents.storage_ref IS 'Object-storage key/path; the file itself is never served via a public URL (UC-30).';
 COMMENT ON COLUMN documents.status IS 'Soft-delete state: ACTIVE | ARCHIVED | DELETED (UC-30 BR4).';
 
-CREATE TRIGGER trg_documents_updated_at
+CREATE OR REPLACE TRIGGER trg_documents_updated_at
     BEFORE UPDATE ON documents
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -616,7 +617,7 @@ CREATE TABLE IF NOT EXISTS follow_ups (
 COMMENT ON TABLE  follow_ups IS 'Follow-up/review tasks surfaced on the dashboard; status-tracked, not deletable by normal users (UC-20/21).';
 COMMENT ON COLUMN follow_ups.next_followup_id IS 'On reschedule, links to the newly created follow-up (UC-21 BR3).';
 
-CREATE TRIGGER trg_follow_ups_updated_at
+CREATE OR REPLACE TRIGGER trg_follow_ups_updated_at
     BEFORE UPDATE ON follow_ups
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
