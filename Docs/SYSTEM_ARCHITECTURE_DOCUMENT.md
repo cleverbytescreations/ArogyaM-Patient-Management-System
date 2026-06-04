@@ -603,9 +603,30 @@ erDiagram
 | **Secrets Management** | Environment variables / Docker secrets / `.env` excluded from VCS; no secrets in code. |
 | **Audit Logging** | All sensitive actions logged; append-only; admin-reviewable. |
 | **Admin Activity Tracking** | User management, master data, merges, restores all audited. |
+| **Log Privacy (PII/PHI)** | Application/operational logs must **never** contain patient PII/PHI. Field-level redaction, allow-listed structured fields, no request/response body logging on clinical endpoints, debug/SQL-echo disabled in prod, proxy query-string redaction. See **§10.1**. |
 | **Secure Configuration** | Hardened containers, least-privilege DB user, disabled debug in prod, secure headers via proxy. |
 | **OWASP Best Practices** | Addresses Top 10: injection, broken auth, access control, sensitive data exposure, misconfig, etc. |
 | **Compliance** | Align with applicable Indian health-data norms (DPDP Act); data minimization, access logging, retention policy (to be confirmed — see Open Questions). |
+
+### 10.1 Log Privacy — Preventing PII/PHI in Application Logs
+
+**Principle:** The **audit log** (`audit_log` table) is the *only* place permitted to hold patient-identifying or clinical detail, and it is access-controlled and admin-only. All other logs — application logs, request logs, error/stack traces, reverse-proxy access logs, and any external monitoring — are treated as **lower-trust** and must be free of PII/PHI. This is both a security control and a **DPDP §8(5)** safeguard.
+
+**What counts as PII/PHI here (must be redacted/omitted from non-audit logs):** patient name, mobile, email, address, date of birth/age, gender, OP number, blood group, height/weight, any clinical free-text (complaints, diagnosis, notes, prescriptions, discharge summaries, case-sheet fields), uploaded file names/contents, and search terms that contain the above.
+
+| # | Control | Implementation |
+|---|---------|----------------|
+| 1 | **Allow-list structured logging** | Log only an explicit set of non-identifying fields: `request_id` (correlation ID), `user_id`, `role`, HTTP method, **route template** (`/patients/{id}`, not the resolved value), status code, latency. Never serialize whole request/response bodies or ORM model instances. |
+| 2 | **Central redaction filter** | A logging filter/processor (e.g., Python `logging.Filter` / structlog processor) masks a configured set of sensitive keys (`name`, `mobile`, `email`, `address`, `dob`, `op_number`, clinical fields, `q`/search params) to `***REDACTED***` before any log record is emitted — a safety net even if a developer logs an object by mistake. |
+| 3 | **No request/response bodies on clinical & patient endpoints** | Body logging is disabled by default; if a body is ever logged for debugging, it passes through the redaction filter. Multipart uploads log only metadata (content-type, size), never file content or original filename in plaintext. |
+| 4 | **Search terms never logged in plaintext** | `GET /patients/search` query parameters (name/mobile/OP) are omitted or one-way hashed in logs; only result count and latency are recorded. |
+| 5 | **Debug & SQL echo disabled in production** | SQLAlchemy `echo=False` in prod (SQL parameter logging would expose PHI); framework debug mode off; verbose tracebacks not returned to clients. |
+| 6 | **Exception/error handling** | The global exception handler returns a generic error envelope with the `request_id` to the client; internally it logs the exception **type + stack trace + request_id only** — not the request body or entity values. Correlate to the audit log via `request_id` when investigation needs the actual record. |
+| 7 | **Reverse-proxy (Nginx/Caddy) access logs** | Configure the proxy log format to **drop query strings** (or anonymize them) for patient/search routes, since default access logs capture full URLs including PII in query params. Prefer logging the path without query string. |
+| 8 | **External monitoring (if adopted)** | Error/monitoring tools (e.g., Sentry) are enabled only with PII scrubbing / `send_default_pii=false` and `before_send` redaction; covered by a processor contract (DPDP §8(2)). |
+| 9 | **Log storage, access & retention** | Logs stored with restricted OS/file permissions; retained for **≥ 1 year** (DPDP draft-Rules security-log expectation) then rotated/purged. Audit log retention follows the organizational/legal policy (see Open Questions). |
+
+**Validation:** Add a lightweight test/lint step in CI that scans log output of representative patient/clinical requests and fails if any known PII pattern (e.g., a seeded test mobile number or name) appears in non-audit log streams.
 
 ---
 
@@ -849,10 +870,10 @@ flowchart TB
 
 | Concern | Phase 1 Implementation |
 |---------|------------------------|
-| Application logging | Structured JSON logs to stdout (collected by Docker) |
-| API request logging | Middleware logs method, path, status, latency, user id |
-| Error logging | Captured with stack traces; optional Sentry (future) |
-| Audit logging | Business `audit_log` table (separate from app logs) |
+| Application logging | Structured JSON logs to stdout (collected by Docker); **PII/PHI-redacted per §10.1** (allow-listed fields only) |
+| API request logging | Middleware logs `request_id`, method, **route template**, status, latency, user id — **no bodies, no PII query params** (§10.1) |
+| Error logging | Exception type + stack trace + `request_id` only; **no request body/entity values**; generic envelope to client; optional Sentry with PII scrubbing (future) |
+| Audit logging | Business `audit_log` table — the **only** log permitted to hold patient/clinical detail; access-controlled, separate from app logs |
 | Metrics | Optional `/metrics` (Prometheus) — Full-Scope, not MVP |
 | Health checks | `/health` (liveness) and `/ready` (DB/storage connectivity) |
 | Distributed tracing | Not needed (single service) |
@@ -951,6 +972,7 @@ When load or criticality grows beyond Phase 1 assumptions, evolve as follows (no
 | Performance degradation as data grows | Medium | Low | Indexing, pagination, optional cache, materialized views when needed |
 | Limited operational/DevOps support | Medium | Medium | Simple Docker Compose ops, runbooks, monitoring/alerts |
 | Malware via uploaded files | Medium | Low | File-type/size validation, store outside web root, optional AV scan |
+| PII/PHI leakage via application or proxy logs | High | Medium | Log redaction filter, allow-listed fields, no body/SQL logging in prod, proxy query-string redaction, CI log-scan test (§10.1) |
 
 ---
 
