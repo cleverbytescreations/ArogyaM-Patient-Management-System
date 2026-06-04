@@ -70,6 +70,7 @@ Per Plan §1.5 — code merged via PR · unit + integration tests passing · RBA
 
 **Security / Tests**
 - `SEC-T1.1`, `SEC-T0.1`–`SEC-T0.3` — deny-by-default RBAC, input/SQL safety, CORS/headers, secrets.
+- `SEC-T1.2` — auth rate limiting (`429` + `Retry-After`, optional Redis) on the login route.
 - `LOG-T1.1` (login + user changes), `LOG-T0.1` — audit + PII-safe logging wired from day one.
 - `TST-T1.1`, `TST-T1.2` — auth/RBAC + security-negative tests.
 
@@ -122,6 +123,7 @@ Per Plan §1.5 — code merged via PR · unit + integration tests passing · RBA
 
 **Tests / Cross-cutting**
 - `TST-T6.1` (clinical lifecycle, partial — visits/case-sheet/notes), `UI-TX.2` a11y pass on profile + clinical forms.
+- `UI-TX.3` — frontend component & validation tests (route-guard/permission gating, form zod validation) established now that real edit forms exist; continues every sprint after.
 
 **Exit criteria:** Visit → case sheet → consultation note works with version checks and RBAC; field-level visibility verified; profile tabs render correct data.
 
@@ -166,7 +168,7 @@ Per Plan §1.5 — code merged via PR · unit + integration tests passing · RBA
 
 **Hardening (continuous tracks land here)**
 - `TST-T11.1`, `TST-T0.2` (log-privacy CI guard), `TST-T0.3` (migration up/down), `TST-T0.4` (**perf/load on ~50k seed: search p95 <1s, dashboard <2s**), `TST-T0.5` (coverage gates).
-- `SEC-T0.4` OWASP checklist · `DEV-TF.2`, `DEV-TF.3`, `DEV-TF.5`, `DEV-TF.6`, `DEV-TF.8`, `DEV-TF.9` — prod images, proxy/TLS, security scans, migrations-on-deploy + rollback, encryption-at-rest, observability/uptime.
+- `SEC-T0.4` OWASP checklist · `LOG-T0.3` log storage perms/rotation/retention policy · `DEV-TF.2`, `DEV-TF.3`, `DEV-TF.5`, `DEV-TF.6`, `DEV-TF.8`, `DEV-TF.9` — prod images, proxy/TLS, security scans, migrations-on-deploy + rollback, encryption-at-rest, observability/uptime.
 
 **Exit criteria (= M4, R1 go-live ready):** Every MVP module complete and tested; backups automated + restore drilled; perf NFRs met on seeded data; CI gates (lint/type/test/a11y/dep-scan/image-scan/secret-scan/log-privacy) all green; deploy + rollback rehearsed.
 
@@ -179,7 +181,7 @@ Per Plan §1.5 — code merged via PR · unit + integration tests passing · RBA
 
 **Go-live (priority 1)**
 - `DEV-TF.4`/`DEV-TF.7` finalize CI/CD + release tagging · `DEV-TF.6` migrations-on-deploy in prod.
-- `DOC-T0.1`–`DOC-T0.5`, `DOC-T13.1`, `DOC-T0.4` — OpenAPI publish, READMEs, migration/release notes, ops/backup runbooks, security/log-privacy docs, open-questions resolution log.
+- `DOC-T0.1`–`DOC-T0.5`, `DOC-T13.1`, `UI-TX.5` — OpenAPI publish, backend + frontend READMEs (UX/a11y conventions), migration/release notes, ops/backup runbooks, security/log-privacy docs, open-questions resolution log.
 - UAT sign-off · production cutover · user training · post-go-live smoke.
 
 **R2 quick wins (priority 2, pull in this order as capacity allows — all *stretch*)**
@@ -198,7 +200,7 @@ Per Plan §1.5 — code merged via PR · unit + integration tests passing · RBA
 
 | Track | Cadence | Anchored tasks |
 |-------|---------|----------------|
-| **Testing** | Each module merged with unit + integration tests | `TST-T*` aligned to the sprint's modules |
+| **Testing** | Each module merged with unit + integration tests | `TST-T*` aligned to the sprint's modules; `UI-TX.3` frontend component/validation tests |
 | **Security** | Each endpoint deny-by-default + negative tests | `SEC-T1.1`, `SEC-T0.x`, `SEC-T9.x` |
 | **Log-privacy** | Redaction on from S1; CI guard from S5 | `LOG-T0.1`, `LOG-T0.2`, `TST-T0.2` |
 | **Accessibility** | a11y check on each new screen | `UI-TF.7`, `UI-TX.2` |

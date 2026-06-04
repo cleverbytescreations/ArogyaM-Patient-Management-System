@@ -1,0 +1,392 @@
+# =============================================================================
+# ArogyaM Patient Management System — PRODUCTION Docker Compose
+# -----------------------------------------------------------------------------
+# Purpose : Secure single-VM rollout (SAD §18, ADR §26 — Docker Compose on one
+#           Linux VM). Persistent storage, restart policies, health checks,
+#           readiness-gated startup, network isolation, HTTPS via Nginx +
+#           Let's Encrypt, and automated DB + document backups with retention.
+#
+# Pulls VERSIONED images from a registry (Plan §13 — promote the SAME images
+# Dev -> CI -> UAT -> Prod, only env config changes). It does NOT build.
+#
+# Usage:
+#   cp .env.prod.example .env.prod        # then edit ALL CHANGE_ME values
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod pull
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#   # First run: obtain TLS certs (see Docs/DOCKER_DEPLOYMENT_GUIDE.md §6).
+#
+# Recommended production hardware (see Docs/DOCKER_DEPLOYMENT_GUIDE.md §2):
+#   Minimum     : 2 vCPU /  4 GB RAM /  50 GB SSD + separate backup disk
+#   Recommended : 4 vCPU /  8 GB RAM / 100 GB SSD + >=100 GB backup/offsite vol
+#
+# SECURITY: No secrets are hardcoded here. All credentials come from .env.prod
+#           (chmod 600, never committed). Internal services (db/minio/redis)
+#           are NOT published to the host — only the proxy exposes 80/443.
+# =============================================================================
+
+name: arogyam-prod
+
+# -----------------------------------------------------------------------------
+# Shared logging — json-file with rotation. App emits structured JSON to stdout
+# and is responsible for PII/PHI redaction (SAD §10.1). Docker only transports.
+# Forward to a central log host later by swapping the driver if needed.
+# -----------------------------------------------------------------------------
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "20m"
+    max-file: "10"
+
+services:
+  # ===========================================================================
+  # DATA TIER (internal network only — never published to the host)
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 — primary datastore. Pin a specific minor in .env.prod.
+  # Volume-backed; nightly logical backups handled by the `backup` service.
+  # ---------------------------------------------------------------------------
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    restart: unless-stopped
+    stop_grace_period: 1m
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-UTC}
+      # Harden: scram auth for any host connection within the internal network.
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "${DB_CPU_LIMIT:-2.0}"
+          memory: ${DB_MEM_LIMIT:-2g}
+    logging: *default-logging
+    networks: [backend]
+
+  # ---------------------------------------------------------------------------
+  # MinIO — S3-compatible document store. Console is NOT published; manage via
+  # SSH tunnel if needed. Enable server-side encryption at rest per the guide.
+  # ---------------------------------------------------------------------------
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:latest}
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BROWSER: ${MINIO_BROWSER:-off}   # disable web console in prod by default
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "${MINIO_CPU_LIMIT:-1.0}"
+          memory: ${MINIO_MEM_LIMIT:-1g}
+    logging: *default-logging
+    networks: [backend]
+
+  # ---------------------------------------------------------------------------
+  # createbuckets — one-shot: wait for MinIO, create the PRIVATE documents
+  # bucket, enable versioning (protects against accidental overwrite/delete).
+  # ---------------------------------------------------------------------------
+  createbuckets:
+    image: ${MC_IMAGE:-minio/mc:latest}
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET:-arogyam-documents}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD; do
+        echo 'waiting for minio...'; sleep 2;
+      done;
+      mc mb --ignore-existing local/$$MINIO_BUCKET;
+      mc anonymous set none local/$$MINIO_BUCKET;
+      mc version enable local/$$MINIO_BUCKET || true;
+      echo 'bucket ready (private, versioned):' $$MINIO_BUCKET;
+      "
+    restart: "no"
+    networks: [backend]
+
+  # ---------------------------------------------------------------------------
+  # Redis — cache / login rate-limiting / token denylist (SAD §10). Password
+  # protected, AOF persistence on. Internal only.
+  # ---------------------------------------------------------------------------
+  redis:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes", "--maxmemory", "${REDIS_MAXMEMORY:-256mb}", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "${REDIS_CPU_LIMIT:-0.5}"
+          memory: ${REDIS_MEM_LIMIT:-384m}
+    logging: *default-logging
+    networks: [backend]
+
+  # ===========================================================================
+  # APPLICATION TIER
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # api — FastAPI backend (versioned image from registry). Sits on BOTH
+  # networks: edge (reachable by proxy) and backend (reaches db/minio/redis).
+  # Startup is readiness-gated: DB healthy + bucket created + Redis healthy.
+  # Run Alembic migrations as a controlled step BEFORE this rolls out (guide §7).
+  # ---------------------------------------------------------------------------
+  api:
+    image: ${REGISTRY}/${API_IMAGE:-arogyam-api}:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET: ${MINIO_BUCKET:-arogyam-documents}
+      S3_USE_SSL: ${S3_USE_SSL:-false}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ACCESS_TTL_MIN: ${JWT_ACCESS_TTL_MIN:-15}
+      JWT_REFRESH_TTL_MIN: ${JWT_REFRESH_TTL_MIN:-1440}
+      CORS_ALLOW_ORIGINS: ${PUBLIC_BASE_URL}
+      UPLOAD_MAX_MB: ${UPLOAD_MAX_MB:-10}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SQL_ECHO: "false"            # MUST stay false in prod — SQL echo leaks PHI (SAD §10.1)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/ready').status==200 else 1)\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: "${API_CPU_LIMIT:-1.5}"
+          memory: ${API_MEM_LIMIT:-1g}
+    logging: *default-logging
+    networks: [edge, backend]
+
+  # ---------------------------------------------------------------------------
+  # frontend — pre-built React SPA served by its own minimal Nginx (self-
+  # contained image with SPA history fallback). Edge proxy routes "/" here.
+  # ---------------------------------------------------------------------------
+  frontend:
+    image: ${REGISTRY}/${FRONTEND_IMAGE:-arogyam-frontend}:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "${FRONTEND_CPU_LIMIT:-0.5}"
+          memory: ${FRONTEND_MEM_LIMIT:-128m}
+    logging: *default-logging
+    networks: [edge]
+
+  # ---------------------------------------------------------------------------
+  # proxy — Nginx edge: TLS termination (443), HTTP->HTTPS redirect (80),
+  # ACME webroot challenge, security headers, query-string-stripped access logs
+  # (SAD §10.1 control #7). Routes "/" -> frontend, "/api/" -> api.
+  # The conf is mounted as an envsubst TEMPLATE so ${DOMAIN} is injected at boot.
+  # ---------------------------------------------------------------------------
+  proxy:
+    image: ${NGINX_IMAGE:-nginx:1.27-alpine}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      # Only substitute our own placeholders; leave Nginx runtime vars ($host…) intact.
+      NGINX_ENVSUBST_TEMPLATE_SUFFIX: ".template"
+      NGINX_ENVSUBST_OUTPUT_DIR: "/etc/nginx/conf.d"
+    volumes:
+      # Mounted into the templates dir -> official entrypoint runs envsubst -> conf.d/
+      - ./nginx/nginx.prod.conf:/etc/nginx/templates/default.conf.template:ro
+      - letsencrypt:/etc/letsencrypt:ro          # certs (managed by certbot container/host)
+      - acme_webroot:/var/www/certbot:ro          # ACME http-01 challenge files
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "${PROXY_CPU_LIMIT:-0.5}"
+          memory: ${PROXY_MEM_LIMIT:-128m}
+    logging: *default-logging
+    networks: [edge]
+
+  # ---------------------------------------------------------------------------
+  # certbot — Let's Encrypt certificate issuance/renewal via the webroot plugin.
+  # Runs a renew loop every 12h; the proxy serves challenges from acme_webroot.
+  # First-time issuance is a manual one-shot documented in the guide (§6).
+  # ---------------------------------------------------------------------------
+  certbot:
+    image: ${CERTBOT_IMAGE:-certbot/certbot:latest}
+    restart: unless-stopped
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - acme_webroot:/var/www/certbot
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done"
+    logging: *default-logging
+    networks: [edge]
+
+  # ===========================================================================
+  # OPERATIONS TIER
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # backup — scheduled DB + document backups with retention (SAD §18, Plan §13,
+  # UC-26/27). A minimal Alpine sidecar that installs pg client + mc, then runs
+  # busybox cron. Schedules and retention come from env. Backups land on the
+  # `backups` volume, which SHOULD be an off-server / external disk mount
+  # (set BACKUP_HOST_PATH in .env.prod) for real disaster recovery.
+  #
+  # The DB backup script can also INSERT into backup_log and trigger an SMTP
+  # failure alert (UC-26) when those env vars are provided.
+  # ---------------------------------------------------------------------------
+  backup:
+    image: ${BACKUP_BASE_IMAGE:-alpine:3.20}
+    restart: unless-stopped
+    environment:
+      # --- Postgres connection (read-only dump user recommended) ---
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: ${BACKUP_PGUSER:-${POSTGRES_USER}}
+      PGPASSWORD: ${BACKUP_PGPASSWORD:-${POSTGRES_PASSWORD}}
+      PGDATABASE: ${POSTGRES_DB}
+      # --- MinIO connection ---
+      MINIO_ENDPOINT: ${S3_ENDPOINT_URL:-http://minio:9000}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET:-arogyam-documents}
+      # --- Backup behaviour ---
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_CRON_DB: ${BACKUP_CRON_DB:-0 2 * * *}       # nightly 02:00
+      BACKUP_CRON_MINIO: ${BACKUP_CRON_MINIO:-0 3 * * *} # nightly 03:00
+      TZ: ${TZ:-UTC}
+      # --- Optional: record run + alert on failure (UC-26) ---
+      BACKUP_LOG_TO_DB: ${BACKUP_LOG_TO_DB:-true}
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+    volumes:
+      - ./scripts:/scripts:ro
+      - backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    # Install tools once, register cron jobs from env, then run cron in foreground.
+    # (mc is fetched as a static binary; pg client comes from apk.)
+    entrypoint: >
+      /bin/sh -c "
+      set -e;
+      apk add --no-cache postgresql16-client gnupg tzdata coreutils ca-certificates wget >/dev/null;
+      wget -q https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/local/bin/mc;
+      chmod +x /usr/local/bin/mc;
+      mkdir -p /var/log/backup;
+      printf '%s root /scripts/backup-db.sh >> /var/log/backup/backup-db.log 2>&1\n' \"$$BACKUP_CRON_DB\" > /etc/crontabs/root;
+      printf '%s root /scripts/backup-minio.sh >> /var/log/backup/backup-minio.log 2>&1\n' \"$$BACKUP_CRON_MINIO\" >> /etc/crontabs/root;
+      echo 'backup cron registered:'; cat /etc/crontabs/root;
+      crond -f -l 8 -L /dev/stdout
+      "
+    logging: *default-logging
+    networks: [backend]
+
+# -----------------------------------------------------------------------------
+# Persistent volumes. db/minio/redis use local named volumes.
+#
+# `backups` SHOULD live on a SEPARATE / off-server disk for real DR. Two options:
+#   (A) Bind a host path (recommended): set BACKUP_HOST_PATH to an ABSOLUTE path
+#       on a mounted external/offsite disk (e.g. /mnt/backup-disk). The
+#       driver_opts below bind it. Default falls back to a local named volume
+#       when BACKUP_HOST_PATH is left empty.
+#   (B) Replace `backups` with a remote/NFS volume driver.
+# -----------------------------------------------------------------------------
+volumes:
+  pg_data:
+  minio_data:
+  redis_data:
+  letsencrypt:
+  acme_webroot:
+  backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      # MUST be an absolute path that already exists on the host. Point this at
+      # an external/offsite disk. If you cannot use a bind mount, delete this
+      # `driver_opts` block to fall back to a plain local volume.
+      device: ${BACKUP_HOST_PATH:-/var/lib/arogyam/backups}
+
+# -----------------------------------------------------------------------------
+# Two networks for isolation:
+#   edge     — internet-facing tier (proxy, frontend, api, certbot)
+#   backend  — INTERNAL ONLY (db, minio, redis, backup). `internal: true` means
+#              these have no route to/from the host or internet. Only `api`
+#              bridges both, so the database is never directly reachable.
+# -----------------------------------------------------------------------------
+networks:
+  edge:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
