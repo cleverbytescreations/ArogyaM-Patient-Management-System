@@ -128,6 +128,12 @@
       **Implementation Notes:** `GET /patients/search`. Results show **minimal identifiers only — no medical data** (masked mobile). Ranked exact-first. This is the default landing for staff.
       **Acceptance Criteria:** Searching by each criterion returns ranked results; no clinical fields shown; pagination works; selecting a result opens the profile.
 
+- [ ] **UI-T5.2 [M]** — Advanced search filters (R2)
+      **Description:** Add an advanced-filter panel to the search screen (SAD §13 Full-Scope): combinable filters for age/DOB range, address, visit-date range, and OP category, backed by `BE-T5.2`.
+      **Files / Components:** `frontend/src/features/search/AdvancedFilters.tsx`, `.../PatientSearchPage.tsx`.
+      **Implementation Notes:** Results keep the minimal-identifier, no-clinical contract. Date/age range inputs validated client-side (zod). Filters collapsible to keep the dashboard-first simple search uncluttered.
+      **Acceptance Criteria:** Combined filters narrow results; ranges validated; result list still shows no clinical data; accessible controls.
+
 ### Module 6 — Visits & Clinical Entry (UC-08/09/10)
 
 - [ ] **UI-T6.1 [M]** — Visit create + visit list (MVP)
@@ -177,6 +183,12 @@
       **Files / Components:** `frontend/src/features/documents/DocumentsRegisterPage.tsx`, `.../SecureViewer.tsx`.
       **Implementation Notes:** Never expose object-store URLs; download via permission-checked endpoints (access audited server-side). Document preview is R2.
       **Acceptance Criteria:** Register lists documents with filters; download/stream works only for permitted users; no raw storage URL exposed.
+
+- [ ] **UI-T9.3 [M]** — In-app document preview (R2)
+      **Description:** Inline preview of PDF/JPG/PNG documents (Plan §1.4 Full-Scope) within the secure viewer, without forcing a download.
+      **Files / Components:** `frontend/src/features/documents/SecureViewer.tsx`, `.../DocumentPreview.tsx`.
+      **Implementation Notes:** Render via the permission-checked `GET /documents/{id}/content` stream (or short-lived pre-signed URL); never expose object-store URLs. Sandbox/iframe for PDFs; image preview for JPG/PNG. Access still audited server-side.
+      **Acceptance Criteria:** Permitted users preview supported types inline; unauthorized users blocked; no raw storage URL exposed; access audited.
 
 ### Module 10 — Patient Timeline (UC-17)
 
@@ -231,6 +243,12 @@
       **Files / Components:** `frontend/src/features/patients/ExportPatientButton.tsx`.
       **Implementation Notes:** Gated by `export`; server audits the export.
       **Acceptance Criteria:** Export produces the chosen format; only permitted roles see the action.
+
+- [ ] **UI-T17.3 [S]** — Clinical PDF download actions (R2)
+      **Description:** "Download PDF" actions for prescriptions and discharge summaries, plus a `pdf` option on patient export — backed by `BE-T17.3`.
+      **Files / Components:** `frontend/src/features/clinical/PrescriptionsTab.tsx`, `.../DischargeSummaryTab.tsx`, `frontend/src/features/patients/ExportPatientButton.tsx`.
+      **Implementation Notes:** Buttons appear only when the PDF feature flag is enabled and the user holds the relevant view/export permission. Streamed via permission-checked endpoints; generation audited server-side.
+      **Acceptance Criteria:** PDF downloads for prescription, discharge summary, and patient export when enabled; hidden when the flag is off or permission absent.
 
 ### Module 15 — Merge Duplicates (UC-18/19, R2, Admin)
 

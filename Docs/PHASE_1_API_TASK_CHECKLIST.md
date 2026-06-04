@@ -8,7 +8,7 @@
 **Status:** For build
 
 > **How to read this checklist**
-> - Tasks are grouped under the 8 required sections (Backend, API, Database, Integration, Security, Logging & Audit, Testing, Documentation), and **within each section by Module** (module numbering follows Plan §3 / SAD §7).
+> - Tasks are grouped under 9 sections (Backend, API, Database, Integration, Security, Logging & Audit, Testing, Documentation, **Deployment & DevOps**), and **within each section by Module** where applicable (module numbering follows Plan §3 / SAD §7). *(Deployment & DevOps — §9 — was added to cover Plan §13 and the Stage 0 foundations; it sits alongside the originally-required 8 sections.)*
 > - Task ID pattern: `<SECTION>-T<module>.<seq>` (e.g. `BE-T9.1`, `API-T9.2`). Foundation/cross-cutting tasks use `F` (foundation) or `0`.
 > - Effort tags: **[S]** ≤0.5 day · **[M]** ~1–2 days · **[L]** ~3+ days.
 > - Tier tags: **(MVP)** = R1 must-have · **(R2)** = Full-Scope.
@@ -164,6 +164,12 @@
       **Implementation Notes:** Use Postgres FTS (`tsvector`+GIN) + `pg_trgm` for partial/typo tolerance (DB-T5.1). Query params `q, op_number, mobile, name, op_category, status`. Search terms never logged in plaintext (SAD §10.1 #4).
       **Acceptance Criteria:** Exact OP/mobile ranks first; partial name matches via trigram; results contain no clinical data; results paginated; search terms absent from non-audit logs.
 
+- [ ] **BE-T5.2 [M]** — Advanced search filters service (R2)
+      **Description:** Extend search with combinable advanced filters (SAD §13 Full-Scope): `age`/`date_of_birth` range, `address`, `visit_date` range, `op_category`, and multi-criteria AND combination on top of `GET /patients/search`.
+      **Files / Components:** `backend/app/modules/search/service.py`, `.../repository.py`; query params extended on `API-T5.1`.
+      **Implementation Notes:** Keep minimal-identifier, no-clinical-data result contract (SAD §7.7). Index `visit_date` and ensure filters are index-backed (DB-T10.1). Faceted search remains out of scope.
+      **Acceptance Criteria:** Combined filters narrow results correctly; date/age ranges validated; results still carry no clinical fields; performant on the seeded dataset.
+
 ### Module 6 — Visit & Consultation
 
 - [ ] **BE-T6.1 [M]** — Visit model, schemas, service (MVP)
@@ -211,7 +217,7 @@
 - [ ] **BE-T9.2 [L]** — Secure document download service (MVP)
       **Description:** Implement `GET /documents/{id}` (metadata), `GET /documents/{id}/content` (permission-checked proxied stream, access audited), `GET /documents/{id}/download-url` (short-lived pre-signed URL), `PUT /documents/{id}` (metadata update / soft-delete via status).
       **Files / Components:** `backend/app/modules/documents/service.py`, `.../storage.py`.
-      **Implementation Notes:** Permission check before streaming (UC-30); never expose object-store URL; pre-signed URL short TTL. Soft-delete only (`status ∈ {ACTIVE, ARCHIVED, DELETED}`). Each content access writes audit.
+      **Implementation Notes:** Permission check before streaming (UC-30); never expose object-store URL; pre-signed URL short TTL. Soft-delete only (`status ∈ {ACTIVE, ARCHIVED, DELETED}`). Each content access writes audit. **Scope split:** this task is the service/endpoint implementation; the security verification (authz-before-stream, audit, URL expiry) is tracked in **SEC-T9.2** — implement once here, verify there.
       **Acceptance Criteria:** Unauthorized download → 403; content streamed via proxy; pre-signed URL expires; access audited; no public URL leaked.
 
 ### Module 10 — Patient Timeline
@@ -296,6 +302,12 @@
       **Implementation Notes:** `export` permission; patient-level export always audited. PDF deferred decision (SAD §27 #12).
       **Acceptance Criteria:** Export produces requested format; export event audited; permission enforced.
 
+- [ ] **BE-T17.3 [L]** — Structured PDF generation (R2)
+      **Description:** Server-side PDF generation for prescriptions (Module 7), discharge summaries (Module 8), and patient export (`POST /patients/{id}/export?format=pdf`) — Full-Scope deliverable (Plan §1.4, SAD §27 #12 launch decision).
+      **Files / Components:** `backend/app/modules/clinical/pdf.py`, consumed by prescription/discharge/export services; optional async via FastAPI background task / Redis RQ.
+      **Implementation Notes:** Render from a versioned template; include generated-by/date metadata; clinical content respects field-level visibility; generation of a patient-level PDF is audited (`action=EXPORT`). Gate behind config since PDF-at-launch is an open question.
+      **Acceptance Criteria:** Valid PDF produced for prescription, discharge summary, and patient export; metadata present; audited; feature toggleable.
+
 ### Module 18 — System / Health
 
 - [ ] **BE-T18.1 [S]** — Health & readiness endpoints (MVP)
@@ -338,10 +350,10 @@
       **Files / Components:** `backend/app/modules/patients/router.py`.
       **Acceptance Criteria:** Returns ordered `PatientTimeline`; `view_patient` enforced; field visibility respected.
 
-- [ ] **API-T5.1 [S]** — Search route (MVP)
-      **Description:** `GET /patients/search?q=&op_number=&mobile=&name=&op_category=&status=` paginated.
+- [ ] **API-T5.1 [S]** — Search route (MVP; advanced filters R2)
+      **Description:** `GET /patients/search?q=&op_number=&mobile=&name=&op_category=&status=` paginated. R2: accept the advanced-filter query params from **BE-T5.2** (`age`/`dob` range, `address`, `visit_date` range).
       **Files / Components:** `backend/app/modules/search/router.py`.
-      **Acceptance Criteria:** Matches API spec §7.5; minimal-identifier results; ranked; search terms not logged.
+      **Acceptance Criteria:** Matches API spec §7.5; minimal-identifier results; ranked; search terms not logged; advanced filters wired when BE-T5.2 lands.
 
 - [ ] **API-T6.1 [M]** — Visit & consultation routes (MVP)
       **Description:** `POST/GET /patients/{id}/visits`, `GET/PUT /visits/{id}`, `PUT/GET /visits/{id}/case-sheet`, `POST/GET /visits/{id}/consultation-notes`.
@@ -391,9 +403,9 @@
       **Acceptance Criteria:** Matches API spec §7.12; role-specific widgets.
 
 - [ ] **API-T17.1 [M]** — Reports & export routes (R2)
-      **Description:** `GET /reports/{type}`, `POST /patients/{id}/export`.
+      **Description:** `GET /reports/{type}`, `POST /patients/{id}/export` (supports `format=json|csv|xlsx|pdf`; `pdf` via **BE-T17.3**).
       **Files / Components:** `backend/app/modules/reports/router.py`.
-      **Acceptance Criteria:** Matches API spec §7.13; date range required; exports audited.
+      **Acceptance Criteria:** Matches API spec §7.13; date range required; exports audited; PDF format served when BE-T17.3 enabled.
 
 - [ ] **API-T0.1 [M]** — API conventions & envelope conformance (MVP)
       **Description:** Enforce global conventions across all routers: `/api/v1` prefix, snake_case JSON, ISO-8601, UUID ids, paginated envelope, error envelope, `X-Request-ID`, `Idempotency-Key` (optional) on non-idempotent creates.
@@ -477,7 +489,7 @@
 - [ ] **INT-T13.2 [S]** — SMTP backup-alert hook (optional) (MVP)
       **Description:** Send backup success/failure alert email to Administrator via SMTP.
       **Files / Components:** `backend/app/core/notify.py` or `ops/backup/notify.sh`.
-      **Implementation Notes:** Optional; SMTP details are an open question (SAD §27 #8). Backup notification recorded in `backup_log`.
+      **Implementation Notes:** Optional; SMTP details are an open question (SAD §27 #8). This task = *sending* the alert; the *recording* of notification outcomes is tracked in **LOG-T13.1** (`backup_log` send-log). Keep the two concerns split.
       **Acceptance Criteria:** Failure triggers an alert email when SMTP configured; no-op when disabled.
 
 - [ ] **INT-T13.3 [M]** — Restore runbook & restore test (MVP)
@@ -490,8 +502,8 @@
       **Files / Components:** `backend/app/modules/documents/service.py`.
       **Acceptance Criteria:** When enabled, infected file rejected; when disabled, pipeline unaffected.
 
-- [ ] **INT-T17.1 [L]** — Bulk historical import utility (R2, Could-Have)
-      **Description:** Internal admin batch utility (CSV/Excel template) for migrated records: mark `is_historical=TRUE`, preserve old OP numbers as `patient_aliases`, validate against template.
+- [ ] **INT-T3.1 [L]** — Bulk historical import utility (R2, Could-Have, UC-16)
+      **Description:** Internal admin batch utility (CSV/Excel template) for migrated records (Module 3 / historical digitization): mark `is_historical=TRUE`, preserve old OP numbers as `patient_aliases`, validate against template.
       **Files / Components:** `backend/app/modules/admin/historical_import.py`, candidate routes `POST/GET /admin/historical-imports`.
       **Implementation Notes:** Candidate endpoints (API spec §9.5); Admin/Data-Entry only; audited; async `202` + job status.
       **Acceptance Criteria:** Valid template imports with historical flag + aliases; invalid rows reported; audited.
@@ -532,8 +544,8 @@
       **Acceptance Criteria:** Secret scan passes; DB user has least privilege; no secret in repo.
 
 - [ ] **SEC-T9.2 [M]** — Document access authorization & audited download (MVP)
-      **Description:** Permission check before any document stream/pre-sign; every access audited; pre-signed URLs short-lived.
-      **Files / Components:** `documents/service.py`.
+      **Description:** Security verification of the download path implemented in **BE-T9.2**: permission check before any document stream/pre-sign; every access audited; pre-signed URLs short-lived. (Verification/hardening only — no duplicate implementation.)
+      **Files / Components:** `documents/service.py`, `tests/security/`.
       **Acceptance Criteria:** Unauthorized access → 403; each access logged to `audit_log`; URL expiry enforced.
 
 - [ ] **SEC-T0.4 [S]** — OWASP Top 10 alignment checklist (MVP)
@@ -562,7 +574,7 @@
       **Acceptance Criteria:** Proxy logs for `/patients/search` contain no query params; path logged without query string.
 
 - [ ] **LOG-T13.1 [S]** — Backup notification send-log (MVP)
-      **Description:** Record backup notification outcomes in `backup_log`; basic send log for alerts.
+      **Description:** Record backup notification outcomes in `backup_log`; basic send log for alerts. (Pairs with the send path in **INT-T13.2** — recording only.)
       **Files / Components:** `backup/service.py`, `ops/backup/`.
       **Acceptance Criteria:** Each alert send recorded; status visible via backup status API.
 
@@ -673,6 +685,65 @@
       **Description:** Track resolution of SAD §27 open questions affecting config (OP format, retention, hosting, upload limit, SMTP, etc.) before build lock.
       **Files / Components:** `Docs/OPEN_QUESTIONS_LOG.md`.
       **Acceptance Criteria:** Each open question has an owner + decision before R1 config is frozen.
+
+---
+
+## 9. Deployment & DevOps Tasks
+
+> Covers Plan §13 (Deployment Considerations), the Stage 0 foundations (Plan §14), SAD §18–§19, and the CI gates in Plan §12. Single Linux VM + Docker Compose; promote the *same* images Dev → CI → UAT → Prod with only env config changing.
+
+- [ ] **DEV-TF.1 [L]** — Docker Compose dev environment (MVP)
+      **Description:** Author `docker-compose.yml` with services: reverse proxy, frontend, api, postgres (+volume), minio (+volume), redis (optional); seed data; hot-reload for dev. Stand up Postgres + MinIO locally (Stage 0).
+      **Files / Components:** `docker-compose.yml`, `docker-compose.override.yml` (dev), `ops/seed/`.
+      **Implementation Notes:** Per-service healthchecks; named volumes for Postgres/MinIO; Redis toggleable. MinIO swappable for S3 with no code change.
+      **Acceptance Criteria:** `docker compose up` brings the full stack up locally with seed data; API reaches Postgres + MinIO; app usable end-to-end in dev.
+
+- [ ] **DEV-TF.2 [M]** — Production container images (MVP)
+      **Description:** Build hardened Docker images for the API and the frontend (static build served by the proxy). Multi-stage builds, non-root user, debug disabled.
+      **Files / Components:** `backend/Dockerfile`, `frontend/Dockerfile`, `.dockerignore`.
+      **Implementation Notes:** Least-privilege runtime; no secrets baked into images; pinned base images.
+      **Acceptance Criteria:** Images build reproducibly; run as non-root; same image promotes across environments via env config only.
+
+- [ ] **DEV-TF.3 [M]** — Reverse proxy & TLS (MVP)
+      **Description:** Configure Nginx/Caddy/Traefik: TLS termination (Let's Encrypt), HTTP→HTTPS redirect, secure headers, routing to frontend + API, and proxy access-log query-string redaction for patient/search routes.
+      **Files / Components:** `ops/proxy/` (Nginx/Caddy config).
+      **Implementation Notes:** TLS 1.2+; coordinate with SEC-T0.2 (CORS/headers) and LOG-T0.2 (query-string redaction) — this task owns the proxy config those reference.
+      **Acceptance Criteria:** HTTPS enforced with valid cert; HTTP redirects; secure headers present; proxy logs drop query strings on patient/search routes.
+
+- [ ] **DEV-TF.4 [L]** — CI/CD pipeline (build → image → deploy) (MVP)
+      **Description:** GitHub Actions: on PR → lint/type-check/test/scan; on merge/tag → build versioned images, push to GHCR, deploy to UAT then Prod (`docker compose pull && up -d` or deploy script).
+      **Files / Components:** `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `ops/deploy/`.
+      **Implementation Notes:** Reuses the test pipeline (TST-T0.1) and frontend checks (UI-TF.7). Environment promotion Dev → CI → UAT → Prod with the same images.
+      **Acceptance Criteria:** PR runs full gate; merge/tag builds + pushes versioned images; UAT deploy precedes Prod; rollback path documented (DEV-TF.6).
+
+- [ ] **DEV-TF.5 [M]** — CI security scans (dependency, image, secret) (MVP)
+      **Description:** Add the remaining Plan §12 CI gates: dependency scan (`pip-audit` / `npm audit`), container image scan (Trivy), and secret scanning. Fail the build on high-severity findings.
+      **Files / Components:** `.github/workflows/ci.yml` (scan jobs).
+      **Implementation Notes:** Complements SEC-T0.3 (secrets) and the log-privacy test (TST-T0.2). Tune severity thresholds to avoid noise.
+      **Acceptance Criteria:** Vulnerable dependency, vulnerable image layer, or committed secret each fail CI; results visible on the PR.
+
+- [ ] **DEV-TF.6 [M]** — Migrations-on-deploy & rollback strategy (MVP)
+      **Description:** Run Alembic `upgrade` as a controlled step before API rollout; define rollback (re-deploy previous image tag; DB via tested backup / down-migration, favoring forward-fix).
+      **Files / Components:** `ops/deploy/migrate.sh`, deploy workflow step, `ops/DEPLOYMENT.md`.
+      **Implementation Notes:** Migration step gated before traffic switch; coordinate with TST-T0.3 (migration test) and INT-T13.3 (restore runbook).
+      **Acceptance Criteria:** Deploy applies migrations before API starts; documented rollback restores the prior release; forward-fix preferred for prod.
+
+- [ ] **DEV-TF.7 [S]** — Release management & versioning (MVP)
+      **Description:** Semantic-version git tags drive image tags; maintain `CHANGELOG`; each release records Alembic migration notes + any manual/ops steps (SAD §19).
+      **Files / Components:** `CHANGELOG.md`, tagging convention, release workflow.
+      **Implementation Notes:** Pairs with DOC-T0.3 (release notes process). Same images promoted across envs.
+      **Acceptance Criteria:** A tagged release produces matching image tags, a changelog entry, and migration notes.
+
+- [ ] **DEV-TF.8 [S]** — Encryption at rest & secure configuration (MVP)
+      **Description:** Enable DB volume + object-store encryption at rest (filesystem/disk encryption or MinIO/S3 SSE); enforce hardened containers, least-privilege DB user, debug off in prod (SAD §10 / §18).
+      **Files / Components:** compose/infra config, `ops/DEPLOYMENT.md`.
+      **Implementation Notes:** TLS handles in-transit (DEV-TF.3); this task covers at-rest. Confirm hosting choice (SAD §27 #7) affects MinIO-SSE vs S3-SSE.
+      **Acceptance Criteria:** DB and document storage encrypted at rest; prod containers hardened; debug disabled; DB user least-privileged.
+
+- [ ] **DEV-TF.9 [S]** — Observability baseline & uptime alerting (MVP)
+      **Description:** Wire `/health` + `/ready` (BE-T18.1) into the proxy/compose healthchecks; ship structured logs via Docker; optional Uptime Kuma uptime check + backup-failure alert. Prometheus/Grafana deferred (R2).
+      **Files / Components:** compose healthchecks, `ops/observability/`.
+      **Acceptance Criteria:** Liveness/readiness drive container health; logs collected; uptime + backup-failure alerting functional (when enabled).
 
 ---
 
