@@ -977,6 +977,10 @@ Files to refer (if required - lazy loading):
 2. Docs/PHASE_1_UI_TASK_CHECKLIST.md
 3. Docs/PHASE_1_API_TASK_CHECKLIST.md
 
+Output file:
+------------
+1. Docs/PHASE_1_SPRINT_PLAN.md
+
 Can you provide a two weeks springt plan to provide a usable modules in each sprint in the order of the workflow and usecase priority ? 
 
 Special isntructions: 
