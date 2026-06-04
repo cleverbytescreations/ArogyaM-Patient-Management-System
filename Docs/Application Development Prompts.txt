@@ -717,7 +717,7 @@ Instructions:
 
 Output file:
 ------------
-Docs/PHASE_IMPLEMENTATION_PLAN.md
+Docs/PHASE1_IMPLEMENTATION_PLAN.md
 
 Expected output format:
 -----------------------
@@ -747,9 +747,227 @@ Files to refer:
 1. Docs/usecases.md
 2. Docs/SYSTEM_ARCHITECTURE_DOCUMENT.md
 3. Docs/DDL_DATAMODEL.sql
-4. Docs/PHASE_IMPLEMENTATION_PLAN.md
+4. Docs/PHASE1_IMPLEMENTATION_PLAN.md
 
 Please compare the implementation-plan with the solution architecture document and let me know if there is any gap in the implementation plan
+
+====================================================================================================================================
+
+>>> Generate OpenAPI / Swagger documentation:
+
+Files to refer:
+1. Docs/SYSTEM_ARCHITECTURE_DOCUMENT.md
+2. Docs/PHASE1_IMPLEMENTATION_PLAN.md
+
+
+Objective:
+Generate a complete OpenAPI / Swagger documentation for the application based on the solution architecture and implementation plan.
+
+Instructions:
+1. Review both referenced documents carefully before generating the API specification.
+2. Identify all modules, services, user roles, business workflows, integrations, and data entities mentioned in the documents.
+3. Generate a complete OpenAPI 3.0 or 3.1 compliant specification.
+4. The API specification should be suitable for backend implementation, frontend integration, API testing, and client review.
+
+Output file:
+Save the generated OpenAPI documentation under:
+
+Docs/API_SPECIFICATION_OPENAPI.md
+
+Required sections:
+1. API Overview
+   - Application name
+   - API purpose
+   - API consumers
+   - API style: REST
+   - Base URL placeholders for Dev, QA, UAT, and Production
+
+2. Authentication and Authorization
+   - Authentication mechanism
+   - Token format
+   - Role-based access control
+   - Tenant identification, if applicable
+   - Common authorization rules
+
+3. Common API Standards
+   - URL naming conventions
+   - HTTP methods
+   - Request/response format
+   - Pagination standard
+   - Filtering and sorting
+   - Idempotency rules
+   - Date/time format
+   - File upload/download standard
+
+4. Common Headers
+   - Authorization
+   - Content-Type
+   - Accept
+   - X-Tenant-ID, if applicable
+   - Correlation ID / Request ID
+
+5. Common Response Structure
+   - Success response format
+   - Error response format
+   - Validation error format
+   - Pagination response format
+
+6. Error Code Design
+   - HTTP status codes
+   - Application-level error codes
+   - Validation errors
+   - Authentication and authorization errors
+   - Business rule errors
+
+7. API Endpoint Specification
+   For each module, provide:
+   - API name
+   - Endpoint path
+   - HTTP method
+   - Purpose
+   - Required role/permission
+   - Request headers
+   - Path parameters
+   - Query parameters
+   - Request body schema
+   - Response body schema
+   - Success response example
+   - Error response examples
+
+8. Data Schemas
+   - Request DTOs
+   - Response DTOs
+   - Common DTOs
+   - Enum definitions
+   - Validation rules
+
+9. Integration APIs
+   - External system APIs
+   - Callback/webhook APIs
+   - Background job APIs, if applicable
+   - Event-driven APIs, if applicable
+
+10. Security Considerations
+   - Input validation
+   - Rate limiting
+   - CORS
+   - Audit logging
+   - Sensitive data masking
+   - API versioning
+   - Access control rules
+
+11. OpenAPI YAML
+   Generate a valid OpenAPI YAML section covering:
+   - openapi version
+   - info
+   - servers
+   - securitySchemes
+   - tags
+   - paths
+   - components/schemas
+   - components/responses
+   - components/parameters
+   - components/securitySchemes
+
+Validation instructions:
+1. Ensure all APIs mentioned in the implementation plan are covered.
+2. Ensure the API design aligns with the solution architecture.
+3. Do not invent unrelated APIs.
+4. If any API details are missing, infer them logically and mark them as:
+   Assumption: <details>
+5. Ensure the OpenAPI YAML is syntactically valid.
+6. Ensure endpoint naming is consistent and RESTful.
+7. Ensure all request and response schemas are reusable where possible.
+8. Ensure frontend developers can use this document without additional clarification.
+
+Output format:
+- Use Markdown format.
+- Include OpenAPI YAML inside a fenced code block.
+- Use clear module-wise grouping.
+- Keep the documentation implementation-ready.
+
+====================================================================================================================================
+
+>>> Generate Detailed Task Checklist:
+
+Files to refer:
+---------------
+1. Docs/SYSTEM_ARCHITECTURE_DOCUMENT.md
+2. Docs/PHASE1_IMPLEMENTATION_PLAN.md
+3. Docs/API_SPECIFICATION_OPENAPI.md
+
+Objective:
+----------
+Create a detailed developer task checklist for the above implementation plan for phase 1. 
+Refer the scope of phase 1 from the Solution Architecture Document (#2).
+
+Instructions:
+-------------
+1. Review the implementation plan carefully.
+2. Create a detailed task list that covers 100% of the Phase 1 implementation scope.
+3. Each task should contain enough implementation details for a developer to work independently.
+4. Include tasks for backend, frontend, APIs, database, validation, error handling, security, testing, and documentation.
+4.1 All UI related tasks should be saved under the UI task list (e.g. PHASE_1_UI_TASK_CHECKLIST.md). 
+4.2 Rest of the tasks (backend, APIs, database, validation, error handling etc) should be saved under API task list (e.g. PHASE_1_API_TASK_CHECKLIST.md)
+5. Each task should be grouped under a module (e.g. Module 4   Document Management)
+5. All tasks must be marked as incomplete using [ ] by default.
+6. Do not implement any code in this step.
+7. Save the generated task list under the following location - UI & API tasks should be created separately:
+
+Output file:
+------------
+1. Docs/PHASE_1_UI_TASK_CHECKLIST.md
+2. Docs/PHASE_1_API_TASK_CHECKLIST.md
+
+Task format:
+------------
+- [ ] Task ID & Title: (e.g. T4.1.1 [L]   Implement POST /documents upload endpoint)
+      Description:
+      Files / Components to be changed:
+      Implementation Notes:
+      Acceptance Criteria:
+
+Expected output structure:
+--------------------------
+
+# Implementation Task Checklist (UI Task list)
+## 1. Frontend Tasks 
+
+# Implementation Task Checklist (API)
+## 1. Backend Tasks
+## 2. API Tasks
+## 3. Database Tasks
+## 4. Integration Tasks
+## 5. Security Tasks
+## 6. Logging and Audit Tasks
+## 7. Testing Tasks
+## 8. Documentation Tasks
+
+====================================================================================================================================
+
+>>>Validate Task Checklist Against Implementation Plan 
+
+Files to refer:
+---------------
+1. Docs/PHASE_IMPLEMENTATION_PLAN.md
+2. Docs/PHASE_1_UI_TASK_CHECKLIST.md
+3. Docs/PHASE_1_API_TASK_CHECKLIST.md
+
+Objective:
+----------
+Validate the generated task checklist against the Phase 1 implementation plan.
+
+Instructions:
+-------------
+1. Review the implementation plan and the task checklist.
+2. Confirm whether the task checklist covers 100% of the implementation plan.
+3. Identify any missing tasks, incomplete coverage, duplicate tasks, unclear tasks, or wrongly grouped tasks.
+4. Do not modify the task checklist unless explicitly instructed.
+5. Provide a validation report for review.
+
+====================================================================================================================================
+
+====================================================================================================================================
 
 ====================================================================================================================================
 
