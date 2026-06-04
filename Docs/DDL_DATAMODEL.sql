@@ -295,6 +295,44 @@ CREATE TABLE IF NOT EXISTS patient_aliases (
 );
 COMMENT ON TABLE patient_aliases IS 'Alternate/old OP numbers kept as searchable aliases after merge or migration (UC-16/UC-19).';
 
+-- 3.3 merge_requests ----------------------------------------------------------
+-- Supports the two-step duplicate-merge workflow (UC-18/UC-19, SAD §11.5/§12.2):
+-- Receptionist/Data Entry may *request* a merge (status PENDING); an Administrator
+-- reviews and APPROVES (executes the merge) or REJECTS it. The actual merge is
+-- performed in a single transaction by the service layer when approved. This row
+-- records the request, the decision, and who/when — fully audited.
+CREATE TABLE IF NOT EXISTS merge_requests (
+    id                   UUID        NOT NULL DEFAULT uuid_generate_v4(),
+    primary_patient_id   UUID        NOT NULL,            -- record proposed to survive
+    duplicate_patient_id UUID        NOT NULL,            -- record proposed to be merged away
+    status               VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- PENDING | APPROVED | REJECTED | CANCELLED
+    reason               TEXT,                            -- requester's justification
+    decision_remarks     TEXT,                            -- admin's approve/reject note
+    requested_by         UUID        NOT NULL,            -- receptionist/data-entry/admin
+    requested_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    reviewed_by          UUID,                            -- admin who approved/rejected
+    reviewed_at          TIMESTAMPTZ,
+    merged_at            TIMESTAMPTZ,                      -- set when the merge actually executes
+    version              INTEGER     NOT NULL DEFAULT 1,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT pk_merge_requests PRIMARY KEY (id),
+    CONSTRAINT ck_merge_requests_status CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED')),
+    -- A record cannot be merged into itself.
+    CONSTRAINT ck_merge_requests_distinct CHECK (primary_patient_id <> duplicate_patient_id),
+    CONSTRAINT fk_merge_requests_primary FOREIGN KEY (primary_patient_id) REFERENCES patients (id),
+    CONSTRAINT fk_merge_requests_duplicate FOREIGN KEY (duplicate_patient_id) REFERENCES patients (id),
+    CONSTRAINT fk_merge_requests_requested_by FOREIGN KEY (requested_by) REFERENCES users (id),
+    CONSTRAINT fk_merge_requests_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES users (id)
+);
+COMMENT ON TABLE  merge_requests IS 'Two-step merge workflow: staff request, Administrator approves/executes or rejects (UC-19, SAD §11.5/§12.2).';
+COMMENT ON COLUMN merge_requests.status IS 'PENDING (requested) -> APPROVED (merge executed) | REJECTED | CANCELLED.';
+COMMENT ON COLUMN merge_requests.merged_at IS 'Timestamp when the approved merge transaction completed.';
+
+CREATE TRIGGER trg_merge_requests_updated_at
+    BEFORE UPDATE ON merge_requests
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 -- =============================================================================
 -- SECTION 4 — VISITS & CLINICAL RECORDS
 -- =============================================================================
@@ -648,6 +686,10 @@ CREATE INDEX IF NOT EXISTS idx_patients_name_trgm     ON patients USING gin (ful
 CREATE INDEX IF NOT EXISTS idx_patients_search_vector ON patients USING gin (search_vector);
 -- Alias lookup by old OP number.
 CREATE INDEX IF NOT EXISTS idx_patient_aliases_patient ON patient_aliases (patient_id);
+-- Merge-request queues (admin "pending requests" view + per-patient lookup).
+CREATE INDEX IF NOT EXISTS idx_merge_requests_status    ON merge_requests (status);
+CREATE INDEX IF NOT EXISTS idx_merge_requests_primary   ON merge_requests (primary_patient_id);
+CREATE INDEX IF NOT EXISTS idx_merge_requests_duplicate ON merge_requests (duplicate_patient_id);
 
 -- 8.2 Foreign-key / timeline indexes -----------------------------------------
 CREATE INDEX IF NOT EXISTS idx_visits_patient         ON visits (patient_id);
