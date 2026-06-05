@@ -45,9 +45,11 @@ export function AppShell({ children }: AppShellProps) {
           <Link
             to="/"
             aria-label={`${APP_NAME} — go to dashboard`}
-            className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex items-center gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <BrandLogo variant="wordmark" className="h-7 w-auto" />
+            <BrandLogo variant="mark" decorative className="h-8 w-8" />
+            <BrandLogo variant="wordmark" decorative className="h-6 w-auto" />
+            <span className="sr-only">{APP_NAME}</span>
           </Link>
           <Button
             variant="ghost"
@@ -95,6 +97,17 @@ export function AppShell({ children }: AppShellProps) {
         >
           {children}
         </main>
+
+        {/* Footer (Kyndryl-style cream band with coral accent) */}
+        <footer className="border-t bg-secondary px-4 py-3 lg:px-6">
+          <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <p className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-3 w-0.5 bg-primary" />
+              {APP_NAME} — secure patient record management
+            </p>
+            <p>© {new Date().getFullYear()} ArogyaM Clinic. All rights reserved.</p>
+          </div>
+        </footer>
       </div>
     </div>
   );

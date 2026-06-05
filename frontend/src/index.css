@@ -4,64 +4,70 @@
 
 @layer base {
   /*
-   * ArogyaM brand palette — derived from the ArogyaM wordmark (warm amber/orange)
-   * with the navy of the Sacred Grove lotus mark as the complementary accent.
+   * ArogyaM brand palette — Kyndryl-inspired editorial system:
+   * a warm cream canvas, charcoal ink, and a single confident coral accent,
+   * with the navy of the Sacred Grove lotus mark as the complementary tone.
+   * Corners are nearly square and type is set in IBM Plex Sans.
    */
   :root {
-    --background: 40 40% 99%;
-    --foreground: 222 45% 14%;
+    --background: 0 0% 100%;
+    --foreground: 210 9% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 222 45% 14%;
+    --card-foreground: 210 9% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 45% 14%;
-    --primary: 32 95% 50%;
+    --popover-foreground: 210 9% 15%;
+    --primary: 9 92% 56%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 38 100% 95%;
-    --secondary-foreground: 28 75% 28%;
-    --muted: 40 30% 96%;
-    --muted-foreground: 28 10% 45%;
-    --accent: 38 100% 92%;
-    --accent-foreground: 28 80% 25%;
-    --destructive: 0 84% 60%;
+    --secondary: 40 13% 94%;
+    --secondary-foreground: 210 9% 20%;
+    --muted: 40 14% 96%;
+    --muted-foreground: 215 7% 35%;
+    --accent: 9 100% 96%;
+    --accent-foreground: 9 75% 42%;
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 36 32% 89%;
-    --input: 36 32% 87%;
-    --ring: 32 95% 50%;
-    --radius: 0.5rem;
+    --border: 30 9% 88%;
+    --input: 30 9% 85%;
+    --ring: 9 92% 56%;
+    --radius: 0.125rem;
 
     /* Brand tokens (logo-derived) */
     --brand-amber: 32 95% 50%;
     --brand-amber-light: 40 96% 62%;
-    --brand-coral: 14 86% 57%;
+    --brand-coral: 9 92% 56%;
     --brand-navy: 223 56% 33%;
+    --brand-cream: 40 13% 93%;
+    --brand-ink: 210 9% 15%;
   }
 
   .dark {
-    --background: 224 33% 8%;
-    --foreground: 40 30% 96%;
-    --card: 224 30% 11%;
-    --card-foreground: 40 30% 96%;
-    --popover: 224 30% 11%;
-    --popover-foreground: 40 30% 96%;
-    --primary: 36 95% 55%;
-    --primary-foreground: 224 45% 10%;
-    --secondary: 224 25% 18%;
-    --secondary-foreground: 40 30% 96%;
-    --muted: 224 25% 16%;
-    --muted-foreground: 36 15% 65%;
-    --accent: 224 25% 20%;
-    --accent-foreground: 40 96% 70%;
+    --background: 24 12% 9%;
+    --foreground: 38 22% 94%;
+    --card: 24 11% 12%;
+    --card-foreground: 38 22% 94%;
+    --popover: 24 11% 12%;
+    --popover-foreground: 38 22% 94%;
+    --primary: 9 92% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 24 9% 18%;
+    --secondary-foreground: 38 22% 94%;
+    --muted: 24 9% 16%;
+    --muted-foreground: 30 8% 64%;
+    --accent: 24 9% 20%;
+    --accent-foreground: 9 90% 68%;
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
-    --border: 224 22% 20%;
-    --input: 224 22% 22%;
-    --ring: 36 95% 55%;
+    --border: 24 8% 22%;
+    --input: 24 8% 24%;
+    --ring: 9 92% 60%;
 
     /* Brand tokens (logo-derived) */
     --brand-amber: 36 95% 55%;
     --brand-amber-light: 40 96% 65%;
-    --brand-coral: 14 86% 60%;
+    --brand-coral: 9 92% 60%;
     --brand-navy: 223 50% 70%;
+    --brand-cream: 24 9% 18%;
+    --brand-ink: 38 22% 94%;
   }
 }
 
@@ -74,8 +80,42 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
+  /* Editorial display type — light weight, tight tracking (Kyndryl voice) */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
   /* Focus ring for keyboard navigation (WCAG 2.1 AA) */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  /* Short coral rule placed under a section heading — the signature Kyndryl accent */
+  .accent-rule {
+    @apply block h-[3px] w-12 bg-primary;
+  }
+
+  /* Oversized, faint watermark heading (e.g. the "how kyndryl helps" treatment) */
+  .ghost-heading {
+    @apply pointer-events-none select-none font-light leading-none tracking-tighter;
+    color: hsl(var(--foreground) / 0.04);
+  }
+
+  /* Coral sawtooth band used as a brand divider */
+  .sawtooth {
+    height: 22px;
+    background-image: linear-gradient(
+        135deg,
+        transparent 50%,
+        hsl(var(--primary)) 50%
+      ),
+      linear-gradient(45deg, hsl(var(--primary)) 50%, transparent 50%);
+    background-size: 22px 22px;
+    background-repeat: repeat-x;
+    background-position: bottom;
   }
 }
