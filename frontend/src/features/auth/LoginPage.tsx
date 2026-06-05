@@ -10,7 +10,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Form,
@@ -21,6 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useAuth } from "@/auth/AuthContext";
+import { BrandLogo } from "@/components/BrandLogo";
 import { loginSchema, type LoginFormValues } from "@/lib/validation/auth";
 import { getApiErrorCode, getApiErrorMessage } from "@/api/errors";
 import { APP_NAME } from "@/lib/constants";
@@ -73,12 +73,28 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            {APP_NAME}
-          </CardTitle>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-secondary via-background to-background p-4">
+      {/* Soft brand glow accents */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-brand-amber/20 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-brand-coral/10 blur-3xl"
+      />
+
+      <Card className="relative w-full max-w-sm border-border/60 shadow-xl shadow-brand-amber/5">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col items-center gap-3">
+            <BrandLogo
+              variant="mark"
+              decorative
+              className="h-16 w-16 drop-shadow-sm"
+            />
+            <BrandLogo variant="wordmark" decorative className="h-8 w-auto" />
+            <h1 className="sr-only">{APP_NAME}</h1>
+          </div>
           <CardDescription className="text-center">
             Sign in to your account
           </CardDescription>

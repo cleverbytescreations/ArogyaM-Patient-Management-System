@@ -5,6 +5,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Nav } from "./Nav";
+import { BrandLogo } from "./BrandLogo";
 import { useAuth } from "@/auth/AuthContext";
 import { useSessionTimeout } from "@/lib/session";
 import { APP_NAME } from "@/lib/constants";
@@ -43,9 +44,10 @@ export function AppShell({ children }: AppShellProps) {
         <div className="flex h-16 items-center justify-between px-4 border-b">
           <Link
             to="/"
-            className="font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            aria-label={`${APP_NAME} — go to dashboard`}
+            className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {APP_NAME}
+            <BrandLogo variant="wordmark" className="h-7 w-auto" />
           </Link>
           <Button
             variant="ghost"

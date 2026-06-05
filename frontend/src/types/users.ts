@@ -17,6 +17,7 @@ export interface User {
   mobile: string | null;
   roles: RoleCode[];
   is_doctor: boolean;
+  is_superuser: boolean;
   status: UserStatus;
   version: number;
   created_at: string;

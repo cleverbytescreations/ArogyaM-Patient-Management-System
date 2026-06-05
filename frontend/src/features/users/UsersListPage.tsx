@@ -146,14 +146,16 @@ export function UsersListPage() {
       className: "text-right",
       render: (user) => (
         <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => openEdit(user)}
-            aria-label={`Edit ${user.full_name}`}
-          >
-            Edit
-          </Button>
+          {!user.is_superuser && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openEdit(user)}
+              aria-label={`Edit ${user.full_name}`}
+            >
+              Edit
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -162,23 +164,25 @@ export function UsersListPage() {
           >
             <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => openStatusToggle(user)}
-            className={
-              user.status === "ACTIVE"
-                ? "text-destructive hover:text-destructive"
-                : "text-green-600 hover:text-green-700"
-            }
-            aria-label={
-              user.status === "ACTIVE"
-                ? `Disable ${user.full_name}`
-                : `Enable ${user.full_name}`
-            }
-          >
-            {user.status === "ACTIVE" ? "Disable" : "Enable"}
-          </Button>
+          {!user.is_superuser && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openStatusToggle(user)}
+              className={
+                user.status === "ACTIVE"
+                  ? "text-destructive hover:text-destructive"
+                  : "text-green-600 hover:text-green-700"
+              }
+              aria-label={
+                user.status === "ACTIVE"
+                  ? `Disable ${user.full_name}`
+                  : `Enable ${user.full_name}`
+              }
+            >
+              {user.status === "ACTIVE" ? "Disable" : "Enable"}
+            </Button>
+          )}
         </div>
       ),
     },

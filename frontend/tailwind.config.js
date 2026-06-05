@@ -43,6 +43,12 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        brand: {
+          amber: "hsl(var(--brand-amber))",
+          "amber-light": "hsl(var(--brand-amber-light))",
+          coral: "hsl(var(--brand-coral))",
+          navy: "hsl(var(--brand-navy))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

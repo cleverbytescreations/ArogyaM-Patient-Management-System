@@ -122,6 +122,7 @@ class UserOut(BaseModel):
     full_name: str
     status: str
     is_doctor: bool
+    is_superuser: bool = False
     roles: list[str] = Field(default_factory=list)
     version: int
     created_at: datetime

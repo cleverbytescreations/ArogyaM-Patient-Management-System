@@ -42,6 +42,7 @@ def _to_out(user: User) -> UserOut:
         full_name=user.full_name,
         status=user.status,
         is_doctor=user.is_doctor,
+        is_superuser=user.is_superuser,
         roles=_user_role_codes(user),
         version=user.version,
         created_at=user.created_at,
@@ -156,6 +157,8 @@ def update_user(
         raise NotFoundError(f"User {user_id} not found")
     if user.version != body.version:
         raise VersionConflictError("Record was modified by another request; reload and retry")
+    if user.is_superuser and (body.role_codes is not None or body.is_doctor is not None):
+        raise ConflictError("The super-user account's roles and doctor flag cannot be changed")
 
     old_roles = _user_role_codes(user)
     old_snap = {
@@ -229,6 +232,8 @@ def set_user_status(
     user = user_repo.get_user_by_id(db, user_id)
     if user is None:
         raise NotFoundError(f"User {user_id} not found")
+    if user.is_superuser:
+        raise ConflictError("The super-user account cannot be disabled")
     if str(user.id) == str(actor_id) and body.status == "DISABLED":
         raise ConflictError("You cannot disable your own account")
 

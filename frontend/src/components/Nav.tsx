@@ -71,7 +71,7 @@ export function Nav({ onNavigate }: { onNavigate?: () => void }) {
                   "hover:bg-accent hover:text-accent-foreground",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   isActive
-                    ? "bg-accent text-accent-foreground"
+                    ? "bg-primary/10 text-primary shadow-[inset_3px_0_0_0] shadow-primary"
                     : "text-muted-foreground"
                 )
               }
