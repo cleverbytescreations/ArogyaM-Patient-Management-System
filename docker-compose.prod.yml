@@ -229,7 +229,9 @@ services:
     image: ${REGISTRY}/${FRONTEND_IMAGE:-arogyam-frontend}:${IMAGE_TAG:-latest}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      # Use 127.0.0.1 (not localhost): busybox wget resolves localhost to ::1,
+      # but the frontend's nginx only listens on IPv4 by default -> always unhealthy.
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
