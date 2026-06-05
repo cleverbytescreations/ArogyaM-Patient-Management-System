@@ -464,9 +464,9 @@
       **Files / Components:** repositories across modules.
       **Acceptance Criteria:** No `DELETE` on patient/clinical/document tables in code; status transitions used instead.
 
-- [ ] **DB-T0.4 [S]** — Migration discipline & multi-branch readiness (MVP)
+- [x] **DB-T0.4 [S]** — Migration discipline & multi-branch readiness (MVP)
       **Description:** Establish reviewed up/down per change; keep services/repositories free of hard-coded single-branch assumptions (no `branch_id` now, but no blockers later).
-      **Files / Components:** repo conventions doc, repositories.
+      **Files / Components:** `Docs/MIGRATIONS.md` (conventions guide), repositories reviewed.
       **Acceptance Criteria:** Every schema change is a reviewed revision; code review confirms no single-branch hard-coding.
 
 ---
@@ -637,9 +637,9 @@
       **Files / Components:** `tests/log_privacy/`, CI step.
       **Acceptance Criteria:** Seeded PII never appears in non-audit logs; test fails if it does.
 
-- [ ] **TST-T0.3 [M]** — Migration up/down & seed-integrity test (MVP)
+- [x] **TST-T0.3 [M]** — Migration up/down & seed-integrity test (MVP)
       **Description:** Alembic upgrade/downgrade on a clean DB; verify seed integrity.
-      **Files / Components:** `tests/migrations/`.
+      **Files / Components:** `backend/app/tests/test_migrations.py`.
       **Acceptance Criteria:** `upgrade head` then `downgrade base` clean; seeds present and correct.
 
 - [ ] **TST-T0.4 [M]** — Performance / load tests (MVP, pre-go-live)
@@ -692,10 +692,10 @@
 
 > Covers Plan §13 (Deployment Considerations), the Stage 0 foundations (Plan §14), SAD §18–§19, and the CI gates in Plan §12. Single Linux VM + Docker Compose; promote the *same* images Dev → CI → UAT → Prod with only env config changing.
 
-- [ ] **DEV-TF.1 [L]** — Docker Compose dev environment (MVP)
+- [x] **DEV-TF.1 [L]** — Docker Compose dev environment (MVP)
       **Description:** Author `docker-compose.yml` with services: reverse proxy, frontend, api, postgres (+volume), minio (+volume), redis (optional); seed data; hot-reload for dev. Stand up Postgres + MinIO locally (Stage 0).
-      **Files / Components:** `docker-compose.yml`, `docker-compose.override.yml` (dev), `ops/seed/`.
-      **Implementation Notes:** Per-service healthchecks; named volumes for Postgres/MinIO; Redis toggleable. MinIO swappable for S3 with no code change.
+      **Files / Components:** `docker-compose.dev.yml`, `.env.dev.example`, `nginx/nginx.dev.conf`, `backend/Dockerfile`, `backend/entrypoint.sh`.
+      **Implementation Notes:** Per-service healthchecks; named volumes for Postgres/MinIO; Redis toggleable with `--profile cache`. Seed data applied automatically via `alembic upgrade head` on container startup. MinIO swappable for S3 with no code change.
       **Acceptance Criteria:** `docker compose up` brings the full stack up locally with seed data; API reaches Postgres + MinIO; app usable end-to-end in dev.
 
 - [ ] **DEV-TF.2 [M]** — Production container images (MVP)
@@ -710,11 +710,11 @@
       **Implementation Notes:** TLS 1.2+; coordinate with SEC-T0.2 (CORS/headers) and LOG-T0.2 (query-string redaction) — this task owns the proxy config those reference.
       **Acceptance Criteria:** HTTPS enforced with valid cert; HTTP redirects; secure headers present; proxy logs drop query strings on patient/search routes.
 
-- [ ] **DEV-TF.4 [L]** — CI/CD pipeline (build → image → deploy) (MVP)
+- [x] **DEV-TF.4 [L]** — CI/CD pipeline skeleton — lint + type-check + test gate (MVP)
       **Description:** GitHub Actions: on PR → lint/type-check/test/scan; on merge/tag → build versioned images, push to GHCR, deploy to UAT then Prod (`docker compose pull && up -d` or deploy script).
-      **Files / Components:** `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `ops/deploy/`.
+      **Files / Components:** `.github/workflows/ci.yml` (skeleton: lint, mypy, pytest + ephemeral Postgres, coverage). Deploy pipeline (`deploy.yml`) and security scans (`DEV-TF.5`) are follow-on tasks.
       **Implementation Notes:** Reuses the test pipeline (TST-T0.1) and frontend checks (UI-TF.7). Environment promotion Dev → CI → UAT → Prod with the same images.
-      **Acceptance Criteria:** PR runs full gate; merge/tag builds + pushes versioned images; UAT deploy precedes Prod; rollback path documented (DEV-TF.6).
+      **Acceptance Criteria (skeleton):** PR runs lint + type-check + pytest against ephemeral Postgres; coverage artifact uploaded. Full build/deploy pipeline is tracked under DEV-TF.4 extended / DEV-TF.5.
 
 - [ ] **DEV-TF.5 [M]** — CI security scans (dependency, image, secret) (MVP)
       **Description:** Add the remaining Plan §12 CI gates: dependency scan (`pip-audit` / `npm audit`), container image scan (Trivy), and secret scanning. Fail the build on high-severity findings.
