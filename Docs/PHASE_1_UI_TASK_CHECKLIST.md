@@ -25,63 +25,63 @@
 
 ### Module 0 — Frontend Foundation (blocks all screens)
 
-- [ ] **UI-TF.1 [M]** — Scaffold Vite + React + TS + MUI app (MVP)
+- [x] **UI-TF.1 [M]** — Scaffold Vite + React + TS + MUI app (MVP)
       **Description:** Create the frontend project per Plan §2.3 (`api/`, `auth/`, `components/`, `features/`, `routes/`, `lib/`) with TypeScript strict, MUI theme, ESLint/Prettier.
       **Files / Components:** `frontend/package.json`, `frontend/vite.config.ts`, `frontend/src/main.tsx`, `frontend/src/App.tsx`, `frontend/src/theme.ts`.
       **Implementation Notes:** One `features/` folder per backend module. Strict TS (`tsc` clean). MUI base theme with AA-contrast palette.
       **Acceptance Criteria:** App builds and runs; `tsc` + `eslint` clean; folder structure matches Plan §2.3.
 
-- [ ] **UI-TF.2 [L]** — Axios client with JWT interceptor & auto-refresh (MVP)
+- [x] **UI-TF.2 [L]** — Axios client with JWT interceptor & auto-refresh (MVP)
       **Description:** Implement a typed axios instance: attach access token, auto-refresh on 401, redirect to login on refresh failure; standard error-envelope parsing; `X-Request-ID` passthrough.
       **Files / Components:** `frontend/src/api/client.ts`, `frontend/src/api/interceptors.ts`, `frontend/src/api/errors.ts`.
       **Implementation Notes:** Decode `{ error: { code, message, details, request_id } }`; surface field-level 422 details to forms. No patient data persisted beyond session storage.
       **Acceptance Criteria:** Expired access token auto-refreshes transparently; failed refresh redirects to login; error envelope parsed consistently.
 
-- [ ] **UI-TF.3 [M]** — Auth context, token store & route guards (MVP)
+- [x] **UI-TF.3 [M]** — Auth context, token store & route guards (MVP)
       **Description:** Auth context + session token storage; `usePermissions()` hook; `<RequireAuth>` / `<RequirePermission>` route guards; role-gated routing.
       **Files / Components:** `frontend/src/auth/AuthContext.tsx`, `.../tokenStore.ts`, `.../usePermissions.ts`, `frontend/src/routes/`.
       **Implementation Notes:** Permissions fetched from `GET /me/permissions` — never hard-code the matrix. UI gating mirrors but does not replace server enforcement.
       **Acceptance Criteria:** Unauthenticated access redirects to login; users without a permission cannot reach/see gated routes/actions; permissions sourced from API.
 
-- [ ] **UI-TF.4 [L]** — Shared component library (MVP)
+- [x] **UI-TF.4 [L]** — Shared component library (MVP)
       **Description:** Build reusable components: data table (pagination/sort/filter), form wrapper with field-level zod validation, file upload (client-side type/size pre-check), confirmation dialog, timeline component, toast/error display, masked-field display.
       **Files / Components:** `frontend/src/components/DataTable.tsx`, `.../FormWrapper.tsx`, `.../FileUpload.tsx`, `.../ConfirmDialog.tsx`, `.../Timeline.tsx`, `.../Toast.tsx`.
       **Implementation Notes:** Table consumes the `{items,total,page,page_size}` envelope. Upload pre-checks pdf/jpeg/png + size before sending. All components AA-accessible.
       **Acceptance Criteria:** Components reused across features; table paginates server-side; upload rejects bad type/size client-side; all keyboard-navigable.
 
-- [ ] **UI-TF.5 [M]** — App shell, role-based navigation & session timeout (MVP)
+- [x] **UI-TF.5 [M]** — App shell, role-based navigation & session timeout (MVP)
       **Description:** App layout (header, role-filtered menu, content area), inactivity/session-timeout handling, global 409-conflict reload prompt pattern.
       **Files / Components:** `frontend/src/components/AppShell.tsx`, `.../Nav.tsx`, `frontend/src/lib/session.ts`.
       **Implementation Notes:** Menu items hidden by permission. Inactivity timeout configurable; clears session (no patient data cached beyond session). 409 → standardized reload dialog.
       **Acceptance Criteria:** Menu reflects role; idle timeout logs out & clears state; 409 anywhere prompts reload.
 
-- [ ] **UI-TF.6 [M]** — zod schemas, formatting & constants (MVP)
+- [x] **UI-TF.6 [M]** — zod schemas, formatting & constants (MVP)
       **Description:** Shared zod validation schemas mirroring API rules, formatters (dates ISO-8601, masked mobile), and constants; master-data-driven select options via `GET /master-data/{type}`.
       **Files / Components:** `frontend/src/lib/validation/`, `frontend/src/lib/format.ts`, `frontend/src/lib/constants.ts`.
       **Implementation Notes:** Never hard-code lookup codes — fetch live from master-data. Min-identity rule reflected client-side as a friendly hint (server authoritative).
       **Acceptance Criteria:** Forms validate against zod before submit; selects populated from master-data; dates rendered/sent ISO-8601.
 
-- [ ] **UI-TF.7 [S]** — CI: lint, type-check & accessibility checks (MVP)
+- [x] **UI-TF.7 [S]** — CI: lint, type-check & accessibility checks (MVP)
       **Description:** Wire eslint + tsc + automated a11y (jest-axe/Playwright-axe) on key screens into CI.
       **Files / Components:** `frontend/.eslintrc`, CI workflow, `frontend/src/**/*.a11y.test.tsx`.
       **Acceptance Criteria:** CI fails on lint/type/a11y violations on key screens.
 
 ### Module 1 — Login & Auth Shell (UC-01)
 
-- [ ] **UI-T1.1 [M]** — Login screen (MVP)
+- [x] **UI-T1.1 [M]** — Login screen (MVP)
       **Description:** Build the login form (username + password) calling `POST /auth/login`, storing tokens, redirecting to the dashboard/search.
       **Files / Components:** `frontend/src/features/auth/LoginPage.tsx`.
       **Implementation Notes:** Show a single generic error on bad credentials (no enumeration); surface lockout (`AUTH_ACCOUNT_LOCKED`) and disabled (`AUTH_ACCOUNT_DISABLED`) messages; handle `429` with retry hint. Accessible labels + focus order.
       **Acceptance Criteria:** Valid login authenticates and routes in; bad credentials show generic message; locked/disabled/throttled states handled; keyboard-navigable.
 
-- [ ] **UI-T1.2 [S]** — Logout & current-user menu (MVP)
+- [x] **UI-T1.2 [S]** — Logout & current-user menu (MVP)
       **Description:** User menu showing `GET /me` identity; logout calls `POST /auth/logout` and clears session.
       **Files / Components:** `frontend/src/features/auth/UserMenu.tsx`.
       **Acceptance Criteria:** Logout revokes token and returns to login; user identity/roles shown.
 
 ### Module 1b — User Management (UC-02, Admin)
 
-- [ ] **UI-T1.3 [L]** — User Management screen (MVP)
+- [x] **UI-T1.3 [L]** — User Management screen (MVP)
       **Description:** Admin screen to list/search users (`?status=`, `?q=`, `?is_doctor=`), create, edit (roles, version-checked), enable/disable, reset password.
       **Files / Components:** `frontend/src/features/users/UsersListPage.tsx`, `.../UserFormDialog.tsx`, `.../ResetPasswordDialog.tsx`.
       **Implementation Notes:** Gated by `manage_users`. Roles from `GET /roles`. Duplicate username/email → inline 409 message; stale version → reload prompt. Confirmation dialog for disable/reset.

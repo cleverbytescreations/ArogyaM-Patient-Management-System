@@ -3,7 +3,6 @@ import { NavLink } from "react-router-dom";
 import {
   Users,
   FileText,
-  ShieldCheck,
   HardDrive,
   Activity,
 } from "lucide-react";
@@ -83,25 +82,6 @@ export function Nav({ onNavigate }: { onNavigate?: () => void }) {
           </li>
         ))}
       </ul>
-      <div className="mt-4 border-t pt-4">
-        <NavLink
-          to="/users/security"
-          className={({ isActive }) =>
-            cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              "hover:bg-accent hover:text-accent-foreground",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              isActive
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground"
-            )
-          }
-          onClick={onNavigate}
-        >
-          <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-          Security Settings
-        </NavLink>
-      </div>
     </nav>
   );
 }

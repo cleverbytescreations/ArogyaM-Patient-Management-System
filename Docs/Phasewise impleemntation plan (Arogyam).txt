@@ -1213,7 +1213,11 @@ Objective:
 Review the recently generated/modified React UI code for possible errors, security issues, syntax problems, architectural mismatches, and incomplete implementation. Fix all valid issues with minimal changes.
 
 Implemented task:
-Auth UI: T1.1, T1.2, T1.3, T1.4, T1.5, T1.6
+
+Frontend
+UI-TF.1–UI-TF.7 — Vite/React/MUI scaffold, axios+JWT interceptor, auth context + route guards, shared component library, app shell + role nav + session timeout, zod/format/constants, CI lint/type/a11y.
+UI-T1.1, UI-T1.2 — Login screen, logout/current-user menu.
+UI-T1.3 — User Management screen (admin).
 
 Review and fix:
 - React/TS syntax errors

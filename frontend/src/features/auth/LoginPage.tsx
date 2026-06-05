@@ -134,8 +134,8 @@ export function LoginPage() {
                       <FormLabel>
                         Password <span aria-hidden="true">*</span>
                       </FormLabel>
-                      <FormControl>
-                        <div className="relative">
+                      <div className="relative">
+                        <FormControl>
                           <Input
                             {...field}
                             type={showPassword ? "text" : "password"}
@@ -145,25 +145,25 @@ export function LoginPage() {
                             placeholder="Enter your password"
                             className="pr-10"
                           />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                            onClick={() => setShowPassword((v) => !v)}
-                            aria-label={
-                              showPassword ? "Hide password" : "Show password"
-                            }
-                            tabIndex={0}
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                            ) : (
-                              <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                            )}
-                          </Button>
-                        </div>
-                      </FormControl>
+                        </FormControl>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword((v) => !v)}
+                          aria-label={
+                            showPassword ? "Hide password" : "Show password"
+                          }
+                          tabIndex={0}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                          )}
+                        </Button>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -214,6 +214,23 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev down -v   # wipes v
 > Dockerfiles exposing `dev` build stages), comment those two services out and
 > bring up just `db` + `minio` + `createbuckets` to develop against the data tier.
 
+> **Frontend dependency changes — recreate the `node_modules` volume.**
+> The `frontend` service bind-mounts `./frontend` over `/app` and keeps
+> `/app/node_modules` as an *anonymous volume* (so host `node_modules` doesn't
+> shadow the container's). That volume persists across rebuilds, so after anyone
+> adds/updates a dependency in `frontend/package.json` (e.g. Tailwind), a plain
+> `up --build` keeps the **stale** `node_modules` and the dev server fails with
+> errors like `Failed to load PostCSS config: Cannot find module 'tailwindcss'`.
+> Fix by renewing the anonymous volume so the freshly built deps are used:
+>
+> ```bash
+> docker compose -f docker-compose.dev.yml --env-file .env.dev \
+>   up -d --build --renew-anon-volumes frontend
+> ```
+>
+> (`down -v` also clears it, but that additionally wipes the Postgres/MinIO data
+> volumes — prefer `--renew-anon-volumes` when you only need to refresh deps.)
+
 ---
 
 ## 4. Quick start — Production

@@ -19,6 +19,10 @@ export default defineConfig({
       clientPort: 8080,
     },
   },
+  // Under Vitest, use an inline empty PostCSS config so Vite never resolves
+  // postcss.config.js (which requires tailwindcss). This keeps tests runnable
+  // in environments where Tailwind isn't installed (e.g. the Docker test image).
+  css: process.env.VITEST ? { postcss: { plugins: [] } } : undefined,
   test: {
     globals: true,
     environment: "jsdom",
