@@ -23,3 +23,5 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev down -v
 
 ref
 https://www.kyndryl.com/in/en/services/applications
+
+admin / Admin@12345
