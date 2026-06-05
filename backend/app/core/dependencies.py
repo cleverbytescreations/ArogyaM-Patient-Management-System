@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends, status
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
@@ -16,11 +16,14 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.errors import AccountDisabledError, AuthError, ForbiddenError
 from app.core.security import TOKEN_TYPE_ACCESS, decode_token
+from app.core.tokens import is_denied
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-def _get_token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)]) -> str:
+def _get_token(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+) -> str:
     if not credentials:
         raise AuthError("Authentication required")
     return credentials.credentials
@@ -33,10 +36,13 @@ def get_current_user(
     """Decode the JWT and load the user. Returns the token payload dict."""
     try:
         payload = decode_token(token)
-    except JWTError:
-        raise AuthError("Token is invalid or expired")
+    except JWTError as exc:
+        raise AuthError("Token is invalid or expired") from exc
 
     if payload.get("type") != TOKEN_TYPE_ACCESS:
+        raise AuthError("Token is invalid or expired")
+
+    if is_denied(payload.get("jti")):
         raise AuthError("Token is invalid or expired")
 
     user_id: str | None = payload.get("sub")
@@ -45,6 +51,7 @@ def get_current_user(
 
     # Load user from DB to confirm active status (handles mid-session disable/lock)
     from app.modules.auth.repository import get_user_by_id
+
     user = get_user_by_id(db, user_id)
     if user is None:
         raise AuthError("Token is invalid or expired")
@@ -72,9 +79,7 @@ def require_permission(*permissions: str):
         for perm in permissions:
             if perm in user_perms:
                 return payload
-        raise ForbiddenError(
-            f"Permission required: {', '.join(permissions)}"
-        )
+        raise ForbiddenError(f"Permission required: {', '.join(permissions)}")
 
     return _check
 

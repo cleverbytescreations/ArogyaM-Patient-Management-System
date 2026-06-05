@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-import traceback
 from typing import Any
 
 SENSITIVE_KEYS: frozenset[str] = frozenset(
@@ -53,7 +52,9 @@ ALLOWED_EXTRA_KEYS: frozenset[str] = frozenset(
 
 def _redact(value: Any) -> Any:
     if isinstance(value, dict):
-        return {k: "***REDACTED***" if k in SENSITIVE_KEYS else _redact(v) for k, v in value.items()}
+        return {
+            k: "***REDACTED***" if k in SENSITIVE_KEYS else _redact(v) for k, v in value.items()
+        }
     if isinstance(value, list):
         return [_redact(item) for item in value]
     return value

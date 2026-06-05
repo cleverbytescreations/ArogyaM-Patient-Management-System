@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.modules.auth.models import Role, User, UserRole
+from app.modules.auth.models import User, UserRole
 
 
 def get_user_by_id(db: Session, user_id: str | uuid.UUID) -> User | None:
@@ -33,19 +33,26 @@ def email_exists(db: Session, email: str, exclude_id: uuid.UUID | None = None) -
     return db.execute(stmt).first() is not None
 
 
+# Columns clients may sort the user list by (M5 / BE-TF.9 allow-list).
+SORTABLE_FIELDS = {"full_name", "username", "email", "status", "created_at", "last_login_at"}
+
+
 def list_users(
     db: Session,
     *,
     q: str | None = None,
     is_doctor: bool | None = None,
     status: str | None = None,
+    sort: str = "full_name",
+    descending: bool = False,
     limit: int = 20,
     offset: int = 0,
 ) -> tuple[list[User], int]:
+    sort_col = getattr(User, sort if sort in SORTABLE_FIELDS else "full_name")
     stmt = (
         select(User)
         .options(selectinload(User.user_roles).selectinload(UserRole.role))
-        .order_by(User.full_name)
+        .order_by(sort_col.desc() if descending else sort_col.asc())
     )
     count_stmt = select(func.count(User.id))
 
@@ -78,7 +85,9 @@ def create_user(db: Session, user: User) -> User:
     return user
 
 
-def assign_roles(db: Session, user_id: uuid.UUID, role_ids: list[int], assigned_by: uuid.UUID | None) -> None:
+def assign_roles(
+    db: Session, user_id: uuid.UUID, role_ids: list[int], assigned_by: uuid.UUID | None
+) -> None:
     db.execute(
         UserRole.__table__.delete().where(UserRole.user_id == user_id)  # type: ignore[attr-defined]
     )

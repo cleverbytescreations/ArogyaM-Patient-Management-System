@@ -10,6 +10,11 @@ src = ["app"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+# Alembic migrations carry verbatim DDL/seed SQL string literals where the
+# 100-col limit harms readability; line-length is not enforced there.
+"app/migrations/versions/*.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.12"
 plugins = ["pydantic.mypy"]

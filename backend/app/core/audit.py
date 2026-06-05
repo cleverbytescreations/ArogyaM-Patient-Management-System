@@ -18,7 +18,9 @@ from app.core.logging import SENSITIVE_KEYS
 def _sanitize(obj: Any) -> Any:
     """Remove sensitive keys from dicts before storing in audit old/new JSON."""
     if isinstance(obj, dict):
-        return {k: "***REDACTED***" if k in SENSITIVE_KEYS else _sanitize(v) for k, v in obj.items()}
+        return {
+            k: "***REDACTED***" if k in SENSITIVE_KEYS else _sanitize(v) for k, v in obj.items()
+        }
     if isinstance(obj, list):
         return [_sanitize(i) for i in obj]
     return obj
@@ -77,6 +79,7 @@ def _to_json(obj: dict | None) -> str | None:
     if obj is None:
         return None
     import json
+
     return json.dumps(_sanitize(obj))
 
 
