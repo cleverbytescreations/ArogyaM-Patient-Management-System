@@ -227,7 +227,9 @@ services:
       frontend:
         condition: service_started
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost/healthz || exit 1"]
+      # Use 127.0.0.1 (not localhost): busybox wget resolves localhost to ::1,
+      # but nginx.dev.conf listens on IPv4 only -> would always report unhealthy.
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/healthz || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5

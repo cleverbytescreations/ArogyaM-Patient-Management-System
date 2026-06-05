@@ -53,9 +53,10 @@ Detailed design and planning documents live in [Docs/](Docs/):
   - Recommended: 4 vCPU / 8 GB RAM / 20 GB free disk
 
 > **Note:** The development stack is configured in [docker-compose.dev.yml](docker-compose.dev.yml).
-> The `api` and `frontend` services build from `./backend` and `./frontend`, which are added
-> in the application-code step. Until those directories exist, the data-layer services
-> (`db`, `minio`, `createbuckets`) will still come up on their own.
+> The `api` and `frontend` services build from [backend/](backend/) and [frontend/](frontend/),
+> which currently contain the Stage 0 foundation scaffold (FastAPI health/readiness API and a
+> React + Vite shell). Feature modules are layered on per the
+> [Phase 1 Implementation Plan](Docs/PHASE1_IMPLEMENTATION_PLAN.md).
 
 ## Installation & Startup (Development)
 
@@ -150,6 +151,6 @@ and restore helpers live in [scripts/](scripts/).
 ├── nginx/                     # Reverse proxy configs (dev + prod)
 ├── scripts/                   # Backup / restore helpers (DB + MinIO)
 ├── Docs/                      # Architecture, use cases, API spec, data model
-├── backend/                   # FastAPI app (added in the application-code step)
-└── frontend/                  # React SPA (added in the application-code step)
+├── backend/                   # FastAPI app (Stage 0 foundation scaffold)
+└── frontend/                  # React + Vite SPA (Stage 0 foundation scaffold)
 ```
