@@ -1068,12 +1068,11 @@ You need to descide the recommended H/W for dev and production
 
 Files to refer (if required - lazy loading):
 ---------------
-1. Docs/implementation-plan.md
+1. Docs/PHASE1_IMPLEMENTATION_PLAN.md
 2. Docs/DDL_DATAMODEL.sql
 3. Docs/PHASE_1_API_TASK_CHECKLIST.md
 4. Docs/PHASE_1_SPRINT_PLAN.md
-5. docker-compose-lite.yml
-6. docker-compose-db.yml
+5. docker-compose.dev.yml
 
 Objective:
 ----------

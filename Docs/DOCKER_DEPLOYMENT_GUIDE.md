@@ -84,20 +84,109 @@ Alpine images; bind mounts give hot reload without rebuilds.
 Indicative per-service limits (set in `.env.prod`, enforced via
 `deploy.resources.limits`):
 
-| Service | CPU | RAM |
-|---------|-----|-----|
-| db | 2.0 | 2 GB |
-| api | 1.5 | 1 GB |
-| minio | 1.0 | 1 GB |
-| redis | 0.5 | 384 MB |
-| frontend | 0.5 | 128 MB |
-| proxy | 0.5 | 128 MB |
+| Service | CPU | RAM | Notes |
+|---------|-----|-----|-------|
+| db | 2.0 | 2 GB | |
+| api | 2.0 | 1.5 GB | multi-worker FastAPI — see below |
+| minio | 1.0 | 1 GB | |
+| redis | 0.5 | 384 MB | |
+| frontend | 0.5 | 128 MB | static SPA via Nginx |
+| proxy | 0.5 | 128 MB | TLS edge |
 
-> Scaling path (SAD §23): vertical first (more CPU/RAM). The API is stateless, so
-> horizontal scaling behind the proxy is a later, no-rewrite step.
+**FastAPI workers (multi-core).** The `api` container runs several worker
+processes so it actually uses the multi-core CPU instead of pinning one core.
+The image entrypoint (Gunicorn/Uvicorn) reads the standard `WEB_CONCURRENCY`
+variable, which the compose file feeds from `API_WORKERS` in `.env.prod`:
+
+| VM size | vCPU | `API_WORKERS` | `API_CPU_LIMIT` | `API_MEM_LIMIT` |
+|---------|------|---------------|-----------------|-----------------|
+| Minimum | 2 | 2 | 1.5 | 1 GB |
+| Recommended | 4 | 4 | 2.0 | 1.5 GB |
+
+Rule of thumb for this I/O-bound API: `workers = (2 × vCPU) + 1`, then cap it so
+the worker count stays within `API_CPU_LIMIT` (roughly one worker per ~0.5 vCPU)
+and budget ~256 MB RAM per worker. Defaults ship tuned for the recommended box
+(4 workers); lower `API_WORKERS` to `2` on the minimum 2 vCPU VM.
+
+> Scaling path (SAD §23): vertical first (more CPU/RAM, then raise `API_WORKERS`).
+> The API is stateless, so horizontal scaling behind the proxy is a later,
+> no-rewrite step.
 
 **Host prerequisites:** 64-bit Linux, Docker Engine 24+ and the Docker Compose v2
 plugin, a DNS A/AAAA record pointing `DOMAIN` at the VM, and inbound 80/443 open.
+
+### 2.3 Database engine — why PostgreSQL, and how to make it lighter
+
+A recurring question is whether to swap PostgreSQL for something "lighter." The
+short answer: **keep Postgres and tune it down** — it is the recommended path for
+this system. The reasoning is recorded here so it does not get re-litigated.
+
+**Postgres is not the weight problem.** The `DB_MEM_LIMIT=2g` in `.env.prod` is a
+*ceiling, not consumption*. `postgres:16-alpine` idles at ~30–50 MB RAM and a few
+hundred MB on disk at our data scale (single branch, ≤30 peak users, modest
+data). "Lighter" here means a smaller ceiling, not real savings.
+
+**The schema is deeply Postgres-coupled.** `Docs/DDL_DATAMODEL.sql` depends on:
+
+- Extensions: `uuid-ossp`, `pgcrypto`, `pg_trgm`, `citext`
+- `tsvector` + GIN full-text search and `pg_trgm` fuzzy/partial patient search
+- `CITEXT` case-insensitive username/email
+- Triggers (`updated_at`; the concurrency-safe OP-number sequence, UC-29)
+- `TIMESTAMPTZ`, `SMALLSERIAL`, server-side UUID generation
+
+Switching engines means rewriting search, case-insensitivity, ID generation, and
+triggers — plus re-validation for a PHI system.
+
+**Options considered:**
+
+| Option | Lighter? | Verdict |
+|--------|----------|---------|
+| **Tune Postgres down** (lower limits + `shared_buffers`) | Yes, in practice | **Recommended** — keeps every feature, zero rewrite, smaller real footprint. |
+| **SQLite** (+ WAL, + SQLCipher for encryption-at-rest) | Yes, genuinely | Only real "light" engine, but big architectural cost — see below. |
+| **MariaDB / MySQL** | No | Comparable/heavier footprint *and* still a rewrite. No benefit. |
+| **DuckDB / embedded analytical** | Yes | Wrong tool — analytical, not transactional OLTP. |
+
+**Why SQLite is the only real contender — and its catch.** It would drop the
+separate `db` container (in-process file), but it collides with existing
+decisions:
+
+1. **Multi-worker API.** We run 4 FastAPI workers (`API_WORKERS`); SQLite is
+   single-writer, so concurrent worker writes serialize and hit `SQLITE_BUSY`.
+   WAL mode helps reads, not concurrent writes.
+2. **No network/container isolation.** The DB currently sits behind the API on
+   the internal `backend` network; SQLite becomes a file on a shared volume —
+   different backup, locking, and access model.
+3. **Encryption at rest** needs SQLCipher (stock SQLite has none); not optional
+   for PHI.
+4. **Schema rewrite** of the Postgres-specific features listed above.
+
+**Recommended action — keep Postgres, make it lean.** In `.env.prod`:
+
+```diff
+- DB_MEM_LIMIT=2g
++ DB_MEM_LIMIT=1g        # or 512m on the 2-vCPU minimum box
+```
+
+…and pass conservative Postgres memory settings, e.g. add to the `db` service:
+
+```yaml
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=128MB"
+      - "-c"
+      - "effective_cache_size=512MB"
+      - "-c"
+      - "work_mem=8MB"
+      - "-c"
+      - "max_connections=50"        # size to API_WORKERS x pool + headroom
+```
+
+This yields the smaller footprint people are after while keeping full-text
+search, ACID, concurrent multi-worker writes, roles, and encryption options —
+with no schema rewrite. Reconsider SQLite only if the deployment ever becomes
+genuinely single-writer / read-mostly and the PHI encryption + schema-rewrite
+costs are accepted.
 
 ---
 
