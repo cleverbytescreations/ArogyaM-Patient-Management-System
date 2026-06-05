@@ -51,6 +51,15 @@ class Settings(BaseSettings):
     login_max_attempts: int = Field(default=5)
     login_lockout_min: int = Field(default=30)
 
+    # --- Bootstrap admin (auto-created on startup by migration 0003) ----------
+    # The super-user gets the ADMIN role => all permissions (see core/permissions).
+    # In production ADMIN_PASSWORD must be supplied; otherwise creation is skipped
+    # (use scripts/create_admin.py). In dev a fallback password is used.
+    admin_username: str = Field(default="admin")
+    admin_password: str = Field(default="")
+    admin_full_name: str = Field(default="System Administrator")
+    admin_email: str = Field(default="")
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_allow_origins.split(",") if o.strip()]

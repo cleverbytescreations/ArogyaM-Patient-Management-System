@@ -144,7 +144,7 @@ class TestBaselineMigration:
         assert "alembic_version" in inspector.get_table_names()
 
     def test_migration_head_applied(self, db_engine: Engine) -> None:
-        """Both revisions (0001 and 0002) must be recorded in alembic_version."""
+        """The latest revision (0003) must be recorded as the single applied head."""
         with db_engine.connect() as conn:
             rows = conn.execute(text("SELECT version_num FROM alembic_version")).fetchall()
         version_nums = {r[0] for r in rows}
@@ -152,7 +152,7 @@ class TestBaselineMigration:
         assert len(version_nums) == 1, (
             f"Expected exactly one alembic_version row, got {version_nums}"
         )
-        assert "0002" in version_nums, f"Expected head revision '0002', got {version_nums}"
+        assert "0003" in version_nums, f"Expected head revision '0003', got {version_nums}"
 
 
 # ── Seed data tests ───────────────────────────────────────────────────────────
@@ -230,6 +230,49 @@ class TestSeedMigration:
                 ).fetchall()
             }
         assert {"PENDING", "CONTACTED", "COMPLETED", "RESCHEDULED", "NOT_REACHABLE"} == codes
+
+
+# ── Bootstrap admin seed (migration 0003) ──────────────────────────────────────
+
+
+class TestAdminSeedMigration:
+    """Migration 0003 — the bootstrap super-user is created with the ADMIN role.
+
+    Runs against the migrated test DB (env defaults to non-production, so the
+    dev fallback password is used and the 'admin' user is created).
+    """
+
+    def test_admin_user_created(self, db_engine: Engine) -> None:
+        with db_engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT status, is_doctor FROM users WHERE username = 'admin'")
+            ).first()
+        assert row is not None, "Bootstrap admin user was not created by migration 0003"
+        assert row[0] == "ACTIVE"
+
+    def test_admin_has_admin_role(self, db_engine: Engine) -> None:
+        with db_engine.connect() as conn:
+            roles = {
+                r[0]
+                for r in conn.execute(
+                    text(
+                        "SELECT ro.code FROM users u "
+                        "JOIN user_roles ur ON ur.user_id = u.id "
+                        "JOIN roles ro ON ro.id = ur.role_id "
+                        "WHERE u.username = 'admin'"
+                    )
+                ).fetchall()
+            }
+        assert "ADMIN" in roles, f"Admin user missing ADMIN role; has {roles}"
+
+    def test_admin_password_is_hashed(self, db_engine: Engine) -> None:
+        with db_engine.connect() as conn:
+            pw_hash = conn.execute(
+                text("SELECT password_hash FROM users WHERE username = 'admin'")
+            ).scalar_one()
+        # bcrypt hashes start with $2; plaintext must never be stored.
+        assert pw_hash.startswith("$2"), "Admin password is not a bcrypt hash"
+        assert "Admin@12345" not in pw_hash
 
 
 # ── Round-trip migration test ─────────────────────────────────────────────────
