@@ -105,6 +105,10 @@ jobs:
       DATABASE_URL: postgresql+psycopg://arogyam:arogyam_ci_pw@localhost:5432/arogyam
       # Separate test DB so integration tests are isolated from any seeded data
       TEST_DATABASE_URL: postgresql+psycopg://arogyam:arogyam_ci_pw@localhost:5432/arogyam_test
+      # Reference DDL for the DDL↔migration parity drift guard (test_ddl_parity.py).
+      # Set explicitly so the test runs (and fails loudly) in CI instead of skipping
+      # if Docs/ is ever moved.
+      DDL_SQL_PATH: ${{ github.workspace }}/Docs/DDL_DATAMODEL.sql
       # JWT secret (non-sensitive dev placeholder for CI)
       JWT_SECRET_KEY: ci-only-not-a-real-secret-00000000000000000000000000000000
       JWT_ACCESS_TTL_MIN: "15"

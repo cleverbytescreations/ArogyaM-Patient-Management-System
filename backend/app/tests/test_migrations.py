@@ -20,7 +20,6 @@ import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Engine
 
-
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 _PROD_URL = os.environ.get(
@@ -81,7 +80,7 @@ EXPECTED_INDEXES = [
 ]
 
 SEED_LOOKUP_COUNTS = {
-    "consultation_category": 3,   # REGULAR, VILLAGE, CAMP
+    "consultation_category": 3,  # REGULAR, VILLAGE, CAMP
     "visit_type": 5,
     "document_type": 7,
     "follow_up_status": 5,
@@ -97,6 +96,7 @@ OP_SEQUENCE_PREFIXES = {"OPN", "OPV", "FC"}
 
 # ── Table existence tests ─────────────────────────────────────────────────────
 
+
 class TestBaselineMigration:
     """DB-T0.1 — all tables created by the baseline migration exist."""
 
@@ -110,9 +110,7 @@ class TestBaselineMigration:
     def test_index_exists(self, db_engine: Engine, index_name: str) -> None:
         with db_engine.connect() as conn:
             row = conn.execute(
-                text(
-                    "SELECT 1 FROM pg_indexes WHERE indexname = :name"
-                ),
+                text("SELECT 1 FROM pg_indexes WHERE indexname = :name"),
                 {"name": index_name},
             ).first()
         assert row is not None, f"Expected index '{index_name}' not found in DB"
@@ -120,24 +118,18 @@ class TestBaselineMigration:
     def test_set_updated_at_function_exists(self, db_engine: Engine) -> None:
         with db_engine.connect() as conn:
             row = conn.execute(
-                text(
-                    "SELECT 1 FROM pg_proc WHERE proname = 'set_updated_at'"
-                )
+                text("SELECT 1 FROM pg_proc WHERE proname = 'set_updated_at'")
             ).first()
         assert row is not None, "set_updated_at() trigger function not found"
 
     def test_pg_trgm_extension_enabled(self, db_engine: Engine) -> None:
         with db_engine.connect() as conn:
-            row = conn.execute(
-                text("SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm'")
-            ).first()
+            row = conn.execute(text("SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm'")).first()
         assert row is not None, "pg_trgm extension not installed"
 
     def test_citext_extension_enabled(self, db_engine: Engine) -> None:
         with db_engine.connect() as conn:
-            row = conn.execute(
-                text("SELECT 1 FROM pg_extension WHERE extname = 'citext'")
-            ).first()
+            row = conn.execute(text("SELECT 1 FROM pg_extension WHERE extname = 'citext'")).first()
         assert row is not None, "citext extension not installed"
 
     def test_uuid_ossp_extension_enabled(self, db_engine: Engine) -> None:
@@ -160,12 +152,11 @@ class TestBaselineMigration:
         assert len(version_nums) == 1, (
             f"Expected exactly one alembic_version row, got {version_nums}"
         )
-        assert "0002" in version_nums, (
-            f"Expected head revision '0002', got {version_nums}"
-        )
+        assert "0002" in version_nums, f"Expected head revision '0002', got {version_nums}"
 
 
 # ── Seed data tests ───────────────────────────────────────────────────────────
+
 
 class TestSeedMigration:
     """DB-T0.2 — lookup data seeded by the second migration is correct."""
@@ -176,10 +167,7 @@ class TestSeedMigration:
     ) -> None:
         with db_engine.connect() as conn:
             count = conn.execute(
-                text(
-                    "SELECT COUNT(*) FROM master_data "
-                    "WHERE type = :t AND is_active = TRUE"
-                ),
+                text("SELECT COUNT(*) FROM master_data WHERE type = :t AND is_active = TRUE"),
                 {"t": lookup_type},
             ).scalar()
         assert count == expected_count, (
@@ -211,19 +199,14 @@ class TestSeedMigration:
             non_zero = conn.execute(
                 text("SELECT COUNT(*) FROM op_sequence WHERE last_sequence != 0")
             ).scalar()
-        assert non_zero == 0, (
-            "Seeded op_sequence rows should start at last_sequence=0"
-        )
+        assert non_zero == 0, "Seeded op_sequence rows should start at last_sequence=0"
 
     def test_consultation_category_codes(self, db_engine: Engine) -> None:
         with db_engine.connect() as conn:
             codes = {
                 row[0]
                 for row in conn.execute(
-                    text(
-                        "SELECT code FROM master_data "
-                        "WHERE type = 'consultation_category'"
-                    )
+                    text("SELECT code FROM master_data WHERE type = 'consultation_category'")
                 ).fetchall()
             }
         assert {"REGULAR", "VILLAGE", "CAMP"} == codes
@@ -243,15 +226,14 @@ class TestSeedMigration:
             codes = {
                 row[0]
                 for row in conn.execute(
-                    text(
-                        "SELECT code FROM master_data WHERE type = 'follow_up_status'"
-                    )
+                    text("SELECT code FROM master_data WHERE type = 'follow_up_status'")
                 ).fetchall()
             }
         assert {"PENDING", "CONTACTED", "COMPLETED", "RESCHEDULED", "NOT_REACHABLE"} == codes
 
 
 # ── Round-trip migration test ─────────────────────────────────────────────────
+
 
 class TestMigrationRoundTrip:
     """TST-T0.3 skeleton — upgrade head → downgrade base → upgrade head must succeed.
@@ -309,9 +291,7 @@ class TestMigrationRoundTrip:
 
         inspector = inspect(rt_engine)
         app_tables = [t for t in inspector.get_table_names() if t != "alembic_version"]
-        assert app_tables == [], (
-            f"Tables remain after downgrade base: {app_tables}"
-        )
+        assert app_tables == [], f"Tables remain after downgrade base: {app_tables}"
 
     def test_upgrade_again_after_downgrade(self, rt_engine: Engine) -> None:
         """upgrade head after downgrade base must succeed (idempotent re-apply)."""
