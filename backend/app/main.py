@@ -1,22 +1,35 @@
-"""ArogyaM PMS API entrypoint.
+"""ArogyaM PMS API entrypoint (API-T0.1).
 
-Stage 0 foundation: wires config, CORS, logging and the health/readiness probes
-under the versioned `/api/v1` prefix. Feature modules (auth, patients, visits, …)
-are mounted here as they are built (Implementation Plan §3, §14).
+All routes are mounted under /api/v1. The app wires:
+  • Request-ID middleware
+  • Structured JSON logging with PII redaction
+  • Global error handlers producing the consistent error envelope
+  • Auth, User, Role, and Health routers
 """
 
 from __future__ import annotations
 
-import logging
-
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from jose import JWTError
 
 from app import __version__
 from app.api import health
 from app.core.config import settings
+from app.core.errors import (
+    AppError,
+    app_error_handler,
+    generic_error_handler,
+    jwt_error_handler,
+    validation_error_handler,
+)
+from app.core.logging import setup_logging
+from app.core.middleware import RequestIDMiddleware
+from app.modules.auth.router import router as auth_router
+from app.modules.users.router import roles_router, router as users_router
 
-logging.basicConfig(level=settings.log_level.upper())
+setup_logging(settings.log_level)
 
 API_PREFIX = "/api/v1"
 
@@ -24,9 +37,12 @@ app = FastAPI(
     title="ArogyaM Patient Management System API",
     version=__version__,
     docs_url="/docs",
+    redoc_url="/redoc",
     openapi_url=f"{API_PREFIX}/openapi.json",
 )
 
+# ── Middleware ─────────────────────────────────────────────────────────────────
+app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -35,7 +51,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Global exception handlers ──────────────────────────────────────────────────
+app.add_exception_handler(AppError, app_error_handler)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
+app.add_exception_handler(JWTError, jwt_error_handler)
+app.add_exception_handler(Exception, generic_error_handler)
+
+# ── Routers ────────────────────────────────────────────────────────────────────
 app.include_router(health.router, prefix=API_PREFIX)
+app.include_router(auth_router, prefix=API_PREFIX)
+app.include_router(users_router, prefix=API_PREFIX)
+app.include_router(roles_router, prefix=API_PREFIX)
 
 
 @app.get("/", include_in_schema=False)

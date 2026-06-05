@@ -37,14 +37,23 @@ class Settings(BaseSettings):
     cors_allow_origins: str = Field(default="http://localhost:8080")
     upload_max_mb: int = Field(default=10)
 
-    # --- Auth (placeholders wired in the auth stage) -------------------------
+    # --- Auth ----------------------------------------------------------------
     jwt_secret_key: str = Field(default="dev-only-change-me")
+    jwt_algorithm: str = Field(default="HS256")
     jwt_access_ttl_min: int = Field(default=15)
-    jwt_refresh_ttl_min: int = Field(default=1440)
+    jwt_refresh_ttl_min: int = Field(default=480)  # 8 h
+
+    # --- Login lockout -------------------------------------------------------
+    login_max_attempts: int = Field(default=5)
+    login_lockout_min: int = Field(default=30)
 
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_allow_origins.split(",") if o.strip()]
+
+    @property
+    def is_production(self) -> bool:
+        return self.env.lower() == "production"
 
 
 settings = Settings()

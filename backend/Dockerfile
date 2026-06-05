@@ -25,6 +25,10 @@ RUN python -m venv /app/.venv
 COPY requirements.txt ./
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
+# Entrypoint: runs `alembic upgrade head` then exec "$@" (the CMD).
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # -----------------------------------------------------------------------------
 # dev — source is bind-mounted at runtime; the COPY here only matters for a
 # standalone `docker build` (e.g. CI smoke build) without the compose mount.
@@ -32,4 +36,5 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 FROM base AS dev
 COPY . .
 EXPOSE 8000
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

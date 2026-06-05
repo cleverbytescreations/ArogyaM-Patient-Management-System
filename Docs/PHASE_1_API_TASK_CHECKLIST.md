@@ -22,55 +22,55 @@
 
 ### Module 0 — Foundation & Core (blocks all modules)
 
-- [ ] **BE-TF.1 [L]** — Scaffold FastAPI backend project (MVP)
+- [x] **BE-TF.1 [L]** — Scaffold FastAPI backend project (MVP)
       **Description:** Create the backend project skeleton per Plan §2.2 (`core/`, `modules/`, `migrations/`, `tests/`) with the modular-monolith layering `routers → services → repositories → models` and Pydantic schemas at the boundary.
       **Files / Components:** `backend/pyproject.toml`, `backend/app/__init__.py`, `backend/app/main.py`, `backend/app/core/`, `backend/app/modules/`, `backend/app/tests/`.
       **Implementation Notes:** Pin FastAPI, SQLAlchemy 2.x, Pydantic v2, Alembic, uvicorn, argon2/bcrypt, python-jose/pyjwt, boto3/minio, httpx (tests). Configure ruff (lint) and mypy (typing). No business logic in routers; no SQL outside repositories.
       **Acceptance Criteria:** App boots with `uvicorn`; `ruff` and `mypy` run clean on the skeleton; folder structure matches Plan §2.2.
 
-- [ ] **BE-TF.2 [M]** — Environment-driven configuration (MVP)
+- [x] **BE-TF.2 [M]** — Environment-driven configuration (MVP)
       **Description:** Implement `core/config.py` with a Pydantic `Settings` object reading all config from environment (DB URL, JWT secret + access/refresh TTLs, S3/MinIO creds + bucket, CORS origin, upload max size, allowed MIME types, rate-limit toggles).
       **Files / Components:** `backend/app/core/config.py`, `backend/.env.example`.
       **Implementation Notes:** No secrets in code or VCS (SAD §10). Provide sane dev defaults but require secrets via env. Expose typed settings singleton.
       **Acceptance Criteria:** Settings load from env; missing required secret fails fast at startup; `.env.example` documents every key with no real secret.
 
-- [ ] **BE-TF.3 [M]** — Database session & engine (MVP)
+- [x] **BE-TF.3 [M]** — Database session & engine (MVP)
       **Description:** Implement `core/db.py` — SQLAlchemy 2.x engine, session factory, FastAPI `get_db` dependency, `Base` declarative class. `echo=False` in prod (SAD §10.1 control #5).
       **Files / Components:** `backend/app/core/db.py`.
       **Implementation Notes:** Use a request-scoped session with proper commit/rollback/close; connection pool sized for ~15–30 concurrent users.
       **Acceptance Criteria:** A test endpoint can open a session, run a parameterized query, and close cleanly; `echo` is driven by env and off in prod profile.
 
-- [ ] **BE-TF.4 [L]** — Security primitives (MVP)
+- [x] **BE-TF.4 [L]** — Security primitives (MVP)
       **Description:** Implement `core/security.py` — password hashing (argon2/bcrypt), JWT issue/verify for access + refresh, refresh-token rotation, `jti` generation, claims builder per API spec §2.2.
       **Files / Components:** `backend/app/core/security.py`.
       **Implementation Notes:** Access TTL ~15 min, refresh ~8 h (configurable). Claims: `sub, username, roles[], permissions[], is_doctor, type, iat, exp, jti`. Keep a post-password extensibility seam for future MFA (Plan §8).
       **Acceptance Criteria:** Hash/verify round-trips; tokens encode/decode with expected claims; expired/invalid tokens rejected; refresh rotation returns a new `jti`.
 
-- [ ] **BE-TF.5 [L]** — Auth & RBAC dependencies (MVP)
+- [x] **BE-TF.5 [L]** — Auth & RBAC dependencies (MVP)
       **Description:** Implement `core/dependencies.py` — `get_current_user`, `require_active`, `require_permission(...)`, and record-level guard helpers. Deny-by-default.
       **Files / Components:** `backend/app/core/dependencies.py`, `backend/app/core/permissions.py` (static permission→role map).
       **Implementation Notes:** Central enforcement per endpoint + per record (SAD §11.3). Permission constants from API spec §2.3. Disabled/locked user with valid token → `403 AUTH_ACCOUNT_DISABLED`.
       **Acceptance Criteria:** Endpoint declaring `require_permission("x")` returns 403 for users lacking `x`; 401 for no/expired token; permission map matches SAD §11.2.
 
-- [ ] **BE-TF.6 [M]** — Structured logging + redaction filter (MVP)
+- [x] **BE-TF.6 [M]** — Structured logging + redaction filter (MVP)
       **Description:** Implement `core/logging.py` — JSON structured logging with an allow-listed field set and a central redaction filter (SAD §10.1).
       **Files / Components:** `backend/app/core/logging.py`.
       **Implementation Notes:** Allow-list only `request_id, user_id, role, method, route_template, status, latency`. Redact `name, mobile, email, address, dob, op_number, q` and clinical keys to `***REDACTED***`. Never serialize request/response bodies or ORM instances.
       **Acceptance Criteria:** Logging an object containing PII emits redacted output; route template (`/patients/{id}`) logged, not the resolved id. (Covered by LOG tests.)
 
-- [ ] **BE-TF.7 [M]** — Reusable audit-write helper (MVP)
+- [x] **BE-TF.7 [M]** — Reusable audit-write helper (MVP)
       **Description:** Implement `core/audit.py` — a service callable that writes an `audit_log` row with user, role snapshot, action, entity type/id, affected patient, old/new JSON, IP, user agent, `request_id`.
       **Files / Components:** `backend/app/core/audit.py`, `backend/app/modules/audit/`.
       **Implementation Notes:** Append-only; must participate in the caller's transaction so audit + change commit atomically. Old/new captured as JSON diffs.
       **Acceptance Criteria:** Calling the helper inside a service transaction persists one append-only row with the correct `request_id`; rollback of the business txn also rolls back the audit row.
 
-- [ ] **BE-TF.8 [M]** — Global error handling & response envelope (MVP)
+- [x] **BE-TF.8 [M]** — Global error handling & response envelope (MVP)
       **Description:** Implement `core/errors.py` — exception handlers producing the consistent envelope `{ "error": { code, message, details, request_id } }` mapped to HTTP codes (400/401/403/404/409/413/415/422/429/500/503).
       **Files / Components:** `backend/app/core/errors.py`, domain exception classes.
       **Implementation Notes:** Map app error codes per API spec §6.2. Generic 500 with `request_id` only — never leak internals/stack to client (SAD §10.1 control #6). 422 returns `details[]` of `{field, code, message}`.
       **Acceptance Criteria:** Each domain exception maps to the documented HTTP status + `error.code`; validation errors surface field-level detail; 500 leaks nothing.
 
-- [ ] **BE-TF.9 [M]** — Request-ID & pagination/middleware plumbing (MVP)
+- [x] **BE-TF.9 [M]** — Request-ID & pagination/middleware plumbing (MVP)
       **Description:** Add `X-Request-ID` correlation middleware (honor inbound or generate), echo header in responses, and shared pagination/sort/filter helpers returning the `{items,total,page,page_size}` envelope.
       **Files / Components:** `backend/app/core/middleware.py`, `backend/app/core/pagination.py`.
       **Implementation Notes:** `page` default 1, `page_size` default 20 / max 100; `sort`+`order` validated against an allow-list per resource.
@@ -78,31 +78,31 @@
 
 ### Module 1 — User & Access / RBAC
 
-- [ ] **BE-T1.1 [M]** — Auth domain models & schemas (MVP)
+- [x] **BE-T1.1 [M]** — Auth domain models & schemas (MVP)
       **Description:** SQLAlchemy models for `users`, `roles`, `user_roles`; Pydantic schemas `LoginRequest`, `RefreshRequest`, `TokenResponse`, `UserProfile`, `PermissionSet`, `User`, `UserCreateRequest`, `UserUpdateRequest`, `UserStatusUpdateRequest`, `PasswordResetRequest`, `Role`.
       **Files / Components:** `backend/app/modules/auth/models.py`, `.../auth/schemas.py`, `.../users/schemas.py`.
       **Implementation Notes:** `users` carries `status, failed_login_attempts, locked_until, password_changed_at, is_doctor, last_login_at, version`. Snake_case fields.
       **Acceptance Criteria:** Models map to DDL; schemas reject unknown fields; password never present in any response schema.
 
-- [ ] **BE-T1.2 [L]** — Login service with lockout & no-enumeration (MVP)
+- [x] **BE-T1.2 [L]** — Login service with lockout & no-enumeration (MVP)
       **Description:** Implement login: verify credentials against ACTIVE users; increment `failed_login_attempts`; set `locked_until` past threshold; reset counters on success; stamp `last_login_at`; issue tokens.
       **Files / Components:** `backend/app/modules/auth/service.py`, `.../auth/repository.py`.
       **Implementation Notes:** Always return generic `AUTH_INVALID_CREDENTIALS` for bad user OR password (UC-01). Locked → `AUTH_ACCOUNT_LOCKED`; disabled → `AUTH_ACCOUNT_DISABLED`. Audit login success + failure (LOG-T1.1).
       **Acceptance Criteria:** Wrong username and wrong password yield identical generic error; N failures lock the account; locked/disabled cannot authenticate; all attempts audited.
 
-- [ ] **BE-T1.3 [M]** — Token refresh & logout services (MVP)
+- [x] **BE-T1.3 [M]** — Token refresh & logout services (MVP)
       **Description:** Implement refresh-token rotation and logout (optional Redis denylist of `jti`).
       **Files / Components:** `backend/app/modules/auth/service.py`.
       **Implementation Notes:** Refresh validates token type + signature + expiry, rotates refresh, returns new pair. Logout adds `jti` to denylist if Redis enabled; otherwise relies on short TTL.
       **Acceptance Criteria:** Used/expired refresh rejected; rotated token differs; denylisted access token rejected when Redis on.
 
-- [ ] **BE-T1.4 [M]** — Current-user & permissions services (MVP)
+- [x] **BE-T1.4 [M]** — Current-user & permissions services (MVP)
       **Description:** Implement `GET /me` profile assembly and `GET /me/permissions` effective permission resolution from roles.
       **Files / Components:** `backend/app/modules/auth/service.py`.
       **Implementation Notes:** Effective permissions computed from `user_roles` → static permission map; include `is_doctor`. Frontend reads these (never hard-codes the matrix).
       **Acceptance Criteria:** `/me` returns identity + roles + permissions + `is_doctor`; `/me/permissions` matches the role mapping exactly.
 
-- [ ] **BE-T1.5 [L]** — User management service (MVP)
+- [x] **BE-T1.5 [L]** — User management service (MVP)
       **Description:** Implement user CRUD: create (with roles), update (version-checked, role change audited per UC-02 BR4), list/search (`?is_doctor=`, `?status=`, `?q=`), enable/disable status toggle, password reset (new hash + `password_changed_at` + clear lockout).
       **Files / Components:** `backend/app/modules/users/service.py`, `.../users/repository.py`, `.../users/router.py`.
       **Implementation Notes:** Admin-only (`manage_users`). Duplicate username/email → `409 RESOURCE_CONFLICT`. Disabling/locking immediately blocks auth. All three lifecycle actions audited.
@@ -321,13 +321,13 @@
 
 > Routers expose the services above. Each router declares `require_permission(...)`, validates with Pydantic schemas, returns documented envelopes, and registers OpenAPI metadata. All list routes accept `page,page_size,sort,order`.
 
-- [ ] **API-T1.1 [M]** — Auth & session routes (MVP)
+- [x] **API-T1.1 [M]** — Auth & session routes (MVP)
       **Description:** `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` (204), `GET /me`, `GET /me/permissions`.
       **Files / Components:** `backend/app/modules/auth/router.py`.
       **Implementation Notes:** login/refresh `security: []` (public); generic 401 on bad creds; `429` when rate-limited (SEC-T1.2).
       **Acceptance Criteria:** Matches API spec §7.1; tokens issued; logout returns 204; protected `/me` requires bearer.
 
-- [ ] **API-T1.2 [M]** — User & role routes (MVP)
+- [x] **API-T1.2 [M]** — User & role routes (MVP)
       **Description:** `GET/POST /users`, `GET/PUT /users/{id}`, `PUT /users/{id}/status`, `POST /users/{id}/reset-password`, `GET /roles`.
       **Files / Components:** `backend/app/modules/users/router.py`.
       **Implementation Notes:** Admin `manage_users` except `GET /roles` (authenticated). `?is_doctor=true` powers the doctor picker (no separate doctor table).
@@ -407,7 +407,7 @@
       **Files / Components:** `backend/app/modules/reports/router.py`.
       **Acceptance Criteria:** Matches API spec §7.13; date range required; exports audited; PDF format served when BE-T17.3 enabled.
 
-- [ ] **API-T0.1 [M]** — API conventions & envelope conformance (MVP)
+- [x] **API-T0.1 [M]** — API conventions & envelope conformance (MVP)
       **Description:** Enforce global conventions across all routers: `/api/v1` prefix, snake_case JSON, ISO-8601, UUID ids, paginated envelope, error envelope, `X-Request-ID`, `Idempotency-Key` (optional) on non-idempotent creates.
       **Files / Components:** `backend/app/main.py` (router registration), shared deps.
       **Acceptance Criteria:** All endpoints mounted under `/api/v1`; responses conform to §5 envelopes; conventions verified by integration tests.
@@ -416,19 +416,19 @@
 
 ## 3. Database Tasks
 
-- [ ] **DB-T0.1 [L]** — Alembic baseline migration from DDL (MVP)
+- [x] **DB-T0.1 [L]** — Alembic baseline migration from DDL (MVP)
       **Description:** Convert `Docs/DDL_DATAMODEL.sql` into the initial Alembic revision: extensions (`pg_trgm`, etc.), all tables, constraints, indexes, `set_updated_at()` trigger, and seed lookups.
       **Files / Components:** `backend/app/migrations/versions/0001_baseline.py`, `backend/alembic.ini`, `backend/app/migrations/env.py`.
       **Implementation Notes:** DDL file remains the human-readable reference; Alembic is source of truth. Up/down both provided.
       **Acceptance Criteria:** `alembic upgrade head` on a clean DB reproduces the DDL schema; `downgrade` reverses cleanly (migration test).
 
-- [ ] **DB-T0.2 [M]** — Seed data migration (MVP)
+- [x] **DB-T0.2 [M]** — Seed data migration (MVP)
       **Description:** Seed roles; master_data for consultation categories, visit/document types, follow-up statuses, blood groups, dietary prefs, marital status, gender, discharge conditions; `op_sequence` (OPN/OPV/FC).
       **Files / Components:** `backend/app/migrations/versions/0002_seed.py`.
       **Implementation Notes:** Codes/values per API spec §8.5 enum defaults.
       **Acceptance Criteria:** All lookups present after migrate; codes match spec; idempotent.
 
-- [ ] **DB-T0.3 [S]** — First-admin seed script (MVP)
+- [x] **DB-T0.3 [S]** — First-admin seed script (MVP)
       **Description:** Separate, non-committed script to create the first Administrator with a securely hashed password.
       **Files / Components:** `backend/scripts/create_admin.py`.
       **Implementation Notes:** Password supplied via env/prompt, hashed (argon2/bcrypt); never commit credentials.
@@ -587,12 +587,12 @@
 
 ## 7. Testing Tasks
 
-- [ ] **TST-T0.1 [L]** — Test harness & CI test pipeline (MVP)
+- [x] **TST-T0.1 [L]** — Test harness & CI test pipeline (MVP)
       **Description:** Set up pytest + httpx, ephemeral PostgreSQL (testcontainers/CI service), fixtures, factories, coverage reporting.
       **Files / Components:** `backend/app/tests/conftest.py`, CI workflow.
       **Acceptance Criteria:** `pytest` runs green in CI against ephemeral DB; coverage reported.
 
-- [ ] **TST-T1.1 [M]** — Auth & RBAC unit/integration tests (MVP)
+- [x] **TST-T1.1 [M]** — Auth & RBAC unit/integration tests (MVP)
       **Description:** Cover login lockout, no-enumeration, refresh rotation, logout, permission-map enforcement.
       **Files / Components:** `tests/auth/`.
       **Acceptance Criteria:** Wrong-user/wrong-password identical errors; lockout triggers; RBAC denies unauthorized; explicit RBAC coverage.
@@ -627,7 +627,7 @@
       **Files / Components:** `tests/duplicates/`.
       **Acceptance Criteria:** Merge reassigns children, soft-inactivates duplicate, retains alias, audits; explicit coverage required.
 
-- [ ] **TST-T1.2 [M]** — Security negative test suite (MVP)
+- [x] **TST-T1.2 [M]** — Security negative test suite (MVP)
       **Description:** AuthN/Z negatives (no token/expired/wrong role/disabled), no-enumeration, document access denial, SQL-injection attempts.
       **Files / Components:** `tests/security/`.
       **Acceptance Criteria:** All negative cases blocked with documented codes; injection attempts fail.

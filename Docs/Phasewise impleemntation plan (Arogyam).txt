@@ -1078,7 +1078,10 @@ Objective:
 ----------
 Implement the following task from the task list. If any task is already implemented, please validate the feature:
 
-<Task List>
+Backend / Core
+BE-TF.1–BE-TF.9 — scaffold, config, DB session, security primitives (JWT + hashing), auth & RBAC dependencies, structured logging + redaction, audit helper, error envelope, request-ID/pagination plumbing.
+BE-T1.1–BE-T1.5 — auth models/schemas, login with lockout & no-enumeration, refresh/logout, /me + permissions, user management (CRUD, enable/disable, reset password).
+API-T1.1, API-T1.2, API-T0.1 — auth/session routes, user/role routes, /api/v1 conventions & envelopes.
 
 
 Instructions:
@@ -1106,7 +1109,10 @@ Files to refer (if required - lazy loading):
 
 Task to review:
 ---------------
-Notifications spine (moved up from S5): T-B10.1, T-B10.2, T-B10.3, T-I4.13 (Module 1–4 event types only)
+Backend / Core
+BE-TF.1–BE-TF.9 — scaffold, config, DB session, security primitives (JWT + hashing), auth & RBAC dependencies, structured logging + redaction, audit helper, error envelope, request-ID/pagination plumbing.
+BE-T1.1–BE-T1.5 — auth models/schemas, login with lockout & no-enumeration, refresh/logout, /me + permissions, user management (CRUD, enable/disable, reset password).
+API-T1.1, API-T1.2, API-T0.1 — auth/session routes, user/role routes, /api/v1 conventions & envelopes.
 
 Objective:
 ----------
