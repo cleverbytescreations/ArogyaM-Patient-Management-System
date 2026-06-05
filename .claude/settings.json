@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(docker compose exec api pytest *)",
+      "Bash(docker compose exec api alembic *)",
+      "Bash(cd backend && ruff *)",
+      "Bash(cd backend && mypy *)",
+      "Bash(cd frontend && npx tsc *)",
+      "Bash(cd frontend && npm *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Edit(.claude/skills/**)",
+      "Edit(.claude/commands/**)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(rm -rf *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/prefer_lsp.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ts-diagnostics.sh"
+          },
+          {
+            "type": "command",
+            "command": "cd backend && ruff check app/ -q 2>&1 | head -15 || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '=== Session End ===' && echo 'Run /update-checklist to mark completed tasks.' && echo 'Run: git add -p && git commit' && echo '=================='"
+          }
+        ]
+      }
+    ]
+  }
+}

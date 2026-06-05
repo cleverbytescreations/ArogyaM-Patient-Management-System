@@ -23,5 +23,108 @@ letsencrypt/
 .DS_Store
 Thumbs.db
 *.swp
+*.swo
 .idea/
 .vscode/
+*.code-workspace
+
+# =============================================================================
+# Python (backend)
+# =============================================================================
+
+# Byte-compiled / optimised / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+MANIFEST
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env.bak
+pythonenv*/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+htmlcov/
+.cache
+nosetests.xml
+test-results/
+junit*.xml
+
+# Type checkers & linters
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Pytest
+.pytest_cache/
+pytestdebug.log
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Profiling
+*.prof
+*.lprof
+
+# =============================================================================
+# React / Node (frontend)
+# =============================================================================
+
+# Dependencies
+frontend/node_modules/
+node_modules/
+
+# Build output
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/out/
+
+# Vite
+frontend/.vite/
+
+# Test coverage
+frontend/coverage/
+
+# TypeScript incremental build
+*.tsbuildinfo
+frontend/*.tsbuildinfo
+
+# Storybook
+frontend/storybook-static/
+
+# Misc
+frontend/.eslintcache
+*.local
+
+# Claude Code user-specific settings (machine-local, not shared)
+.claude/settings.local.json
