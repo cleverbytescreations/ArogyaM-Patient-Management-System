@@ -34,7 +34,9 @@ def get_user_by_email(db: Session, email: str) -> User | None:
     return db.execute(stmt).scalar_one_or_none()
 
 
-def increment_failed_attempts(db: Session, user_id: uuid.UUID, locked_until: datetime | None) -> None:
+def increment_failed_attempts(
+    db: Session, user_id: uuid.UUID, locked_until: datetime | None
+) -> None:
     db.execute(
         update(User)
         .where(User.id == user_id)

@@ -8,6 +8,8 @@
 .env.*
 !.env.dev.example
 !.env.prod.example
+!.env.example
+!backend/.env.example
 
 # --- Backups & TLS material -------------------------------------------------
 /backups/

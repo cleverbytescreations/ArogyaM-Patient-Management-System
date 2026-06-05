@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -47,7 +46,9 @@ class TestUserCRUD:
         assert "password" not in data
         assert "password_hash" not in data
 
-    def test_create_user_duplicate_username(self, client: TestClient, admin_token: str, admin_user: User):
+    def test_create_user_duplicate_username(
+        self, client: TestClient, admin_token: str, admin_user: User
+    ):
         payload = {
             "username": admin_user.username,
             "full_name": "Duplicate",
@@ -67,7 +68,9 @@ class TestUserCRUD:
         assert resp.status_code == 403
 
     def test_create_user_no_auth(self, client: TestClient):
-        resp = client.post(BASE, json={"username": "x", "full_name": "x", "password": "xxxxxxxxxxx"})
+        resp = client.post(
+            BASE, json={"username": "x", "full_name": "x", "password": "xxxxxxxxxxx"}
+        )
         assert resp.status_code == 401
 
     def test_list_users(self, client: TestClient, admin_token: str, admin_user: User):
@@ -78,13 +81,30 @@ class TestUserCRUD:
         assert "total" in data
         assert data["total"] >= 1
 
-    def test_list_users_doctor_filter(self, client: TestClient, admin_token: str, doctor_user: User):
+    def test_list_users_doctor_filter(
+        self, client: TestClient, admin_token: str, doctor_user: User
+    ):
         resp = client.get(f"{BASE}?is_doctor=true", headers=_auth(admin_token))
         assert resp.status_code == 200
         data = resp.json()
         usernames = [u["username"] for u in data["items"]]
         assert doctor_user.username in usernames
         assert all(u["is_doctor"] for u in data["items"])
+
+    def test_list_users_sorted_by_username_desc(
+        self, client: TestClient, admin_token: str, admin_user: User
+    ):
+        resp = client.get(f"{BASE}?sort=username&order=desc", headers=_auth(admin_token))
+        assert resp.status_code == 200
+        usernames = [u["username"] for u in resp.json()["items"]]
+        assert usernames == sorted(usernames, reverse=True)
+
+    def test_list_users_invalid_sort_rejected(
+        self, client: TestClient, admin_token: str, admin_user: User
+    ):
+        resp = client.get(f"{BASE}?sort=password_hash", headers=_auth(admin_token))
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
 
     def test_get_user_by_id(self, client: TestClient, admin_token: str, admin_user: User):
         resp = client.get(f"{BASE}/{admin_user.id}", headers=_auth(admin_token))
@@ -154,7 +174,9 @@ class TestUserStatus:
         )
         user_id = create_resp.json()["id"]
 
-        resp = client.put(f"{BASE}/{user_id}/status", json={"status": "DISABLED"}, headers=_auth(admin_token))
+        resp = client.put(
+            f"{BASE}/{user_id}/status", json={"status": "DISABLED"}, headers=_auth(admin_token)
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "DISABLED"
 
@@ -170,8 +192,12 @@ class TestUserStatus:
         )
         user_id = create_resp.json()["id"]
 
-        client.put(f"{BASE}/{user_id}/status", json={"status": "DISABLED"}, headers=_auth(admin_token))
-        resp = client.put(f"{BASE}/{user_id}/status", json={"status": "ACTIVE"}, headers=_auth(admin_token))
+        client.put(
+            f"{BASE}/{user_id}/status", json={"status": "DISABLED"}, headers=_auth(admin_token)
+        )
+        resp = client.put(
+            f"{BASE}/{user_id}/status", json={"status": "ACTIVE"}, headers=_auth(admin_token)
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "ACTIVE"
 
@@ -216,6 +242,16 @@ class TestPasswordReset:
         resp = client.post(
             f"{BASE}/{admin_user.id}/reset-password",
             json={"new_password": "short"},
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 422
+
+    def test_reset_password_exceeds_bcrypt_limit(
+        self, client: TestClient, admin_token: str, admin_user: User
+    ):
+        resp = client.post(
+            f"{BASE}/{admin_user.id}/reset-password",
+            json={"new_password": "A" * 73},
             headers=_auth(admin_token),
         )
         assert resp.status_code == 422

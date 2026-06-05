@@ -10,21 +10,21 @@ Revises: (none — initial migration)
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 
 revision: str = "0001"
-down_revision: Union[str, Sequence[str], None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
-    op.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"")
-    op.execute("CREATE EXTENSION IF NOT EXISTS \"pg_trgm\"")
-    op.execute("CREATE EXTENSION IF NOT EXISTS \"citext\"")
+    op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+    op.execute('CREATE EXTENSION IF NOT EXISTS "pgcrypto"')
+    op.execute('CREATE EXTENSION IF NOT EXISTS "pg_trgm"')
+    op.execute('CREATE EXTENSION IF NOT EXISTS "citext"')
 
     op.execute("""
         CREATE OR REPLACE FUNCTION set_updated_at()
@@ -562,55 +562,104 @@ def upgrade() -> None:
 
     # ── indexes ───────────────────────────────────────────────────────────────
     op.execute("CREATE INDEX IF NOT EXISTS idx_patients_mobile        ON patients (mobile)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_patients_op_category   ON patients (op_category_code)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_patients_op_category   ON patients (op_category_code)"
+    )
     op.execute("CREATE INDEX IF NOT EXISTS idx_patients_status        ON patients (status)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_patients_registration  ON patients (registration_date)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_patients_registration  ON patients (registration_date)"
+    )
     op.execute("CREATE INDEX IF NOT EXISTS idx_patients_merged_into   ON patients (merged_into)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_patients_name_trgm     ON patients USING gin (full_name gin_trgm_ops)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_patients_search_vector ON patients USING gin (search_vector)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_patient_aliases_patient ON patient_aliases (patient_id)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_patients_name_trgm     ON patients USING gin (full_name gin_trgm_ops)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_patients_search_vector ON patients USING gin (search_vector)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_patient_aliases_patient ON patient_aliases (patient_id)"
+    )
     op.execute("CREATE INDEX IF NOT EXISTS idx_merge_requests_status    ON merge_requests (status)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_merge_requests_primary   ON merge_requests (primary_patient_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_merge_requests_duplicate ON merge_requests (duplicate_patient_id)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_merge_requests_primary   ON merge_requests (primary_patient_id)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_merge_requests_duplicate ON merge_requests (duplicate_patient_id)"
+    )
     op.execute("CREATE INDEX IF NOT EXISTS idx_visits_patient         ON visits (patient_id)")
     op.execute("CREATE INDEX IF NOT EXISTS idx_visits_doctor          ON visits (doctor_id)")
     op.execute("CREATE INDEX IF NOT EXISTS idx_visits_date            ON visits (visit_date)")
     op.execute("CREATE INDEX IF NOT EXISTS idx_case_sheets_patient    ON case_sheets (patient_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_consult_notes_visit    ON consultation_notes (visit_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_consult_notes_patient  ON consultation_notes (patient_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_consult_notes_review   ON consultation_notes (review_date)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_consult_notes_visit    ON consultation_notes (visit_id)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_consult_notes_patient  ON consultation_notes (patient_id)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_consult_notes_review   ON consultation_notes (review_date)"
+    )
     op.execute("CREATE INDEX IF NOT EXISTS idx_prescriptions_visit    ON prescriptions (visit_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_prescriptions_patient  ON prescriptions (patient_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_prescription_items_rx  ON prescription_items (prescription_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_discharge_visit        ON discharge_summaries (visit_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_discharge_patient      ON discharge_summaries (patient_id)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_prescriptions_patient  ON prescriptions (patient_id)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_prescription_items_rx  ON prescription_items (prescription_id)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_discharge_visit        ON discharge_summaries (visit_id)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_discharge_patient      ON discharge_summaries (patient_id)"
+    )
     op.execute("CREATE INDEX IF NOT EXISTS idx_documents_patient      ON documents (patient_id)")
     op.execute("CREATE INDEX IF NOT EXISTS idx_documents_visit        ON documents (visit_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_documents_type         ON documents (document_type_code)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_documents_type         ON documents (document_type_code)"
+    )
     op.execute("CREATE INDEX IF NOT EXISTS idx_documents_status       ON documents (status)")
     op.execute("CREATE INDEX IF NOT EXISTS idx_follow_ups_patient     ON follow_ups (patient_id)")
     op.execute("CREATE INDEX IF NOT EXISTS idx_follow_ups_assigned    ON follow_ups (assigned_to)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_follow_ups_status_date ON follow_ups (status_code, follow_up_date)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_follow_ups_status_date ON follow_ups (status_code, follow_up_date)"
+    )
     op.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_user         ON audit_log (user_id)")
     op.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_patient      ON audit_log (patient_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_entity       ON audit_log (entity_type, entity_id)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_log_entity       ON audit_log (entity_type, entity_id)"
+    )
     op.execute("CREATE INDEX IF NOT EXISTS idx_audit_log_created      ON audit_log (created_at)")
-    op.execute("CREATE INDEX IF NOT EXISTS idx_master_data_type       ON master_data (type, is_active)")
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_master_data_type       ON master_data (type, is_active)"
+    )
     op.execute("CREATE INDEX IF NOT EXISTS idx_backup_log_started     ON backup_log (started_at)")
 
 
 def downgrade() -> None:
     # Drop in reverse dependency order
     for tbl in [
-        "backup_log", "audit_log", "follow_ups", "documents",
-        "discharge_summaries", "prescription_items", "prescriptions",
-        "consultation_notes", "case_sheets", "visits",
-        "merge_requests", "patient_aliases", "patients",
-        "user_roles", "users", "op_sequence", "master_data", "roles",
+        "backup_log",
+        "audit_log",
+        "follow_ups",
+        "documents",
+        "discharge_summaries",
+        "prescription_items",
+        "prescriptions",
+        "consultation_notes",
+        "case_sheets",
+        "visits",
+        "merge_requests",
+        "patient_aliases",
+        "patients",
+        "user_roles",
+        "users",
+        "op_sequence",
+        "master_data",
+        "roles",
     ]:
         op.execute(f"DROP TABLE IF EXISTS {tbl} CASCADE")
     op.execute("DROP FUNCTION IF EXISTS set_updated_at() CASCADE")
     op.execute("DROP EXTENSION IF EXISTS pg_trgm")
     op.execute("DROP EXTENSION IF EXISTS citext")
     op.execute("DROP EXTENSION IF EXISTS pgcrypto")
-    op.execute("DROP EXTENSION IF EXISTS \"uuid-ossp\"")
+    op.execute('DROP EXTENSION IF EXISTS "uuid-ossp"')

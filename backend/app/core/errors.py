@@ -104,17 +104,21 @@ class InvalidStateTransitionError(ConflictError):
 # Helpers
 # --------------------------------------------------------------------------- #
 
+
 def _get_request_id(request: Request) -> str:
     return getattr(request.state, "request_id", "")
 
 
 def _error_body(code: str, message: str, details: list, request_id: str) -> dict:
-    return {"error": {"code": code, "message": message, "details": details, "request_id": request_id}}
+    return {
+        "error": {"code": code, "message": message, "details": details, "request_id": request_id}
+    }
 
 
 # --------------------------------------------------------------------------- #
 # Exception handlers — registered in main.py
 # --------------------------------------------------------------------------- #
+
 
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
@@ -134,20 +138,25 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     ]
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=_error_body("VALIDATION_ERROR", "Request validation failed", details, _get_request_id(request)),
+        content=_error_body(
+            "VALIDATION_ERROR", "Request validation failed", details, _get_request_id(request)
+        ),
     )
 
 
 async def jwt_error_handler(request: Request, exc: JWTError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        content=_error_body("AUTH_TOKEN_INVALID", "Token is invalid or expired", [], _get_request_id(request)),
+        content=_error_body(
+            "AUTH_TOKEN_INVALID", "Token is invalid or expired", [], _get_request_id(request)
+        ),
         headers={"WWW-Authenticate": "Bearer"},
     )
 
 
 async def generic_error_handler(request: Request, exc: Exception) -> JSONResponse:
     import logging
+
     logging.getLogger(__name__).error(
         "unhandled_exception",
         extra={"exc_type": type(exc).__name__, "request_id": _get_request_id(request)},
@@ -155,5 +164,7 @@ async def generic_error_handler(request: Request, exc: Exception) -> JSONRespons
     )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=_error_body("INTERNAL_ERROR", "An unexpected error occurred", [], _get_request_id(request)),
+        content=_error_body(
+            "INTERNAL_ERROR", "An unexpected error occurred", [], _get_request_id(request)
+        ),
     )

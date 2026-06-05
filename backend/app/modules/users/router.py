@@ -29,6 +29,7 @@ from app.modules.auth.schemas import (
     UserUpdateRequest,
 )
 from app.modules.users import service
+from app.modules.users.repository import SORTABLE_FIELDS
 
 router = APIRouter(prefix="/users", tags=["users"])
 roles_router = APIRouter(prefix="/roles", tags=["roles"])
@@ -44,7 +45,9 @@ def list_roles(
     return [RoleOut.model_validate(r) for r in auth_repo.get_all_roles(db)]
 
 
-@router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED, summary="Create a new user")
+@router.post(
+    "", response_model=UserOut, status_code=status.HTTP_201_CREATED, summary="Create a new user"
+)
 def create_user(
     body: UserCreateRequest,
     payload: ManageUsers,
@@ -63,9 +66,16 @@ def list_users(
     is_doctor: bool | None = Query(default=None),
     status: str | None = Query(default=None, pattern="^(ACTIVE|DISABLED|LOCKED)$"),
 ) -> dict:
+    sort, descending = pagination.resolve_sort(SORTABLE_FIELDS, default="full_name")
     users, total = service.list_users(
-        db, q=q, is_doctor=is_doctor, status=status,
-        limit=pagination.page_size, offset=pagination.offset,
+        db,
+        q=q,
+        is_doctor=is_doctor,
+        status=status,
+        limit=pagination.page_size,
+        offset=pagination.offset,
+        sort=sort,
+        descending=descending,
     )
     return paginate(users, total, pagination)
 

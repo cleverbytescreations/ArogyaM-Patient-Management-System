@@ -26,8 +26,10 @@ from app.core.errors import (
 )
 from app.core.logging import setup_logging
 from app.core.middleware import RequestIDMiddleware
+from app.modules.auth.router import me_router
 from app.modules.auth.router import router as auth_router
-from app.modules.users.router import roles_router, router as users_router
+from app.modules.users.router import roles_router
+from app.modules.users.router import router as users_router
 
 setup_logging(settings.log_level)
 
@@ -52,14 +54,15 @@ app.add_middleware(
 )
 
 # ── Global exception handlers ──────────────────────────────────────────────────
-app.add_exception_handler(AppError, app_error_handler)
-app.add_exception_handler(RequestValidationError, validation_error_handler)
+app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
+app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(JWTError, jwt_error_handler)
 app.add_exception_handler(Exception, generic_error_handler)
 
 # ── Routers ────────────────────────────────────────────────────────────────────
 app.include_router(health.router, prefix=API_PREFIX)
 app.include_router(auth_router, prefix=API_PREFIX)
+app.include_router(me_router, prefix=API_PREFIX)
 app.include_router(users_router, prefix=API_PREFIX)
 app.include_router(roles_router, prefix=API_PREFIX)
 

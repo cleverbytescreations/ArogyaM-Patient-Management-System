@@ -19,7 +19,6 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -27,12 +26,11 @@ from app.core.config import settings
 from app.core.security import hash_password
 from app.modules.auth.models import User, UserRole
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _login(client: TestClient, username: str, password: str) -> dict:
-    resp = client.post("/api/v1/auth/login", json={"username": username, "password": password})
-    return resp
+
+def _login(client: TestClient, username: str, password: str):
+    return client.post("/api/v1/auth/login", json={"username": username, "password": password})
 
 
 def _auth_header(token: str) -> dict:
@@ -40,6 +38,7 @@ def _auth_header(token: str) -> dict:
 
 
 # ── Login tests ───────────────────────────────────────────────────────────────
+
 
 class TestLogin:
     def test_login_success(self, client: TestClient, admin_user: User):
@@ -149,12 +148,15 @@ class TestLogin:
 
 # ── Token refresh & logout ────────────────────────────────────────────────────
 
+
 class TestRefreshAndLogout:
     def test_refresh_returns_new_tokens(self, client: TestClient, admin_user: User):
         login_resp = _login(client, admin_user.username, "TestPass123!")
         old_tokens = login_resp.json()
 
-        resp = client.post("/api/v1/auth/refresh", json={"refresh_token": old_tokens["refresh_token"]})
+        resp = client.post(
+            "/api/v1/auth/refresh", json={"refresh_token": old_tokens["refresh_token"]}
+        )
         assert resp.status_code == 200
         new_tokens = resp.json()
         assert "access_token" in new_tokens
@@ -171,9 +173,31 @@ class TestRefreshAndLogout:
         resp = client.post("/api/v1/auth/refresh", json={"refresh_token": "not.a.valid.token"})
         assert resp.status_code in (400, 401)
 
+    def test_refresh_token_is_single_use(self, client: TestClient, admin_user: User):
+        """A refresh token must be rejected after it has been rotated (BE-T1.3)."""
+        login_resp = _login(client, admin_user.username, "TestPass123!")
+        refresh_token = login_resp.json()["refresh_token"]
+
+        first = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+        assert first.status_code == 200
+
+        # Replaying the same refresh token must now fail.
+        replay = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+        assert replay.status_code == 401
+
     def test_logout_returns_204(self, client: TestClient, admin_token: str):
         resp = client.post("/api/v1/auth/logout", headers=_auth_header(admin_token))
         assert resp.status_code == 204
+
+    def test_logout_denies_access_token(self, client: TestClient, admin_token: str):
+        """After logout the access token's jti is denylisted → 401 on reuse."""
+        assert client.get("/api/v1/me", headers=_auth_header(admin_token)).status_code == 200
+        assert (
+            client.post("/api/v1/auth/logout", headers=_auth_header(admin_token)).status_code == 204
+        )
+        # Same token can no longer be used.
+        resp = client.get("/api/v1/me", headers=_auth_header(admin_token))
+        assert resp.status_code == 401
 
     def test_logout_requires_auth(self, client: TestClient):
         resp = client.post("/api/v1/auth/logout")
@@ -182,9 +206,10 @@ class TestRefreshAndLogout:
 
 # ── /me endpoint ──────────────────────────────────────────────────────────────
 
+
 class TestMe:
     def test_me_returns_profile(self, client: TestClient, admin_user: User, admin_token: str):
-        resp = client.get("/api/v1/auth/me", headers=_auth_header(admin_token))
+        resp = client.get("/api/v1/me", headers=_auth_header(admin_token))
         assert resp.status_code == 200
         data = resp.json()
         assert data["username"] == admin_user.username
@@ -194,30 +219,38 @@ class TestMe:
         assert "password_hash" not in data
 
     def test_me_requires_token(self, client: TestClient):
-        resp = client.get("/api/v1/auth/me")
+        resp = client.get("/api/v1/me")
         assert resp.status_code == 401
 
     def test_me_permissions_matches_role(self, client: TestClient, reception_token: str):
-        resp = client.get("/api/v1/auth/me", headers=_auth_header(reception_token))
+        resp = client.get("/api/v1/me", headers=_auth_header(reception_token))
         assert resp.status_code == 200
         data = resp.json()
         assert "create_patient" in data["permissions"]
         assert "manage_users" not in data["permissions"]
 
     def test_me_permissions_endpoint(self, client: TestClient, admin_token: str):
-        resp = client.get("/api/v1/auth/me/permissions", headers=_auth_header(admin_token))
+        resp = client.get("/api/v1/me/permissions", headers=_auth_header(admin_token))
         assert resp.status_code == 200
-        assert "permissions" in resp.json()
-        assert "manage_users" in resp.json()["permissions"]
+        body = resp.json()
+        assert "permissions" in body
+        assert "manage_users" in body["permissions"]
+        # Spec §7.1: response also exposes the user's roles (M3).
+        assert "roles" in body
+        assert "ADMIN" in body["roles"]
+
+    def test_me_not_under_auth_prefix(self, client: TestClient, admin_token: str):
+        """/me is a top-level path; the /auth-prefixed variant must not exist."""
+        assert client.get("/api/v1/auth/me", headers=_auth_header(admin_token)).status_code == 404
 
     def test_invalid_token_returns_401(self, client: TestClient):
-        resp = client.get("/api/v1/auth/me", headers={"Authorization": "Bearer invalid.token.here"})
+        resp = client.get("/api/v1/me", headers={"Authorization": "Bearer invalid.token.here"})
         assert resp.status_code == 401
 
     def test_no_token_returns_401(self, client: TestClient):
-        resp = client.get("/api/v1/auth/me")
+        resp = client.get("/api/v1/me")
         assert resp.status_code == 401
 
     def test_malformed_bearer_returns_401(self, client: TestClient):
-        resp = client.get("/api/v1/auth/me", headers={"Authorization": "NotBearer xyz"})
+        resp = client.get("/api/v1/me", headers={"Authorization": "NotBearer xyz"})
         assert resp.status_code == 401

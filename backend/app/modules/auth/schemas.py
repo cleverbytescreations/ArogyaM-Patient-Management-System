@@ -11,10 +11,22 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+# bcrypt only hashes the first 72 bytes of a password; anything beyond is
+# silently ignored. Reject longer secrets so callers don't get a false sense of
+# strength (L1). UTF-8 byte length is what bcrypt counts, not character count.
+_BCRYPT_MAX_BYTES = 72
+
+
+def _validate_password_bytes(value: str) -> str:
+    if len(value.encode("utf-8")) > _BCRYPT_MAX_BYTES:
+        raise ValueError(f"Password must be at most {_BCRYPT_MAX_BYTES} bytes")
+    return value
+
 
 # --------------------------------------------------------------------------- #
 # Auth request/response schemas
 # --------------------------------------------------------------------------- #
+
 
 class LoginRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -58,21 +70,25 @@ class UserProfile(BaseModel):
 
 class PermissionSet(BaseModel):
     permissions: list[str]
+    roles: list[str] = Field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #
 # User management schemas (also used by users module)
 # --------------------------------------------------------------------------- #
 
+
 class UserCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     username: str = Field(min_length=3, max_length=150)
     full_name: str = Field(min_length=1, max_length=150)
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=8, max_length=72)
     email: EmailStr | None = None
     mobile: str | None = Field(default=None, max_length=20)
     is_doctor: bool = False
     role_codes: list[str] = Field(default_factory=list)
+
+    _check_pw = field_validator("password")(_validate_password_bytes)
 
 
 class UserUpdateRequest(BaseModel):
@@ -92,7 +108,9 @@ class UserStatusUpdateRequest(BaseModel):
 
 class PasswordResetRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    new_password: str = Field(min_length=8, max_length=128)
+    new_password: str = Field(min_length=8, max_length=72)
+
+    _check_pw = field_validator("new_password")(_validate_password_bytes)
 
 
 class UserOut(BaseModel):
