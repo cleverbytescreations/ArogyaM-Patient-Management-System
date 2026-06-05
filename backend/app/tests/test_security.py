@@ -12,13 +12,10 @@ Covers:
 
 from __future__ import annotations
 
-import time
 import uuid
 
-import pytest
 from fastapi.testclient import TestClient
 
-from app.core.security import create_access_token
 from app.modules.auth.models import User
 
 
@@ -28,14 +25,14 @@ def _auth(token: str) -> dict:
 
 class TestAuthNegative:
     def test_no_token_protected_endpoint(self, client: TestClient):
-        resp = client.get("/api/v1/auth/me")
+        resp = client.get("/api/v1/me")
         assert resp.status_code == 401
         body = resp.json()
         assert "error" in body
         assert "code" in body["error"]
 
     def test_garbage_token(self, client: TestClient):
-        resp = client.get("/api/v1/auth/me", headers=_auth("garbage.token.value"))
+        resp = client.get("/api/v1/me", headers=_auth("garbage.token.value"))
         assert resp.status_code == 401
 
     def test_expired_token(self, client: TestClient, admin_user: User):
@@ -52,7 +49,9 @@ class TestAuthNegative:
         )
         # Manually create an already-expired token by back-dating exp
         from datetime import UTC, datetime, timedelta
+
         from jose import jwt
+
         payload = {
             **claims,
             "type": "access",
@@ -60,13 +59,14 @@ class TestAuthNegative:
             "iat": datetime.now(UTC) - timedelta(hours=2),
             "exp": datetime.now(UTC) - timedelta(hours=1),
         }
-        expired_token = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+        expired_token = jwt.encode(
+            payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
+        )
 
-        resp = client.get("/api/v1/auth/me", headers=_auth(expired_token))
+        resp = client.get("/api/v1/me", headers=_auth(expired_token))
         assert resp.status_code == 401
 
     def test_refresh_token_used_as_access_token(self, client: TestClient, admin_user: User):
-        from app.core.config import settings
         from app.core.permissions import resolve_permissions
         from app.core.security import build_token_claims, create_refresh_token
 
@@ -78,7 +78,7 @@ class TestAuthNegative:
             is_doctor=False,
         )
         refresh = create_refresh_token(claims)
-        resp = client.get("/api/v1/auth/me", headers=_auth(refresh))
+        resp = client.get("/api/v1/me", headers=_auth(refresh))
         assert resp.status_code == 401
 
 
@@ -120,14 +120,16 @@ class TestSQLInjection:
                 json={"username": payload, "password": "anypassword"},
             )
             # Must not return 200 or 500; safe rejection (401) expected
-            assert resp.status_code in (400, 401, 422), f"Unexpected status for payload: {payload!r}"
+            assert resp.status_code in (400, 401, 422), (
+                f"Unexpected status for payload: {payload!r}"
+            )
             body = resp.json()
             assert "error" in body
 
 
 class TestErrorEnvelope:
     def test_envelope_structure_on_401(self, client: TestClient):
-        resp = client.get("/api/v1/auth/me")
+        resp = client.get("/api/v1/me")
         body = resp.json()
         assert "error" in body
         error = body["error"]
@@ -164,6 +166,6 @@ class TestPIINotLeaked:
         assert "password" not in body_str
 
     def test_user_response_has_no_password_hash(self, client: TestClient, admin_token: str):
-        resp = client.get("/api/v1/auth/me", headers=_auth(admin_token))
+        resp = client.get("/api/v1/me", headers=_auth(admin_token))
         assert "password" not in resp.json()
         assert "password_hash" not in resp.text

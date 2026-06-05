@@ -6,8 +6,14 @@ stack these are supplied by docker-compose.dev.yml / .env.dev.
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Sentinel dev defaults that must never be used in production. Startup fails fast
+# if any of these is still in effect when env == "production" (BE-TF.2, SAD §10).
+_DEV_JWT_SECRET = "dev-only-change-me"
+_DEV_S3_SECRET = "minioadmin_dev_pw"
+_DEV_DB_PASSWORD = "arogyam_dev_pw"
 
 
 class Settings(BaseSettings):
@@ -18,9 +24,7 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
 
     # --- Database ------------------------------------------------------------
-    database_url: str = Field(
-        default="postgresql+psycopg://arogyam:arogyam_dev_pw@db:5432/arogyam"
-    )
+    database_url: str = Field(default="postgresql+psycopg://arogyam:arogyam_dev_pw@db:5432/arogyam")
     sql_echo: bool = Field(default=False)
 
     # --- Object storage (MinIO / S3) -----------------------------------------
@@ -54,6 +58,31 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"
+
+    @model_validator(mode="after")
+    def _require_secrets_in_production(self) -> Settings:
+        """Fail fast at startup if a required secret is missing or still the dev
+        default while running in production (BE-TF.2 acceptance criterion)."""
+        if not self.is_production:
+            return self
+
+        missing: list[str] = []
+        if not self.jwt_secret_key or self.jwt_secret_key == _DEV_JWT_SECRET:
+            missing.append("JWT_SECRET_KEY")
+        if not self.s3_secret_key or self.s3_secret_key == _DEV_S3_SECRET:
+            missing.append("S3_SECRET_KEY")
+        if not self.database_url or _DEV_DB_PASSWORD in self.database_url:
+            missing.append("DATABASE_URL")
+        if self.cors_allow_origins.strip() == "*":
+            missing.append("CORS_ALLOW_ORIGINS (wildcard not allowed in production)")
+
+        if missing:
+            raise ValueError(
+                "Refusing to start in production with insecure/missing secrets: "
+                + ", ".join(missing)
+                + ". Supply them via the environment (see backend/.env.example)."
+            )
+        return self
 
 
 settings = Settings()

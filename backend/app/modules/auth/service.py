@@ -27,17 +27,18 @@ from app.core.security import (
     post_password_hook,
     verify_password,
 )
+from app.core.tokens import deny, is_denied
 from app.modules.auth import repository as repo
 from app.modules.auth.schemas import PermissionSet, TokenResponse, UserProfile
 
 logger = logging.getLogger(__name__)
 
 
-def _user_role_codes(user) -> list[str]:  # type: ignore[no-untyped-def]
+def _user_role_codes(user) -> list[str]:
     return [ur.role.code for ur in user.user_roles if ur.role.is_active]
 
 
-def _issue_tokens(user) -> TokenResponse:  # type: ignore[no-untyped-def]
+def _issue_tokens(user) -> TokenResponse:
     role_codes = _user_role_codes(user)
     permissions = resolve_permissions(role_codes)
     claims = build_token_claims(
@@ -54,7 +55,7 @@ def _issue_tokens(user) -> TokenResponse:  # type: ignore[no-untyped-def]
     )
 
 
-def login(db: Session, username: str, password: str, request=None) -> TokenResponse:  # type: ignore[no-untyped-def]
+def login(db: Session, username: str, password: str, request=None) -> TokenResponse:
     ip, ua, rid = extract_request_meta(request)
 
     user = repo.get_user_by_username(db, username)
@@ -101,14 +102,35 @@ def login(db: Session, username: str, password: str, request=None) -> TokenRespo
         db.commit()
         raise AuthError("Invalid credentials")
 
-    # Credentials verified — now check account state
+    # Credentials verified — now check account state. A correct-password attempt
+    # against a disabled/locked account is still a sensitive event → audit it
+    # (LOG-T1.1) before rejecting.
+    def _audit_blocked(reason: str) -> None:
+        write_audit(
+            db,
+            action="LOGIN_FAILURE",
+            user_id=user.id,
+            user_role=",".join(_user_role_codes(user)),
+            entity_type="user",
+            entity_id=str(user.id),
+            description=reason,
+            ip_address=ip,
+            user_agent=ua,
+            request_id=rid,
+        )
+        db.commit()
+
     if user.status == "DISABLED":
+        _audit_blocked("Login attempt on disabled account")
         raise AccountDisabledError("Account is disabled")
 
     if user.status == "LOCKED" or (
         user.locked_until is not None and user.locked_until.replace(tzinfo=UTC) > datetime.now(UTC)
     ):
-        raise AccountLockedError("Account is temporarily locked due to too many failed login attempts")
+        _audit_blocked("Login attempt on locked account")
+        raise AccountLockedError(
+            "Account is temporarily locked due to too many failed login attempts"
+        )
 
     # Success — reset counters, stamp last_login_at, issue tokens
     repo.reset_login_counters(db, user.id)
@@ -135,10 +157,15 @@ def login(db: Session, username: str, password: str, request=None) -> TokenRespo
 def refresh_tokens(db: Session, refresh_token: str) -> TokenResponse:
     try:
         payload = decode_token(refresh_token)
-    except JWTError:
-        raise AuthError("Refresh token is invalid or expired")
+    except JWTError as exc:
+        raise AuthError("Refresh token is invalid or expired") from exc
 
     if payload.get("type") != TOKEN_TYPE_REFRESH:
+        raise AuthError("Refresh token is invalid or expired")
+
+    jti = payload.get("jti")
+    if is_denied(jti):
+        # Already-rotated (replayed) refresh token — reject.
         raise AuthError("Refresh token is invalid or expired")
 
     user_id = payload.get("sub")
@@ -149,6 +176,9 @@ def refresh_tokens(db: Session, refresh_token: str) -> TokenResponse:
     if user is None or user.status != "ACTIVE":
         raise AuthError("Refresh token is invalid or expired")
 
+    # Single-use rotation: deny the presented refresh token before issuing a new
+    # pair so it cannot be replayed (BE-T1.3).
+    deny(jti, payload.get("exp"))
     return _issue_tokens(user)
 
 
@@ -170,4 +200,7 @@ def get_me(payload: dict, db: Session) -> UserProfile:
 
 
 def get_my_permissions(payload: dict) -> PermissionSet:
-    return PermissionSet(permissions=payload.get("permissions", []))
+    return PermissionSet(
+        permissions=payload.get("permissions", []),
+        roles=payload.get("roles", []),
+    )

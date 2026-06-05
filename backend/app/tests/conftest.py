@@ -16,8 +16,8 @@ from __future__ import annotations
 
 import os
 import uuid
+from collections.abc import Generator
 from datetime import UTC, datetime
-from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,7 +28,6 @@ from app.core.db import get_db
 from app.core.security import hash_password
 from app.main import app
 from app.modules.auth.models import Role, User, UserRole
-from app.modules.auth.service import _issue_tokens
 
 # ── Database URL ───────────────────────────────────────────────────────────────
 # Derive from DATABASE_URL (which uses the Docker service name 'db') so that
@@ -97,8 +96,10 @@ def db(db_engine) -> Generator[Session, None, None]:
 
 # ── User/role helpers ─────────────────────────────────────────────────────────
 
+
 def _ensure_role(db: Session, code: str, name: str) -> Role:
     from sqlalchemy import select
+
     role = db.execute(select(Role).where(Role.code == code)).scalar_one_or_none()
     if role is None:
         role = Role(code=code, name=name, is_active=True)
@@ -108,8 +109,12 @@ def _ensure_role(db: Session, code: str, name: str) -> Role:
 
 
 def _make_user(db: Session, username: str, role_code: str, is_doctor: bool = False) -> User:
-    from sqlalchemy import select
-    role_names = {"ADMIN": "Administrator", "DOCTOR": "Doctor", "RECEPTION": "Receptionist", "DATA_ENTRY": "Data Entry Staff"}
+    role_names = {
+        "ADMIN": "Administrator",
+        "DOCTOR": "Doctor",
+        "RECEPTION": "Receptionist",
+        "DATA_ENTRY": "Data Entry Staff",
+    }
     role = _ensure_role(db, role_code, role_names.get(role_code, role_code))
     user = User(
         id=uuid.uuid4(),
@@ -179,6 +184,7 @@ def reception_token(reception_user: User) -> str:
 
 # ── TestClient ─────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def client(db: Session) -> Generator[TestClient, None, None]:
     def _override_db():
@@ -188,3 +194,13 @@ def client(db: Session) -> Generator[TestClient, None, None]:
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _reset_token_denylist() -> Generator[None, None, None]:
+    """The in-process JWT denylist is module-global; clear it between tests."""
+    from app.core.tokens import reset
+
+    reset()
+    yield
+    reset()

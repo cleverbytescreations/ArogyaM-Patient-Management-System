@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from app.core.audit import extract_request_meta, write_audit
 from app.core.errors import ConflictError, NotFoundError, VersionConflictError
-from app.core.permissions import resolve_permissions
 from app.core.security import hash_password
 from app.modules.auth import repository as auth_repo
 from app.modules.auth.models import User
@@ -126,8 +125,19 @@ def list_users(
     status: str | None,
     limit: int,
     offset: int,
+    sort: str = "full_name",
+    descending: bool = False,
 ) -> tuple[list[UserOut], int]:
-    users, total = user_repo.list_users(db, q=q, is_doctor=is_doctor, status=status, limit=limit, offset=offset)
+    users, total = user_repo.list_users(
+        db,
+        q=q,
+        is_doctor=is_doctor,
+        status=status,
+        sort=sort,
+        descending=descending,
+        limit=limit,
+        offset=offset,
+    )
     return [_to_out(u) for u in users], total
 
 
@@ -148,7 +158,12 @@ def update_user(
         raise VersionConflictError("Record was modified by another request; reload and retry")
 
     old_roles = _user_role_codes(user)
-    old_snap = {"full_name": user.full_name, "email": user.email, "is_doctor": user.is_doctor, "roles": old_roles}
+    old_snap = {
+        "full_name": user.full_name,
+        "email": user.email,
+        "is_doctor": user.is_doctor,
+        "roles": old_roles,
+    }
 
     if body.email and user_repo.email_exists(db, body.email, exclude_id=user.id):
         raise ConflictError(f"Email '{body.email}' is already registered")
@@ -173,7 +188,12 @@ def update_user(
         user_repo.assign_roles(db, user.id, [r.id for r in roles], actor_id)
         new_roles = [r.code for r in roles]
 
-    new_snap = {"full_name": user.full_name, "email": user.email, "is_doctor": user.is_doctor, "roles": new_roles}
+    new_snap = {
+        "full_name": user.full_name,
+        "email": user.email,
+        "is_doctor": user.is_doctor,
+        "roles": new_roles,
+    }
 
     write_audit(
         db,
