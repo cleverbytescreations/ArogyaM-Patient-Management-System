@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.audit import extract_request_meta, write_audit
 from app.core.cache import cache_delete, cache_get, cache_set
+from app.core.config import settings
 from app.core.errors import ConflictError, NotFoundError
 from app.modules.masterdata import repository as repo
 from app.modules.masterdata.models import MasterDataItem, VALID_MASTER_DATA_TYPES
@@ -53,7 +54,7 @@ def list_items(
         return [MasterDataItemOut.model_validate(row) for row in json.loads(cached)]
     items = repo.list_by_type(db, data_type, active_only=active_only)
     result = [_to_out(i) for i in items]
-    cache_set(key, json.dumps([r.model_dump() for r in result]))
+    cache_set(key, json.dumps([r.model_dump() for r in result]), ttl_sec=settings.master_data_cache_ttl_sec)
     return result
 
 

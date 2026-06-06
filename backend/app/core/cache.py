@@ -4,8 +4,9 @@ Backends:
   • Redis  (``REDIS_URL`` set) — shared across workers; survives restart.
   • In-process dict (fallback) — single-process dev/test only.
 
-Cache entries are invalidated explicitly on write (no TTL), so callers must
-call ``cache_delete`` after committing mutations that affect cached data.
+Every entry is stored with a TTL (``ttl_sec``). Entries are also invalidated
+explicitly on write via ``cache_delete``, so the TTL is a safety-net expiry
+rather than the primary freshness mechanism.
 
 Usage::
 
@@ -14,7 +15,7 @@ Usage::
     value = cache_get("masterdata:gender:all")
     if value is None:
         value = json.dumps([...])
-        cache_set("masterdata:gender:all", value)
+        cache_set("masterdata:gender:all", value, ttl_sec=1800)
 
     # after a write:
     cache_delete("masterdata:gender:all", "masterdata:gender:active")
@@ -22,9 +23,13 @@ Usage::
 
 from __future__ import annotations
 
+import time
+
 from .config import settings
 
-_local_store: dict[str, str] = {}
+# In-process fallback store: key → (serialised_value, expires_at_epoch)
+_local_store: dict[str, tuple[str, float]] = {}
+
 _redis_client = None
 
 
@@ -44,15 +49,22 @@ def cache_get(key: str) -> str | None:
     client = _redis()
     if client is not None:
         return client.get(key)
-    return _local_store.get(key)
+    entry = _local_store.get(key)
+    if entry is None:
+        return None
+    value, expires_at = entry
+    if time.monotonic() >= expires_at:
+        _local_store.pop(key, None)
+        return None
+    return value
 
 
-def cache_set(key: str, value: str) -> None:
+def cache_set(key: str, value: str, ttl_sec: int = 1800) -> None:
     client = _redis()
     if client is not None:
-        client.set(key, value)
+        client.setex(key, ttl_sec, value)
     else:
-        _local_store[key] = value
+        _local_store[key] = (value, time.monotonic() + ttl_sec)
 
 
 def cache_delete(*keys: str) -> None:

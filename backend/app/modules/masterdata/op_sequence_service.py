@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.audit import extract_request_meta, write_audit
 from app.core.cache import cache_delete, cache_get, cache_set
+from app.core.config import settings
 from app.core.errors import ConflictError, NotFoundError
 from app.modules.masterdata import repository as repo
 from app.modules.masterdata.schemas import OpSequenceOut, OpSequenceUpdateRequest
@@ -30,7 +31,7 @@ def list_sequences(db: Session) -> list[OpSequenceOut]:
     if cached is not None:
         return [OpSequenceOut.model_validate(row) for row in json.loads(cached)]
     result = [_to_out(s) for s in repo.list_sequences(db)]
-    cache_set(_OP_SEQ_CACHE_KEY, json.dumps([r.model_dump() for r in result]))
+    cache_set(_OP_SEQ_CACHE_KEY, json.dumps([r.model_dump() for r in result]), ttl_sec=settings.master_data_cache_ttl_sec)
     return result
 
 

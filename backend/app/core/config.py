@@ -36,6 +36,10 @@ class Settings(BaseSettings):
 
     # --- Cache / limiter (optional) ------------------------------------------
     redis_url: str = Field(default="")
+    # TTL for quasi-static reference data (master data, OP sequences).
+    # Entries are also invalidated explicitly on every admin write, so this is a
+    # safety-net expiry only. Override via MASTER_DATA_CACHE_TTL_SEC env var.
+    master_data_cache_ttl_sec: int = Field(default=1800)  # 30 minutes
 
     # --- API ------------------------------------------------------------------
     cors_allow_origins: str = Field(default="http://localhost:8080")
