@@ -13,7 +13,8 @@ Use this skill when the task involves:
 - RBAC dependency usage, permission checks, or record-level guards
 - Audit logging, log-redaction compliance, or error-handling patterns
 - Background task design (FastAPI background tasks, future Redis RQ)
-- Redis integration (rate limiting, token denylist)
+- Redis integration (rate limiting, token denylist, master data cache)
+- Master data / reference data read-through caching
 - MinIO/S3 document upload or download logic
 - Alembic migration authoring or review
 
@@ -145,13 +146,70 @@ using Redis RQ. See **architecture-deep-dive skill → Event / Async Layer** for
 
 ## Redis Rules
 Redis is optional (`--profile cache`). Gate all Redis calls on `settings.redis_url` being set.
-When absent, fall back to the in-process store in `core/tokens.py`.
+When absent, fall back to the in-process store (see `core/ratelimit.py` / `core/cache.py`).
 
-Use Redis for: rate-limit counters on login, optional JWT `jti` denylist for logout/revocation.
-Do NOT use Redis for: data that must survive a process restart, session data, or application
-state that belongs in PostgreSQL.
+**Use Redis for:**
+- Rate-limit counters on login (`core/ratelimit.py`)
+- JWT `jti` denylist for logout/revocation (`core/tokens.py`)
+- Read-through cache for quasi-static reference data (`core/cache.py`) — master data types and OP sequences
 
-See **architecture-deep-dive skill → Cache / Queue** for canonical Redis usage rules.
+**Do NOT use Redis for:** data that must survive a process restart, user session state, or
+application state that belongs exclusively in PostgreSQL.
+
+## Master Data Cache Pattern
+
+All `GET` endpoints for quasi-static reference data (master data types, OP sequences, and any
+similar admin-only lookup tables added in future) **must** use the read-through cache in
+`core/cache.py`. Do not hit PostgreSQL on every request for data that almost never changes.
+
+### Freshness strategy — two layers, both required
+
+1. **Explicit invalidation on every write** — call `cache_delete` in the service *after*
+   `db.commit()` whenever an admin mutates the data (create, update, deactivate). This is the
+   primary mechanism: users see fresh data immediately after an admin action.
+
+2. **TTL safety-net expiry** — pass `ttl_sec=settings.master_data_cache_ttl_sec` (default 1800 s
+   / 30 min, override via `MASTER_DATA_CACHE_TTL_SEC` env var) to every `cache_set` call. This
+   catches edge-cases where invalidation was missed (e.g. direct DB patch, future bulk import)
+   and prevents stale data sitting in cache indefinitely.
+
+Both layers must be present. A TTL alone is not enough (stale for up to 30 min after an admin
+edit visible in the UI is unacceptable). Explicit invalidation alone is not enough (a missed
+write path leaves stale data forever).
+
+### Rules
+- Use `cache_get` / `cache_set` / `cache_delete` from `app.core.cache` — never import `redis` directly in service files
+- Cache key format: `masterdata:{type}:all` and `masterdata:{type}:active` (one key per filter variant)
+- Always pass `ttl_sec=settings.master_data_cache_ttl_sec` to `cache_set`
+- Call `cache_delete` for all key variants of the affected type **after** `db.commit()`
+- Serialize to/from JSON using `model_dump()` / `model_validate()` on the Pydantic output schema
+- The in-process fallback in `cache.py` is TTL-aware (uses `time.monotonic()`); it covers single-worker dev but multi-worker prod **must** set `REDIS_URL`
+
+### Canonical service pattern
+```python
+from app.core.cache import cache_delete, cache_get, cache_set
+from app.core.config import settings
+
+# list (read-through)
+def list_items(db: Session, data_type: str, active_only: bool = False) -> list[ItemOut]:
+    key = f"masterdata:{data_type}:{'active' if active_only else 'all'}"
+    cached = cache_get(key)
+    if cached is not None:
+        return [ItemOut.model_validate(row) for row in json.loads(cached)]
+    result = [_to_out(i) for i in repo.list_by_type(db, data_type, active_only=active_only)]
+    cache_set(key, json.dumps([r.model_dump() for r in result]), ttl_sec=settings.master_data_cache_ttl_sec)
+    return result
+
+# write — invalidate after commit (explicit invalidation + TTL both in play)
+def create_item(db: Session, ...) -> ItemOut:
+    ...
+    db.commit()
+    cache_delete(f"masterdata:{data_type}:all", f"masterdata:{data_type}:active")
+    return _to_out(item)
+```
+
+See [core/cache.py](backend/app/core/cache.py) for the full helper implementation and
+`MASTER_DATA_CACHE_TTL_SEC` in [core/config.py](backend/app/core/config.py) for the TTL setting.
 
 ## MinIO / Document Rules
 - Stream uploads directly to MinIO via boto3/minio client; never buffer full file in memory
