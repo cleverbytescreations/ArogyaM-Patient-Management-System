@@ -11,6 +11,7 @@ from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from jose import JWTError
+from sqlalchemy.exc import DataError
 
 # --------------------------------------------------------------------------- #
 # Domain exceptions
@@ -151,6 +152,24 @@ async def jwt_error_handler(request: Request, exc: JWTError) -> JSONResponse:
             "AUTH_TOKEN_INVALID", "Token is invalid or expired", [], _get_request_id(request)
         ),
         headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+async def db_data_error_handler(request: Request, exc: DataError) -> JSONResponse:
+    """Map SQLAlchemy DataError (e.g. invalid UUID cast) to 400 Bad Request.
+
+    This prevents non-UUID path/query values from surfacing as 500. The query
+    is still parameterized — no injection is possible — but the DB type
+    conversion fails, which we surface as a validation error to the client.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content=_error_body(
+            "INVALID_PARAMETER",
+            "A request parameter has an invalid format.",
+            [],
+            _get_request_id(request),
+        ),
     )
 
 

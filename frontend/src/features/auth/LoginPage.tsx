@@ -142,7 +142,18 @@ export function LoginPage() {
       </section>
 
       {/* ─── Sign-in form ─── */}
-      <section className="flex min-h-screen items-center justify-center bg-background px-6 py-12 lg:min-h-0">
+      <section className="flex min-h-screen flex-col bg-background px-6 py-10 lg:min-h-0">
+        {/* Satsang Foundation lockup — top of the form cell */}
+        <div className="mx-auto flex w-full max-w-sm justify-start">
+          <img
+            src="/brand/satsang-foundation-logo.webp"
+            alt="The Satsang Foundation"
+            className="h-12 w-auto"
+            draggable={false}
+          />
+        </div>
+
+        <div className="flex flex-1 items-center justify-center py-10">
         <div className="w-full max-w-sm">
           {/* Compact brand lockup — only shown when the hero is hidden (mobile) */}
           <div className="mb-8 flex items-center gap-3 lg:hidden">
@@ -267,6 +278,12 @@ export function LoginPage() {
             Protected workspace — every action is recorded in the audit trail.
           </p>
         </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="mx-auto w-full max-w-sm text-xs text-muted-foreground">
+          © 2026 The Satsang Foundation. All rights reserved.
+        </footer>
       </section>
     </div>
   );

@@ -1078,7 +1078,9 @@ Objective:
 ----------
 Implement the following task from the task list. If any task is already implemented, please validate the feature:
 
-<TASK LIST>
+SEC-T1.2 — auth rate limiting (429 + Retry-After, optional Redis) on the login route.
+LOG-T1.1 (login + user changes), LOG-T0.1 — audit + PII-safe logging wired from day one.
+TST-T1.1, TST-T1.2 — auth/RBAC + security-negative tests.
 
 Instructions:
 -------------
@@ -1106,7 +1108,9 @@ Files to refer (if required - lazy loading):
 Task to review:
 ---------------
 
-<TASK LIST>
+SEC-T1.2 — auth rate limiting (429 + Retry-After, optional Redis) on the login route.
+LOG-T1.1 (login + user changes), LOG-T0.1 — audit + PII-safe logging wired from day one.
+TST-T1.1, TST-T1.2 — auth/RBAC + security-negative tests.
 
 
 Objective:

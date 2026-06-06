@@ -144,15 +144,26 @@ class TestBaselineMigration:
         assert "alembic_version" in inspector.get_table_names()
 
     def test_migration_head_applied(self, db_engine: Engine) -> None:
-        """The latest revision (0003) must be recorded as the single applied head."""
+        """The alembic_version table must contain exactly one row (the current head)."""
+        from alembic.config import Config
+        from alembic.script import ScriptDirectory
+
+        cfg = Config("alembic.ini")
+        script = ScriptDirectory.from_config(cfg)
+        current_heads = {h for h in script.get_heads()}
+
         with db_engine.connect() as conn:
             rows = conn.execute(text("SELECT version_num FROM alembic_version")).fetchall()
         version_nums = {r[0] for r in rows}
-        # After upgrade head the table contains the latest revision only.
+
         assert len(version_nums) == 1, (
             f"Expected exactly one alembic_version row, got {version_nums}"
         )
-        assert "0003" in version_nums, f"Expected head revision '0003', got {version_nums}"
+        # The applied head must match the script directory head — works for any
+        # future migration without hardcoding a revision number.
+        assert version_nums.issubset(current_heads), (
+            f"Applied revision {version_nums} not in known heads {current_heads}"
+        )
 
 
 # ── Seed data tests ───────────────────────────────────────────────────────────

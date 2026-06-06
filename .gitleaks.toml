@@ -1,0 +1,48 @@
+# =============================================================================
+# ArogyaM PMS — Gitleaks secret scanning configuration (SEC-T0.3)
+# =============================================================================
+# Run locally:
+#   docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect --source /repo
+# In CI: configured via DEV-TF.5 (see .github/workflows/ci.yml)
+
+title = "ArogyaM PMS Secret Scan"
+
+# ── Project-specific rules ────────────────────────────────────────────────────
+
+[[rules]]
+id = "arogyam-dev-jwt-secret"
+description = "ArogyaM dev JWT secret sentinel in source code"
+regex = '''dev-only-change-me'''
+tags = ["secret", "jwt"]
+
+[[rules]]
+id = "arogyam-dev-db-password"
+description = "ArogyaM dev DB password sentinel in source code"
+regex = '''arogyam_dev_pw'''
+tags = ["secret", "database"]
+
+[[rules]]
+id = "arogyam-dev-minio-password"
+description = "ArogyaM dev MinIO password sentinel in source code"
+regex = '''minioadmin_dev_pw'''
+tags = ["secret", "storage"]
+
+# ── Allowlist — known-safe false positives ────────────────────────────────────
+
+[allowlist]
+description = "Files that intentionally reference dev sentinel values"
+paths = [
+    # Config module defines sentinel constants used ONLY for prod-guard detection
+    "backend/app/core/config.py",
+    # Example environment files document keys with 'CHANGE_ME' placeholders
+    "backend/.env.example",
+    # Docker compose dev stack uses explicit dev defaults (never prod)
+    "docker-compose.dev.yml",
+    ".env.dev.example",
+    # Gitleaks own config
+    ".gitleaks.toml",
+    # Test suite & fixtures legitimately reference the dev sentinels — as DB
+    # connection fallbacks (conftest, migration/DDL tests) and as inputs to the
+    # production-guard validation tests (test_config, test_secrets_management).
+    "backend/app/tests/.*",
+]

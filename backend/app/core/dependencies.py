@@ -14,7 +14,7 @@ from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.errors import AccountDisabledError, AuthError, ForbiddenError
+from app.core.errors import AccountDisabledError, AccountLockedError, AuthError, ForbiddenError
 from app.core.security import TOKEN_TYPE_ACCESS, decode_token
 from app.core.tokens import is_denied
 
@@ -59,7 +59,10 @@ def get_current_user(
     if user.status == "DISABLED":
         raise AccountDisabledError("Account is disabled")
     if user.status == "LOCKED":
-        raise AccountDisabledError("Account is locked")
+        # Mirror the login-service semantics: a locked account yields
+        # AUTH_ACCOUNT_LOCKED (not AUTH_ACCOUNT_DISABLED) so the client can
+        # distinguish a temporary lockout from a permanent disable.
+        raise AccountLockedError("Account is locked")
 
     # Attach DB user to payload for convenience
     payload["_db_user"] = user

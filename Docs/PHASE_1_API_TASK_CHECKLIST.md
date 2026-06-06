@@ -512,7 +512,7 @@
 
 ## 5. Security Tasks
 
-- [ ] **SEC-T1.1 [M]** — Deny-by-default RBAC enforcement across endpoints (MVP)
+- [x] **SEC-T1.1 [M]** — Deny-by-default RBAC enforcement across endpoints (MVP)
       **Description:** Ensure every endpoint declares a required permission + record-level rule; no endpoint is implicitly open (except documented public ones).
       **Files / Components:** all routers, `core/dependencies.py`, `core/permissions.py`.
       **Implementation Notes:** Map permissions from SAD §11.2 / API spec §2.3. Field-level visibility filtering for limited roles.
@@ -528,17 +528,17 @@
       **Files / Components:** `documents/service.py`, `documents/storage.py`.
       **Acceptance Criteria:** Disguised file type rejected (sniff mismatch); oversized → 413; stored object not publicly reachable.
 
-- [ ] **SEC-T0.1 [M]** — Input validation & SQL-safety baseline (MVP)
+- [x] **SEC-T0.1 [M]** — Input validation & SQL-safety baseline (MVP)
       **Description:** Pydantic v2 strict schemas at every boundary (reject unknown fields where appropriate); SQLAlchemy parameterized queries only — no string-built SQL.
       **Files / Components:** all schemas + repositories.
       **Acceptance Criteria:** SQL-injection attempt tests fail to inject; unknown-field payloads rejected on strict schemas.
 
-- [ ] **SEC-T0.2 [S]** — CORS, secure headers & TLS posture (MVP)
+- [x] **SEC-T0.2 [S]** — CORS, secure headers & TLS posture (MVP)
       **Description:** Lock CORS to the SPA origin per env (no wildcard outside dev); ensure secure headers and HTTPS-only via proxy; debug off in prod.
       **Files / Components:** `core/config.py`, proxy config (`ops/proxy/`).
       **Acceptance Criteria:** Cross-origin request from non-SPA origin blocked in non-dev; debug disabled in prod profile.
 
-- [ ] **SEC-T0.3 [S]** — Secrets management (MVP)
+- [x] **SEC-T0.3 [S]** — Secrets management (MVP)
       **Description:** All secrets via env/Docker secrets; least-privilege DB user; no secrets in code or images.
       **Files / Components:** `.env.example`, compose, CI secret scanning.
       **Acceptance Criteria:** Secret scan passes; DB user has least privilege; no secret in repo.

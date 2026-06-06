@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError
+from sqlalchemy.exc import DataError
 
 from app import __version__
 from app.api import health
@@ -20,12 +21,13 @@ from app.core.config import settings
 from app.core.errors import (
     AppError,
     app_error_handler,
+    db_data_error_handler,
     generic_error_handler,
     jwt_error_handler,
     validation_error_handler,
 )
 from app.core.logging import setup_logging
-from app.core.middleware import RequestIDMiddleware
+from app.core.middleware import RequestIDMiddleware, SecurityHeadersMiddleware
 from app.modules.auth.router import me_router
 from app.modules.auth.router import router as auth_router
 from app.modules.users.router import roles_router
@@ -44,6 +46,9 @@ app = FastAPI(
 )
 
 # ── Middleware ─────────────────────────────────────────────────────────────────
+# Note: Starlette applies middleware in reverse registration order. Register
+# SecurityHeaders before RequestID so both run correctly on the response path.
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -57,6 +62,7 @@ app.add_middleware(
 app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(JWTError, jwt_error_handler)
+app.add_exception_handler(DataError, db_data_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(Exception, generic_error_handler)
 
 # ── Routers ────────────────────────────────────────────────────────────────────
