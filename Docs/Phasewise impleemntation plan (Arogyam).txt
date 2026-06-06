@@ -1075,11 +1075,10 @@ You need to descide the recommended H/W for dev and production
 
 Files to refer (if required - lazy loading):
 ---------------
-1. Docs/PHASE1_IMPLEMENTATION_PLAN.md
-2. Docs/DDL_DATAMODEL.sql
-3. Docs/PHASE_1_API_TASK_CHECKLIST.md
-4. Docs/PHASE_1_SPRINT_PLAN.md
-5. docker-compose.dev.yml
+1. Docs/DDL_DATAMODEL.sql
+2. Docs/PHASE_1_API_TASK_CHECKLIST.md
+3. Docs/PHASE_1_SPRINT_PLAN.md
+4. docker-compose.dev.yml
 
 Objective:
 ----------
@@ -1108,11 +1107,10 @@ Instructions:
 
 Files to refer (if required - lazy loading):
 --------------- 
-1. Docs/PHASE1_IMPLEMENTATION_PLAN.md
-2. Docs/DDL_DATAMODEL.sql
-3. Docs/PHASE_1_API_TASK_CHECKLIST.md
-4. Docs/PHASE_1_SPRINT_PLAN.md
-5. docker-compose.dev.yml
+1. Docs/DDL_DATAMODEL.sql
+2. Docs/PHASE_1_API_TASK_CHECKLIST.md
+3. Docs/PHASE_1_SPRINT_PLAN.md
+4. docker-compose.dev.yml
 
 
 Task to review:
@@ -1147,11 +1145,10 @@ Following are the code change report:
 
 Files to refer (if required - lazy loading):
 ---------------
-1. Docs/PHASE1_IMPLEMENTATION_PLAN.md
-2. Docs/API_SPECIFICATION_OPENAPI.md
-3. Docs/PHASE_1_UI_TASK_CHECKLIST.md
-4. Docs/PHASE_1_SPRINT_PLAN.md
-5. docker-compose.dev.yml
+1. Docs/API_SPECIFICATION_OPENAPI.md
+2. Docs/PHASE_1_UI_TASK_CHECKLIST.md
+3. Docs/PHASE_1_SPRINT_PLAN.md
+4. docker-compose.dev.yml
 
 Objective:
 ----------
@@ -1215,11 +1212,11 @@ Expected Output:
 
 Files to refer (if required - lazy loading):
 ---------------
-1. Docs/Implementation_Plan.md
-2. Docs/API_SPECIFICATION_OPENAPI.md
-3. Docs/PHASE_1_UI_TASK_CHECKLIST.md
-4. Docs/PHASE_1_SPRINT_PLAN.md
-5. docker-compose.dev.yml
+1. Docs/API_SPECIFICATION_OPENAPI.md
+2. Docs/PHASE_1_UI_TASK_CHECKLIST.md
+3. Docs/PHASE_1_SPRINT_PLAN.md
+4. docker-compose.dev.yml
+
 
 Objective:
 ----------

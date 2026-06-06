@@ -107,9 +107,8 @@ export const mockDietaryOptions: MasterDataItem[] = [
 export const mockOpSequences: OpSequence[] = [
   {
     id: 1,
-    category_code: "OPN",
+    category_code: "REGULAR",
     prefix: "OPN",
-    description: "General Outpatient",
     last_sequence: 42,
     padding_width: 4,
     reset_policy: "NEVER",
@@ -117,10 +116,18 @@ export const mockOpSequences: OpSequence[] = [
   },
   {
     id: 2,
-    category_code: "OPM",
-    prefix: "OPM",
-    description: "Medical Outpatient",
+    category_code: "VILLAGE",
+    prefix: "OPV",
     last_sequence: 18,
+    padding_width: 4,
+    reset_policy: "NEVER",
+    is_active: true,
+  },
+  {
+    id: 3,
+    category_code: "CAMP",
+    prefix: "FC",
+    last_sequence: 0,
     padding_width: 4,
     reset_policy: "NEVER",
     is_active: true,

@@ -28,6 +28,13 @@ const RegisterPatientPage = lazy(
     }))
 );
 
+const PatientDetailPage = lazy(
+  () =>
+    import("@/features/patients/PatientDetailPage").then((m) => ({
+      default: m.PatientDetailPage,
+    }))
+);
+
 function DashboardPlaceholder() {
   return (
     <div className="space-y-2">
@@ -70,6 +77,16 @@ export function AppRoutes() {
                     element={
                       <RequirePermission permission={PERMISSIONS.CREATE_PATIENT}>
                         <RegisterPatientPage />
+                      </RequirePermission>
+                    }
+                  />
+
+                  {/* Patient detail */}
+                  <Route
+                    path="/patients/:id"
+                    element={
+                      <RequirePermission permission={PERMISSIONS.VIEW_PATIENT}>
+                        <PatientDetailPage />
                       </RequirePermission>
                     }
                   />

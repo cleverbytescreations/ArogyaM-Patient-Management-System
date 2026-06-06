@@ -8,11 +8,13 @@ Inactive values retained for history; hidden from new-record pickers via is_acti
 
 from __future__ import annotations
 
+import json
 import uuid
 
 from sqlalchemy.orm import Session
 
 from app.core.audit import extract_request_meta, write_audit
+from app.core.cache import cache_delete, cache_get, cache_set
 from app.core.errors import ConflictError, NotFoundError
 from app.modules.masterdata import repository as repo
 from app.modules.masterdata.models import MasterDataItem, VALID_MASTER_DATA_TYPES
@@ -32,12 +34,27 @@ def _to_out(item: MasterDataItem) -> MasterDataItemOut:
     return MasterDataItemOut.model_validate(item)
 
 
+def _cache_key(data_type: str, active_only: bool) -> str:
+    suffix = "active" if active_only else "all"
+    return f"masterdata:{data_type}:{suffix}"
+
+
+def _invalidate(data_type: str) -> None:
+    cache_delete(_cache_key(data_type, False), _cache_key(data_type, True))
+
+
 def list_items(
     db: Session, data_type: str, active_only: bool = False
 ) -> list[MasterDataItemOut]:
     _validate_type(data_type)
+    key = _cache_key(data_type, active_only)
+    cached = cache_get(key)
+    if cached is not None:
+        return [MasterDataItemOut.model_validate(row) for row in json.loads(cached)]
     items = repo.list_by_type(db, data_type, active_only=active_only)
-    return [_to_out(i) for i in items]
+    result = [_to_out(i) for i in items]
+    cache_set(key, json.dumps([r.model_dump() for r in result]))
+    return result
 
 
 def create_item(
@@ -79,6 +96,7 @@ def create_item(
         request_id=rid,
     )
     db.commit()
+    _invalidate(data_type)
     return _to_out(item)
 
 
@@ -125,4 +143,5 @@ def update_item(
         request_id=rid,
     )
     db.commit()
+    _invalidate(data_type)
     return _to_out(item)

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,18 +49,28 @@ import type {
   DuplicateSuggestion,
 } from "@/types/patients";
 
+function calcAgeFromDOB(dob: string): number | null {
+  const dobDate = new Date(dob);
+  if (isNaN(dobDate.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - dobDate.getFullYear();
+  const m = today.getMonth() - dobDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) age--;
+  return age >= 0 ? age : 0;
+}
+
 function toApiRequest(values: RegisterPatientFormValues): PatientCreateRequest {
   return {
     full_name: values.full_name,
     op_category_code: values.op_category_code,
-    ...(values.gender ? { gender: values.gender as GenderCode } : {}),
+    gender: values.gender as GenderCode,
+    mobile: values.mobile,
     ...(values.date_of_birth?.trim()
       ? { date_of_birth: values.date_of_birth.trim() }
       : {}),
-    ...(values.age_years?.trim()
+    ...(!values.date_of_birth?.trim() && values.age_years?.trim()
       ? { age_years: Number(values.age_years) }
       : {}),
-    ...(values.mobile?.trim() ? { mobile: values.mobile.trim() } : {}),
     ...(values.email?.trim() ? { email: values.email.trim() } : {}),
     ...(values.address?.trim() ? { address: values.address.trim() } : {}),
     ...(values.blood_group ? { blood_group: values.blood_group } : {}),
@@ -276,6 +286,7 @@ export function RegisterPatientPage() {
 
   const form = useForm<RegisterPatientFormValues>({
     resolver: zodResolver(registerPatientSchema),
+    mode: "onChange",
     defaultValues: {
       full_name: "",
       op_category_code: "",
@@ -296,6 +307,19 @@ export function RegisterPatientPage() {
       remarks: "",
     },
   });
+
+  const watchedDOB = form.watch("date_of_birth");
+
+  useEffect(() => {
+    if (!watchedDOB) {
+      form.setValue("age_years", "", { shouldValidate: false });
+      return;
+    }
+    const age = calcAgeFromDOB(watchedDOB);
+    if (age !== null) {
+      form.setValue("age_years", String(age), { shouldValidate: false });
+    }
+  }, [watchedDOB, form]);
 
   const { mutate: registerPatient, isPending } = useMutation({
     mutationFn: ({
@@ -374,7 +398,7 @@ export function RegisterPatientPage() {
       <PageHeader
         eyebrow="Patient Management"
         title="Register New Patient"
-        subtitle="Fields marked * are required. At least one contact or identity field is also required."
+        subtitle="Fields marked * are required."
         actions={
           <Button
             type="button"
@@ -438,6 +462,9 @@ export function RegisterPatientPage() {
                       onValueChange={field.onChange}
                       value={field.value}
                       disabled={isPending}
+                      onOpenChange={(open) => {
+                        if (!open) field.onBlur();
+                      }}
                     >
                       <FormControl>
                         <SelectTrigger aria-label="OP category">
@@ -450,8 +477,41 @@ export function RegisterPatientPage() {
                             key={seq.category_code}
                             value={seq.category_code}
                           >
-                            {seq.prefix}
-                            {seq.description ? ` — ${seq.description}` : ""}
+                            {seq.category_code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Gender <span aria-hidden="true">*</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={isPending}
+                      onOpenChange={(open) => {
+                        if (!open) field.onBlur();
+                      }}
+                    >
+                      <FormControl>
+                        <SelectTrigger aria-label="Gender">
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {genderOptions.map((opt) => (
+                          <SelectItem key={opt.code} value={opt.code}>
+                            {opt.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -463,10 +523,10 @@ export function RegisterPatientPage() {
             </div>
           </FormSection>
 
-          {/* ── Contact & Identification (min-identity) ── */}
+          {/* ── Contact & Identification ── */}
           <FormSection title="Contact & Identification">
             <p className="text-xs text-muted-foreground">
-              At least one field below is required to identify the patient.
+              Email and date of birth help identify patients and reduce duplicate registrations.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField
@@ -474,15 +534,24 @@ export function RegisterPatientPage() {
                 name="mobile"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mobile number</FormLabel>
+                    <FormLabel>
+                      Mobile number <span aria-hidden="true">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="tel"
                         inputMode="numeric"
-                        placeholder="10–15 digit mobile"
+                        maxLength={15}
+                        placeholder="10-digit number (e.g. 9876543210)"
                         autoComplete="tel"
+                        aria-required="true"
                         disabled={isPending}
+                        onChange={(e) => {
+                          field.onChange(
+                            e.target.value.replace(/\D/g, "").slice(0, 15)
+                          );
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -524,67 +593,45 @@ export function RegisterPatientPage() {
                         disabled={isPending}
                       />
                     </FormControl>
+                    {watchedDOB && calcAgeFromDOB(watchedDOB) !== null && (
+                      <p className="text-xs text-muted-foreground">
+                        Age: {calcAgeFromDOB(watchedDOB)} years
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="age_years"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Age (years)</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        max={150}
-                        placeholder="e.g. 35"
-                        disabled={isPending}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!watchedDOB && (
+                <FormField
+                  control={form.control}
+                  name="age_years"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Age (years)</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={150}
+                          placeholder="Enter if date of birth unknown"
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
           </FormSection>
 
           {/* ── Demographics ── */}
           <FormSection title="Demographics">
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="gender"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Gender</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={isPending}
-                    >
-                      <FormControl>
-                        <SelectTrigger aria-label="Gender">
-                          <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {genderOptions.map((opt) => (
-                          <SelectItem key={opt.code} value={opt.code}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="blood_group"

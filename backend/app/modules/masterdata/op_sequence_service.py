@@ -7,14 +7,18 @@ All changes are audited; format changes do not alter already-issued numbers.
 
 from __future__ import annotations
 
+import json
 import uuid
 
 from sqlalchemy.orm import Session
 
 from app.core.audit import extract_request_meta, write_audit
+from app.core.cache import cache_delete, cache_get, cache_set
 from app.core.errors import ConflictError, NotFoundError
 from app.modules.masterdata import repository as repo
 from app.modules.masterdata.schemas import OpSequenceOut, OpSequenceUpdateRequest
+
+_OP_SEQ_CACHE_KEY = "op-sequences"
 
 
 def _to_out(seq) -> OpSequenceOut:
@@ -22,7 +26,12 @@ def _to_out(seq) -> OpSequenceOut:
 
 
 def list_sequences(db: Session) -> list[OpSequenceOut]:
-    return [_to_out(s) for s in repo.list_sequences(db)]
+    cached = cache_get(_OP_SEQ_CACHE_KEY)
+    if cached is not None:
+        return [OpSequenceOut.model_validate(row) for row in json.loads(cached)]
+    result = [_to_out(s) for s in repo.list_sequences(db)]
+    cache_set(_OP_SEQ_CACHE_KEY, json.dumps([r.model_dump() for r in result]))
+    return result
 
 
 def update_sequence(
@@ -84,4 +93,5 @@ def update_sequence(
         request_id=rid,
     )
     db.commit()
+    cache_delete(_OP_SEQ_CACHE_KEY)
     return _to_out(seq)

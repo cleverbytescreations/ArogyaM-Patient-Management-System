@@ -4,11 +4,20 @@ export const registerPatientSchema = z
   .object({
     full_name: z.string().min(1, "Full name is required").max(200, "Name too long"),
     op_category_code: z.string().min(1, "OP category is required"),
-    gender: z.string().optional(),
+    gender: z.string().min(1, "Gender is required"),
+    mobile: z
+      .string()
+      .min(1, "Mobile number is required")
+      .regex(/^\d{10,15}$/, "Mobile must be 10–15 digits"),
     date_of_birth: z.string().optional(),
     age_years: z.string().optional(),
-    mobile: z.string().optional(),
-    email: z.string().optional(),
+    email: z
+      .string()
+      .refine(
+        (val) => !val?.trim() || z.string().email().safeParse(val.trim()).success,
+        { message: "Invalid email address" }
+      )
+      .optional(),
     address: z.string().max(500, "Address too long").optional(),
     blood_group: z.string().optional(),
     marital_status: z.string().optional(),
@@ -21,39 +30,6 @@ export const registerPatientSchema = z
     remarks: z.string().max(2000, "Too long").optional(),
   })
   .superRefine((data, ctx) => {
-    const hasMobile = Boolean(data.mobile?.trim());
-    const hasEmail = Boolean(data.email?.trim());
-    const hasDOB = Boolean(data.date_of_birth?.trim());
-    const hasAge = Boolean(data.age_years?.trim());
-
-    if (!hasMobile && !hasEmail && !hasDOB && !hasAge) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          "At least one of mobile, email, date of birth, or age is required.",
-        path: ["mobile"],
-      });
-    }
-
-    if (data.mobile?.trim() && !/^\d{10,15}$/.test(data.mobile.trim())) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Mobile must be 10–15 digits",
-        path: ["mobile"],
-      });
-    }
-
-    if (data.email?.trim()) {
-      const emailResult = z.string().email().safeParse(data.email.trim());
-      if (!emailResult.success) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Invalid email address",
-          path: ["email"],
-        });
-      }
-    }
-
     if (
       data.date_of_birth?.trim() &&
       !/^\d{4}-\d{2}-\d{2}$/.test(data.date_of_birth.trim())

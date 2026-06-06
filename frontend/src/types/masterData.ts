@@ -22,7 +22,6 @@ export interface OpSequence {
   id: number;
   category_code: string;
   prefix: string;
-  description: string | null;
   last_sequence: number;
   padding_width: number;
   reset_policy: "NEVER" | "YEARLY";
