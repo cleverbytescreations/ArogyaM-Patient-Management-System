@@ -24,7 +24,8 @@ Principles:
 ## Tech Stack
 Frontend: React 18 + Vite + TypeScript, Radix UI primitives, Tailwind CSS,
   TanStack Query v5, Zustand, React Hook Form + Zod, Axios, MSW v2, Vitest + RTL
-Backend: FastAPI + SQLAlchemy 2.x (sync) + Pydantic v2 + Alembic, psycopg3, ruff, mypy
+Backend: FastAPI + SQLAlchemy 2.x (sync) + Pydantic v2 + pydantic-settings + Alembic,
+  psycopg3, passlib[bcrypt], python-jose, ruff, mypy
 Data: PostgreSQL 16 (FTS + pg_trgm; no separate search engine)
 Storage: MinIO / S3-compatible (document binaries only; metadata in PostgreSQL)
 Infra: Redis (optional — rate limiting / token denylist), Nginx, Docker Compose
@@ -47,6 +48,10 @@ Use `backend-patterns` for FastAPI backend design, module structure, services, r
 - Migrations run inside Docker: `docker compose exec api alembic …`; never edit DB schema directly
 - All sensitive actions (login, view-profile, create/update, upload, export, merge, user changes) write to `audit_log`
 - `SQL_ECHO=false` in all environments — SQL parameter logging would expose PHI (SAD §10.1)
+- `SecurityHeadersMiddleware` (in `core/middleware.py`) sets CSP, `X-Frame-Options`, `X-Content-Type-Options`,
+  `Referrer-Policy`, and `Permissions-Policy` on every response — never remove or bypass this
+- JWT denylist (`core/tokens.py`) and login rate limiter (`core/ratelimit.py`) use Redis when `REDIS_URL` is
+  set; both fall back to an in-process dict for single-worker dev — multi-worker prod MUST configure Redis
 
 ## Code navigation policy
 Prefer LSP for `.py`, `.ts`, `.tsx` symbol lookup; use Grep only as fallback for config

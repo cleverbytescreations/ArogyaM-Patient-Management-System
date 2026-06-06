@@ -13,9 +13,9 @@
 > - Task ID pattern: `UI-T<module>.<seq>`. Foundation tasks use `UI-TF.x`.
 > - Effort tags: **[S]** ≤0.5 day · **[M]** ~1–2 days · **[L]** ~3+ days. Tier: **(MVP)** R1 · **(R2)** Full-Scope.
 > - All tasks unchecked `[ ]` by default. **No code is to be written in this planning step.**
-> - **Stack (Plan §5.1):** Vite + React + TypeScript + MUI; axios client with JWT interceptor; zod validation; route guards + `usePermissions()`.
+> - **Stack (Plan §5.1):** Vite + React + TypeScript + Radix UI primitives + Tailwind CSS; TanStack Query v5; Zustand; React Hook Form + Zod; Axios with JWT interceptor; MSW v2; Vitest + RTL; route guards + `usePermissions()`.
 > - **Cross-cutting UX rules (Plan §5.3):** mandatory fields clearly marked; clinical forms mirror paper case sheets; **no medical detail in search result lists**; 409 conflict shows a reload prompt; no patient data cached beyond session.
-> - **Accessibility baseline (Plan §5.4, SAD §21):** WCAG 2.1 AA — accessible MUI semantics/ARIA, full keyboard nav + visible focus, labels associated with inputs, clear error announcements, contrast ≥ AA, never colour-as-only-signal; axe checks in CI.
+> - **Accessibility baseline (Plan §5.4, SAD §21):** WCAG 2.1 AA — accessible Radix UI semantics/ARIA, full keyboard nav + visible focus, labels associated with inputs, clear error announcements, contrast ≥ AA, never colour-as-only-signal; axe checks in CI.
 >
 > **Screen map (Plan §5.2):** Login · Dashboard (R2) · Patient Search · New Patient Registration · Patient Profile (tabs) · Visit + clinical forms · Follow-Up Register · Documents Register · Reports (R2) · User Management · Master Data (R2) · Backup Status · Audit Logs · Merge Duplicates (R2).
 
