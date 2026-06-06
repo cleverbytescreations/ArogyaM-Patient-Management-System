@@ -568,7 +568,7 @@
       **Files / Components:** `core/logging.py`, `core/errors.py`, all routers.
       **Acceptance Criteria:** Representative clinical request logs contain no PII; route templates logged not resolved ids; covered by CI log-privacy guard (TST-T0.2).
 
-- [ ] **LOG-T0.2 [S]** — Reverse-proxy query-string redaction (MVP)
+- [x] **LOG-T0.2 [S]** — Reverse-proxy query-string redaction (MVP)
       **Description:** Configure proxy access-log format to drop/anonymize query strings on patient/search routes.
       **Files / Components:** `ops/proxy/nginx.conf` (or Caddy/Traefik).
       **Acceptance Criteria:** Proxy logs for `/patients/search` contain no query params; path logged without query string.
@@ -597,12 +597,12 @@
       **Files / Components:** `tests/auth/`.
       **Acceptance Criteria:** Wrong-user/wrong-password identical errors; lockout triggers; RBAC denies unauthorized; explicit RBAC coverage.
 
-- [ ] **TST-T4.1 [M]** — OP-numbering & concurrency tests (MVP)
+- [x] **TST-T4.1 [M]** — OP-numbering & concurrency tests (MVP)
       **Description:** Simultaneous registrations produce unique OP numbers; concurrent edits raise 409 (UC-29).
       **Files / Components:** `tests/concurrency/`.
       **Acceptance Criteria:** Parallel registrations → all unique; concurrent record edits → exactly one 409.
 
-- [ ] **TST-T3.1 [M]** — Patient lifecycle integration tests (MVP)
+- [x] **TST-T3.1 [M]** — Patient lifecycle integration tests (MVP)
       **Description:** registration → OP → search → timeline; min-identity, duplicate advisory, version conflict, role field-filtering.
       **Files / Components:** `tests/patients/`.
       **Acceptance Criteria:** Full vertical slice passes; limited-role responses filtered.

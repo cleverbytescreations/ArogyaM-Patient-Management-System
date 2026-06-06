@@ -181,6 +181,7 @@ services:
     volumes:
       - ./backend:/app          # hot reload
       - /app/.venv              # keep container venv (do not shadow with host)
+      - ./nginx:/app/nginx:ro   # nginx configs accessible for proxy-config tests (LOG-T0.2)
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:

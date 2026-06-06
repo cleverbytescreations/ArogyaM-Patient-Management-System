@@ -4,7 +4,8 @@ Covers:
 - Sequential unique numbers within a transaction
 - Unknown/inactive category → NotFoundError
 - YEARLY reset increments correctly across years (mocked)
-- Concurrent registrations produce unique numbers (concurrency test)
+- Concurrent registrations produce unique numbers (TST-T4.1)
+- Concurrent patient edits → stale version raises VersionConflictError (TST-T4.1)
 - DB-T4.1: SELECT FOR UPDATE runs without error on a live DB
 - DB-T3.1: op_number unique constraint rejects duplicates at DB level
 - DB-T5.1: search indexes are present (EXPLAIN confirms GIN usage)
@@ -21,7 +22,8 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.core.errors import NotFoundError
+from app.core.concurrency import bump_version, ensure_current_version
+from app.core.errors import NotFoundError, VersionConflictError
 from app.modules.patients.op_number import generate_op_number
 
 
@@ -337,4 +339,113 @@ class TestOpNumberConcurrency:
         assert len(results) == n_threads, "Some threads did not produce an OP number"
         assert len(set(results)) == n_threads, (
             f"Duplicate OP numbers detected: {sorted(results)}"
+        )
+
+
+# ── Version-conflict concurrency (TST-T4.1) ──────────────────────────────────
+
+
+class TestVersionConflictConcurrency:
+    """TST-T4.1: Concurrent patient edits → the stale edit raises VersionConflictError.
+
+    Uses separate committed DB sessions (db_engine) so threads see each other's
+    committed changes, which is required to exercise the version-check path under
+    realistic concurrency.
+
+    Thread 1 commits first (version 1 → 2).  Thread 2 waits for Thread 1 to
+    commit, then reads the patient (now at version 2) but supplies the original
+    client version (1) — exactly the scenario of a stale-update request — and
+    must receive VersionConflictError.
+    """
+
+    def test_stale_edit_gets_version_conflict(self, db_engine) -> None:
+        """TST-T4.1: concurrent record edits → exactly one wins, stale edit gets 409."""
+        from sqlalchemy import select
+
+        from app.modules.patients.models import Patient
+
+        patient_id = uuid.uuid4()
+
+        with db_engine.connect() as conn:
+            admin_id = conn.execute(text("SELECT id FROM users LIMIT 1")).scalar()
+            cat_code = conn.execute(
+                text("SELECT category_code FROM op_sequence WHERE is_active = TRUE LIMIT 1")
+            ).scalar()
+            unique_op = f"VCTEST{uuid.uuid4().hex[:8].upper()}"
+            conn.execute(
+                text(
+                    "INSERT INTO patients "
+                    "(id, op_number, op_category_code, full_name, mobile, "
+                    "status, version, created_by, updated_by) "
+                    "VALUES (:id, :op, :cat, 'VersionConflict Test', '7778889999', "
+                    "'ACTIVE', 1, :uid, :uid)"
+                ),
+                {
+                    "id": str(patient_id),
+                    "op": unique_op,
+                    "cat": cat_code,
+                    "uid": str(admin_id),
+                },
+            )
+            conn.commit()
+
+        success_count: list[int] = [0]
+        conflict_count: list[int] = [0]
+        errors: list[Exception] = []
+        thread1_committed = threading.Event()
+
+        def _first_edit() -> None:
+            try:
+                from sqlalchemy.orm import Session as OrmSession
+
+                with OrmSession(db_engine) as sess:
+                    with sess.begin():
+                        p = sess.execute(
+                            select(Patient).where(Patient.id == patient_id)
+                        ).scalar_one()
+                        ensure_current_version(p, 1)
+                        p.city = "EditedByFirst"
+                        bump_version(p)
+                success_count[0] += 1
+            except Exception as exc:
+                errors.append(exc)
+            finally:
+                thread1_committed.set()
+
+        def _stale_edit() -> None:
+            thread1_committed.wait(timeout=10.0)
+            try:
+                from sqlalchemy.orm import Session as OrmSession
+
+                with OrmSession(db_engine) as sess:
+                    with sess.begin():
+                        p = sess.execute(
+                            select(Patient).where(Patient.id == patient_id)
+                        ).scalar_one()
+                        # DB has version=2 after Thread 1; client still sends version=1 (stale)
+                        ensure_current_version(p, 1)
+                        p.city = "EditedByStale"
+                        bump_version(p)
+                success_count[0] += 1
+            except VersionConflictError:
+                conflict_count[0] += 1
+            except Exception as exc:
+                errors.append(exc)
+
+        t1 = threading.Thread(target=_first_edit)
+        t2 = threading.Thread(target=_stale_edit)
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        # Cleanup — runs regardless of test outcome
+        with db_engine.connect() as conn:
+            conn.execute(text("DELETE FROM patients WHERE id = :id"), {"id": str(patient_id)})
+            conn.commit()
+
+        assert not errors, f"Unexpected thread errors: {errors}"
+        assert success_count[0] == 1, f"Expected 1 success, got {success_count[0]}"
+        assert conflict_count[0] == 1, (
+            f"Expected 1 VersionConflict (maps to 409), got {conflict_count[0]}"
         )
