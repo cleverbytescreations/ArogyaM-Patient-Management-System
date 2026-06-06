@@ -1115,10 +1115,10 @@ Files to refer (if required - lazy loading):
 Task to review:
 ---------------
 
-Backend (Stage 4, part 1)
+Tests / Cross-cutting
 
-BE-T3.x profile shell support; BE-T6.1–BE-T6.3, API-T6.1 — visits (future-date rule), case-sheet upsert (one per visit), append-only consultation notes.
-Field-level visibility filtering exercised end-to-end (limited roles → reduced clinical view).
+TST-T6.1 (clinical lifecycle, partial — visits/case-sheet/notes), UI-TX.2 a11y pass on profile + clinical forms.
+UI-TX.3 — frontend component & validation tests (route-guard/permission gating, form zod validation) established now that real edit forms exist; continues every sprint after.
 
 
 Objective:

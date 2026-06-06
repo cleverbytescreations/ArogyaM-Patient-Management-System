@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { AxiosError } from "axios";
 import type { ApiError } from "@/types/api";
 
@@ -13,15 +13,15 @@ export function isVersionConflict(error: unknown): boolean {
 export function useConflictHandler() {
   const [hasConflict, setHasConflict] = useState(false);
 
-  const handlePossibleConflict = (error: unknown): boolean => {
+  const handlePossibleConflict = useCallback((error: unknown): boolean => {
     if (isVersionConflict(error)) {
       setHasConflict(true);
       return true;
     }
     return false;
-  };
+  }, []);
 
-  const clearConflict = () => setHasConflict(false);
+  const clearConflict = useCallback(() => setHasConflict(false), []);
 
   return { hasConflict, handlePossibleConflict, clearConflict };
 }

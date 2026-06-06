@@ -271,12 +271,12 @@
       **Files / Components:** `frontend/src/lib/conflict.ts`, integrated into all edit forms.
       **Acceptance Criteria:** Concurrent edits anywhere surface a consistent reload prompt; no silent overwrite.
 
-- [ ] **UI-TX.2 [M]** — Accessibility pass on key screens (MVP)
+- [x] **UI-TX.2 [M]** — Accessibility pass on key screens (MVP)
       **Description:** Audit Login, Registration, Search, Profile tabs, clinical forms, Follow-Up Register for WCAG 2.1 AA: keyboard nav, focus order, ARIA labels, error announcements, contrast, non-colour signalling; fix axe findings.
       **Files / Components:** all `features/` screens, `*.a11y.test.tsx`.
       **Acceptance Criteria:** axe checks pass on key screens in CI; manual keyboard-nav smoke passes.
 
-- [ ] **UI-TX.3 [M]** — Frontend component & validation tests (MVP)
+- [x] **UI-TX.3 [M]** — Frontend component & validation tests (MVP)
       **Description:** Vitest + React Testing Library tests for components, form validation, route-guard/permission gating, with API mocks.
       **Files / Components:** `frontend/src/**/*.test.tsx`, mock handlers.
       **Acceptance Criteria:** Components and forms covered; guards block unauthorized routes in tests; CI green.
