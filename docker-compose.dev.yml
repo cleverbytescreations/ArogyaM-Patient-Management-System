@@ -218,6 +218,14 @@ services:
       - /app/node_modules       # keep container node_modules
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
+    healthcheck:
+      # Vite is served by the Node process, so use Node's built-in fetch instead
+      # of relying on curl/wget being present in the image.
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5173/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     logging: *default-logging
     networks: [arogyam]
 
@@ -237,7 +245,7 @@ services:
       api:
         condition: service_healthy
       frontend:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       # Use 127.0.0.1 (not localhost): busybox wget resolves localhost to ::1,
       # but nginx.dev.conf listens on IPv4 only -> would always report unhealthy.

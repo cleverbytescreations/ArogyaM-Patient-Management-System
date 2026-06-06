@@ -110,13 +110,13 @@
 
 ### Module 2 — Master Data
 
-- [ ] **BE-T2.1 [M]** — Master-data model, schemas, service (MVP)
+- [x] **BE-T2.1 [M]** — Master-data model, schemas, service (MVP)
       **Description:** Model `master_data` (typed lookup) + schemas `MasterDataItem`, `MasterDataCreateRequest`, `MasterDataUpdateRequest`; service for list (`?active=`), create, update/deactivate by `{type}`.
       **Files / Components:** `backend/app/modules/masterdata/models.py`, `.../schemas.py`, `.../service.py`, `.../repository.py`.
       **Implementation Notes:** `{type}` constrained to the `master_data.type` CHECK list (API spec §8.5). Read = authenticated; write = `manage_master_data` (Admin), audited. Inactive values hidden from new records but preserved on old.
       **Acceptance Criteria:** Unknown type → 404; duplicate `type+code` → 409; deactivation does not break existing references; writes audited.
 
-- [ ] **BE-T2.2 [M]** — OP-sequence management service (MVP)
+- [x] **BE-T2.2 [M]** — OP-sequence management service (MVP)
       **Description:** Model `op_sequence` + schemas `OpSequence`, `OpSequenceUpdateRequest`; service to list sequences and update prefix/padding/reset policy (Admin, audited). `last_sequence` not client-settable except controlled correction.
       **Files / Components:** `backend/app/modules/masterdata/op_sequence_service.py`.
       **Implementation Notes:** `reset_policy ∈ {NEVER, YEARLY}`. Changing format must not retroactively alter issued numbers.
@@ -124,7 +124,7 @@
 
 ### Module 3 — Patient Registration & Profile
 
-- [ ] **BE-T3.1 [M]** — Patient model & schemas (MVP)
+- [x] **BE-T3.1 [M]** — Patient model & schemas (MVP)
       **Description:** Models `patients`, `patient_aliases`; schemas `Patient`, `PatientCreateRequest`, `PatientUpdateRequest`, `PatientAlias`, `PatientSearchResult`, `PatientTimeline`.
       **Files / Components:** `backend/app/modules/patients/models.py`, `.../schemas.py`.
       **Implementation Notes:** `patients` includes `op_number, op_category, status, merged_into, is_historical, version`. `op_number` server-generated, immutable on update. Min-identity rule fields.
@@ -150,7 +150,7 @@
 
 ### Module 4 — OP Numbering
 
-- [ ] **BE-T4.1 [L]** — Transaction-safe OP number generator (MVP)
+- [x] **BE-T4.1 [L]** — Transaction-safe OP number generator (MVP)
       **Description:** Implement the OP-number service used inside registration: `SELECT … FROM op_sequence WHERE category_code=:c FOR UPDATE`, increment `last_sequence`, format `prefix + zero-pad(padding_width)`, honor reset policy, return number.
       **Files / Components:** `backend/app/modules/patients/op_number.py` (or `modules/masterdata`).
       **Implementation Notes:** Must run inside the caller's registration transaction (no separate commit). Guarantees no duplicates / no reuse under concurrency (UC-04/UC-29). YEARLY reset checks year boundary.
@@ -333,7 +333,7 @@
       **Implementation Notes:** Admin `manage_users` except `GET /roles` (authenticated). `?is_doctor=true` powers the doctor picker (no separate doctor table).
       **Acceptance Criteria:** Matches API spec §7.2; duplicate → 409; version conflict → 409; `is_doctor` filter works.
 
-- [ ] **API-T2.1 [M]** — Master-data & OP-sequence routes (MVP)
+- [x] **API-T2.1 [M]** — Master-data & OP-sequence routes (MVP)
       **Description:** `GET/POST /master-data/{type}`, `PUT /master-data/{type}/{id}`, `GET /op-sequences`, `PUT /op-sequences/{id}`.
       **Files / Components:** `backend/app/modules/masterdata/router.py`.
       **Implementation Notes:** `{type}` path enum constrained; write admin-only.
@@ -434,17 +434,17 @@
       **Implementation Notes:** Password supplied via env/prompt, hashed (argon2/bcrypt); never commit credentials.
       **Acceptance Criteria:** Running the script yields a working admin login; no secret in VCS.
 
-- [ ] **DB-T5.1 [M]** — Search indexes (FTS + trigram) (MVP)
+- [x] **DB-T5.1 [M]** — Search indexes (FTS + trigram) (MVP)
       **Description:** Ensure `pg_trgm` GIN on `patients.full_name` and GIN on generated `search_vector`; tune ranking (exact OP/mobile first, then name).
       **Files / Components:** migration revision, `backend/app/modules/search/repository.py`.
       **Acceptance Criteria:** Search query uses the indexes (EXPLAIN); p95 < 1 s on ~50k seeded patients (perf test PERF).
 
-- [ ] **DB-T3.1 [S]** — Patient/alias constraints & version columns (MVP)
+- [x] **DB-T3.1 [S]** — Patient/alias constraints & version columns (MVP)
       **Description:** Verify unique `op_number`, `patient_aliases` FK, `merged_into` FK, `version` default, status CHECK; B-tree indexes on `op_number`, `mobile`.
       **Files / Components:** baseline migration.
       **Acceptance Criteria:** Duplicate OP rejected at DB level; indexes present.
 
-- [ ] **DB-T4.1 [S]** — OP-sequence row-lock readiness (MVP)
+- [x] **DB-T4.1 [S]** — OP-sequence row-lock readiness (MVP)
       **Description:** Confirm `op_sequence` schema supports `SELECT … FOR UPDATE` per category (PK/unique on category, `last_sequence`, `prefix`, `number_format`/`padding_width`, `reset_policy`, `active`).
       **Files / Components:** baseline migration.
       **Acceptance Criteria:** Locking query runs; concurrent test (TST-T4.1) passes.

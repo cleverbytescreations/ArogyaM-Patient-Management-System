@@ -1084,9 +1084,10 @@ Objective:
 ----------
 Implement the following task from the task list. If any task is already implemented, please validate the feature:
 
-SEC-T1.2 — auth rate limiting (429 + Retry-After, optional Redis) on the login route.
-LOG-T1.1 (login + user changes), LOG-T0.1 — audit + PII-safe logging wired from day one.
-TST-T1.1, TST-T1.2 — auth/RBAC + security-negative tests.
+Master Data & OP Numbering (Stage 2)
+
+BE-T2.1, BE-T2.2, API-T2.1 — master-data read APIs + OP-sequence service (seed verified in S1).
+BE-T4.1, DB-T4.1, DB-T5.1, DB-T3.1 — row-locked OP-number generator, sequence lock readiness, search FTS/trigram indexes, patient/alias constraints.
 
 Instructions:
 -------------
@@ -1114,9 +1115,8 @@ Files to refer (if required - lazy loading):
 Task to review:
 ---------------
 
-SEC-T1.2 — auth rate limiting (429 + Retry-After, optional Redis) on the login route.
-LOG-T1.1 (login + user changes), LOG-T0.1 — audit + PII-safe logging wired from day one.
-TST-T1.1, TST-T1.2 — auth/RBAC + security-negative tests.
+BE-T2.1, BE-T2.2, API-T2.1 — master-data read APIs + OP-sequence service (seed verified in S1).
+BE-T4.1, DB-T4.1, DB-T5.1, DB-T3.1 — row-locked OP-number generator, sequence lock readiness, search FTS/trigram indexes, patient/alias constraints.
 
 
 Objective:
