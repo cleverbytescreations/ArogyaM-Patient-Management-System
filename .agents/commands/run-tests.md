@@ -24,18 +24,18 @@ Optional: `/run-tests backend` | `/run-tests frontend` | `/run-tests all` | `/ru
 
 4. If Docker is unavailable but backend dependencies are installed on the host, use:
    ```bash
-   cd backend && python -m pytest app/tests/ -q -p no:cacheprovider
+   cd backend && python3 -m pytest app/tests/ -q -p no:cacheprovider
    ```
 
 5. Scoped backend variants:
    ```bash
-   cd backend && python -m pytest app/tests/<file>.py -q -p no:cacheprovider
-   cd backend && python -m pytest app/tests/<file>.py::<test_name> -q -p no:cacheprovider
+   cd backend && python3 -m pytest app/tests/<file>.py -q -p no:cacheprovider
+   cd backend && python3 -m pytest app/tests/<file>.py::<test_name> -q -p no:cacheprovider
    ```
 
 6. Coverage, when requested:
    ```bash
-   cd backend && COVERAGE_FILE=.coverage.codex python -m pytest app/tests/ --cov=app --cov-report=term-missing -p no:cacheprovider
+   cd backend && COVERAGE_FILE=.coverage.codex python3 -m pytest app/tests/ --cov=app --cov-report=term-missing -p no:cacheprovider
    ```
 
 7. Frontend checks:

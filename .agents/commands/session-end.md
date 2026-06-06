@@ -26,7 +26,7 @@ Optional stage number: `/session-end 3`
 
 4. Run tests:
    ```bash
-   cd backend && python -m pytest app/tests/ -q -p no:cacheprovider
+   cd backend && python3 -m pytest app/tests/ -q -p no:cacheprovider
    cd frontend && npm test
    ```
    Do not commit if required tests are red.

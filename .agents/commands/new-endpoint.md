@@ -19,7 +19,7 @@ Scaffold a new API endpoint following the ArogyaM PMS backend pattern.
    ```bash
    cd backend && ruff check app/
    cd backend && mypy app/ --ignore-missing-imports
-   cd backend && python -m pytest app/tests/<specific_endpoint_test_if_available> -q -p no:cacheprovider
+   cd backend && python3 -m pytest app/tests/<specific_endpoint_test_if_available> -q -p no:cacheprovider
    ```
 
 ## Constraints

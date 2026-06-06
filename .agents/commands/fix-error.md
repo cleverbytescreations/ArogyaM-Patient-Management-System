@@ -22,7 +22,7 @@ Apply the minimal safe change. Do not refactor surrounding code unless the root 
 ### Step 4 - Verify
 Run the narrowest relevant test or checker:
 ```bash
-cd backend && python -m pytest app/tests/<specific_test_or_file> -q -p no:cacheprovider
+cd backend && python3 -m pytest app/tests/<specific_test_or_file> -q -p no:cacheprovider
 ```
 
 For frontend errors:

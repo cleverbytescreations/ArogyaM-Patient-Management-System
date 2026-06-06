@@ -62,7 +62,7 @@ When Redis is configured, use it only for:
 Do not store source-of-truth data, patient records, document metadata, workflow state, or session state in Redis. When Redis is absent, token denylist behavior falls back to the existing in-process store.
 
 ### Event / Async Layer
-Phase 1 uses FastAPI background tasks for lightweight fire-and-forget work such as backup alerts. No Celery, Kafka, or transactional outbox is part of Phase 1. Redis RQ is the documented Full-Scope/Future upgrade path for PDF generation, OCR, and embedding jobs.
+Phase 1 uses FastAPI background tasks for lightweight fire-and-forget work such as backup alerts. No Celery or Kafka is part of Phase 1. Redis RQ is the documented Full-Scope/Future upgrade path for PDF generation, OCR, and embedding jobs.
 
 Use async/background flows for: backup alerts, future PDF generation, future OCR extraction, future embedding generation, and bulk historical import utilities.
 

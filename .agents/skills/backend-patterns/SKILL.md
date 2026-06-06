@@ -20,7 +20,7 @@ Preferred stack:
 - SQLAlchemy 2.x sync `Session`, `create_engine`, and `sessionmaker`
 - Pydantic v2 schemas with `ConfigDict(from_attributes=True)` where ORM serialization is needed
 - Alembic migrations under `backend/app/migrations`
-- psycopg3 via `psycopg[binary]`, direct PostgreSQL connection, no PgBouncer/pooler in Phase 1
+- psycopg3 via `psycopg[binary]` with a direct PostgreSQL connection
 - python-jose for JWT, passlib bcrypt for password hashing
 - ruff, mypy, pytest, pytest-cov, httpx
 
@@ -133,11 +133,11 @@ See `architecture-deep-dive -> Cache / Queue` for canonical Redis DB slot guidan
 
 Backend search orchestration builds PostgreSQL FTS/trigram queries in repositories and returns minimal identifiers for search results. Opening the patient profile is the boundary for medical detail and must be audited.
 
-See `architecture-deep-dive` for search/storage separation and future semantic-search scope.
+See `architecture-deep-dive` for search/storage separation and future AI/search scope.
 
 ## OCR / AI Workflow Rules
 
-OCR, embeddings, RAG, and semantic search are Future scope. If adding preparatory seams, keep them dormant and do not introduce new runtime services or schema extensions without checklist coverage.
+OCR, embeddings, RAG, and AI-assisted search are Future scope. If adding preparatory seams, keep them dormant and do not introduce new runtime services or schema extensions without checklist coverage.
 
 ## Security Rules
 - Use `require_permission("perm_name")` and deny by default on protected routes.

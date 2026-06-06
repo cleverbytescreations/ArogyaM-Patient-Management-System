@@ -32,7 +32,7 @@ Pass migration name: `/migrate <name>`
 5. Verify:
    ```bash
    cd backend && alembic current
-   cd backend && python -m pytest app/tests/test_migrations.py app/tests/test_ddl_parity.py -q -p no:cacheprovider
+   cd backend && python3 -m pytest app/tests/test_migrations.py app/tests/test_ddl_parity.py -q -p no:cacheprovider
    ```
 
 6. If migration fails, do not edit the database manually. Fix the model/migration and rerun the migration workflow.

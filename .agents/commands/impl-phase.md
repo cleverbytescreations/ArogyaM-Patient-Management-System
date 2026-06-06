@@ -44,7 +44,7 @@ cd frontend && npm run type-check
 
 ### Step 5 - Test
 ```bash
-cd backend && python -m pytest app/tests/ -q -p no:cacheprovider
+cd backend && python3 -m pytest app/tests/ -q -p no:cacheprovider
 cd frontend && npm test
 ```
 

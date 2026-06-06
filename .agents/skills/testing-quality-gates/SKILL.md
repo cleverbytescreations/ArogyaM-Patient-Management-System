@@ -17,8 +17,8 @@ Use this skill when the task involves:
 - Backend linter: `cd backend && ruff check app/`
 - Backend format check: `cd backend && ruff format --check app/`
 - Backend type checker: `cd backend && mypy app/ --ignore-missing-imports`
-- Backend test runner: `cd backend && python -m pytest app/tests/ -q -p no:cacheprovider`
-- Backend coverage: `cd backend && COVERAGE_FILE=.coverage.codex python -m pytest app/tests/ --cov=app --cov-report=term-missing -p no:cacheprovider`
+- Backend test runner: `cd backend && python3 -m pytest app/tests/ -q -p no:cacheprovider`
+- Backend coverage: `cd backend && COVERAGE_FILE=.coverage.codex python3 -m pytest app/tests/ --cov=app --cov-report=term-missing -p no:cacheprovider`
 - Migration status: `cd backend && alembic current`
 - Migration apply: `cd backend && alembic upgrade head`
 - Frontend lint: `cd frontend && npm run lint`
@@ -39,16 +39,15 @@ Use this skill when the task involves:
 
 - Run pytest with module invocation and disabled cache metadata when running on the host:
   ```bash
-  cd backend && python -m pytest app/tests/<scope> -q -p no:cacheprovider
+  cd backend && python3 -m pytest app/tests/<scope> -q -p no:cacheprovider
   ```
 - For coverage, keep the coverage file inside the repo or a known writable temp directory:
   ```bash
-  cd backend && COVERAGE_FILE=.coverage.codex python -m pytest app/tests/<scope> --cov=app --cov-report=term-missing -p no:cacheprovider
+  cd backend && COVERAGE_FILE=.coverage.codex python3 -m pytest app/tests/<scope> --cov=app --cov-report=term-missing -p no:cacheprovider
   ```
 - If coverage.py raises a file permission, SQLite data-file, or rename error while tests pass, report the pytest pass count separately and mark coverage as environment-blocked. Coverage.py uses a SQLite-backed data file even though the application database is PostgreSQL.
 - Do not use SQLite for Alembic migrations, DDL parity, OP-number concurrency, PostgreSQL FTS/trigram, CITEXT, triggers, `ON CONFLICT`, or JSONB-like behavior.
 - Use Docker/Postgres or the CI-style PostgreSQL service for migration and integration checks.
-- No PgBouncer/pooler + asyncpg rules are present in the discovered architecture; do not add pooler verification unless the source docs change.
 
 ## Docker Compose Checks
 
