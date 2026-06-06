@@ -32,6 +32,9 @@ ms-python.python-2026.4.0-darwin-arm64
 ms-python.vscode-pylance-2026.2.1
 ms-python.vscode-python-envs-1.30.0-darwin-arm64
 
+--test
+docker compose -f docker-compose.dev.yml exec api python -m pytest app/tests/test_patients.py app/tests/test_op_number.py app/tests/test_masterdata.py -q -p no:cacheprovider
+
 ref
 https://www.kyndryl.com/in/en/services/applications
 

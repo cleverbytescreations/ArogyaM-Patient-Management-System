@@ -130,13 +130,13 @@
       **Implementation Notes:** `patients` includes `op_number, op_category, status, merged_into, is_historical, version`. `op_number` server-generated, immutable on update. Min-identity rule fields.
       **Acceptance Criteria:** Schemas enforce min-identity (BE-TF / SEC validation); `op_number` not accepted on create/update; field set matches DDL.
 
-- [ ] **BE-T3.2 [L]** — Patient registration service (MVP)
+- [x] **BE-T3.2 [L]** — Patient registration service (MVP)
       **Description:** Implement `POST /patients` flow: validate min-identity & lookup codes, run inline duplicate check, generate OP number within the row-locked transaction (Module 4), persist patient `version=1`, audit CREATE.
       **Files / Components:** `backend/app/modules/patients/service.py`, `.../repository.py`.
       **Implementation Notes:** Duplicate suspicion returns advisory `409 DUPLICATE_PATIENT_SUSPECTED` with suggestions in `error.details`; `confirm_create=true` overrides. OP numbering and patient insert are one atomic transaction.
       **Acceptance Criteria:** Valid registration returns `201` with generated `op_number`; missing identity → `422 MIN_IDENTITY_REQUIRED`; bad lookup → `422 INVALID_LOOKUP_CODE`; duplicate advisory overridable.
 
-- [ ] **BE-T3.3 [M]** — Patient profile read/update service (MVP)
+- [x] **BE-T3.3 [M]** — Patient profile read/update service (MVP)
       **Description:** Implement `GET /patients/{id}` (role-filtered fields, access audited), `PUT /patients/{id}` (version-checked, audited old/new), `GET /patients/{id}/aliases`.
       **Files / Components:** `backend/app/modules/patients/service.py`.
       **Implementation Notes:** Receptionist/Data-Entry get reduced medical view (response filtering). Profile view writes an audit VIEW row. `op_number` immutable; stale `version` → `409 VERSION_CONFLICT`.
@@ -158,7 +158,7 @@
 
 ### Module 5 — Search & Retrieval
 
-- [ ] **BE-T5.1 [L]** — Patient search service (MVP)
+- [x] **BE-T5.1 [L]** — Patient search service (MVP)
       **Description:** Implement `GET /patients/search` over OP/mobile/name (exact + partial), ranked exact OP/mobile first then name relevance; paginated; returns minimal identifiers only (no clinical fields); masks mobile.
       **Files / Components:** `backend/app/modules/search/service.py`, `.../repository.py`.
       **Implementation Notes:** Use Postgres FTS (`tsvector`+GIN) + `pg_trgm` for partial/typo tolerance (DB-T5.1). Query params `q, op_number, mobile, name, op_category, status`. Search terms never logged in plaintext (SAD §10.1 #4).
@@ -254,7 +254,7 @@
 
 ### Module 14 — Concurrency Handling (cross-cutting)
 
-- [ ] **BE-T14.1 [M]** — Optimistic concurrency framework (MVP)
+- [x] **BE-T14.1 [M]** — Optimistic concurrency framework (MVP)
       **Description:** Implement a reusable version-check pattern: services compare client `version` to stored row, raise `VERSION_CONFLICT` on mismatch, increment `version` on successful update.
       **Files / Components:** `backend/app/core/concurrency.py`, applied in patients/visits/case-sheet/discharge/follow-up/user services.
       **Implementation Notes:** Pair with row-locked OP sequence (BE-T4.1). Every mutable record carries `version`.
@@ -339,7 +339,7 @@
       **Implementation Notes:** `{type}` path enum constrained; write admin-only.
       **Acceptance Criteria:** Matches API spec §7.3; unknown type → 404; duplicate code → 409.
 
-- [ ] **API-T3.1 [M]** — Patient routes (MVP)
+- [x] **API-T3.1 [M]** — Patient routes (MVP)
       **Description:** `POST /patients` (with `?confirm_create=`), `GET/PUT /patients/{id}`, `GET /patients/{id}/aliases`, `POST /patients/{id}/op-correction` (R2 candidate).
       **Files / Components:** `backend/app/modules/patients/router.py`.
       **Implementation Notes:** Permissions `create_patient/view_patient/edit_patient`; min-identity & duplicate behaviors surfaced as documented codes.
@@ -350,7 +350,7 @@
       **Files / Components:** `backend/app/modules/patients/router.py`.
       **Acceptance Criteria:** Returns ordered `PatientTimeline`; `view_patient` enforced; field visibility respected.
 
-- [ ] **API-T5.1 [S]** — Search route (MVP; advanced filters R2)
+- [x] **API-T5.1 [S]** — Search route (MVP; advanced filters R2)
       **Description:** `GET /patients/search?q=&op_number=&mobile=&name=&op_category=&status=` paginated. R2: accept the advanced-filter query params from **BE-T5.2** (`age`/`dob` range, `address`, `visit_date` range).
       **Files / Components:** `backend/app/modules/search/router.py`.
       **Acceptance Criteria:** Matches API spec §7.5; minimal-identifier results; ranked; search terms not logged; advanced filters wired when BE-T5.2 lands.

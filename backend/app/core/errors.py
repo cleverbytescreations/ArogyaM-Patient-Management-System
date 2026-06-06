@@ -98,6 +98,10 @@ class ServiceUnavailableError(AppError):
     error_code = "SERVICE_UNAVAILABLE"
 
 
+class MinIdentityError(ValidationAppError):
+    error_code = "MIN_IDENTITY_REQUIRED"
+
+
 class DuplicatePatientError(ConflictError):
     error_code = "DUPLICATE_PATIENT_SUSPECTED"
 

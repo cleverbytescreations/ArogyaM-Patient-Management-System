@@ -38,9 +38,7 @@ def generate_op_number(db: Session, category_code: str) -> str:
     ).first()
 
     if row is None:
-        raise NotFoundError(
-            f"No active OP sequence found for category '{category_code}'"
-        )
+        raise NotFoundError(f"No active OP sequence found for category '{category_code}'")
 
     seq_id, prefix, last_seq, padding_width, reset_policy, last_reset_year = row
     current_year = date.today().year

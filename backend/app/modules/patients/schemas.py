@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class PatientAliasOut(BaseModel):
@@ -74,17 +74,6 @@ class PatientCreateRequest(BaseModel):
     registration_date: date | None = None
     remarks: str | None = None
 
-    @model_validator(mode="after")
-    def _min_identity(self) -> "PatientCreateRequest":
-        """At least one contact / identification field required (UC-03 BR4)."""
-        if not any(
-            [self.mobile, self.email, self.date_of_birth, self.age_years is not None]
-        ):
-            raise ValueError(
-                "At least one of mobile, email, date_of_birth, or age_years is required"
-            )
-        return self
-
 
 class PatientUpdateRequest(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=150)
@@ -105,3 +94,15 @@ class PatientUpdateRequest(BaseModel):
     weight_kg: float | None = Field(default=None, gt=0)
     remarks: str | None = None
     version: int = Field(..., ge=1)
+
+
+class PatientSearchResult(BaseModel):
+    id: uuid.UUID
+    op_number: str
+    op_category_code: str
+    full_name: str
+    age_years: int | None = None
+    gender: str | None = None
+    mobile_masked: str | None = None
+    status: str
+    registration_date: date

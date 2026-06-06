@@ -1070,7 +1070,7 @@ You need to descide the recommended H/W for dev and production
 
 ===================================================================================================================================
 
->>=> API Task implementation
+>>> API Task implementation
 
 Files to refer (if required - lazy loading):
 ---------------
@@ -1084,10 +1084,12 @@ Objective:
 ----------
 Implement the following task from the task list. If any task is already implemented, please validate the feature:
 
-Master Data & OP Numbering (Stage 2)
+Patient Core (Stage 3)
 
-BE-T2.1, BE-T2.2, API-T2.1 — master-data read APIs + OP-sequence service (seed verified in S1).
-BE-T4.1, DB-T4.1, DB-T5.1, DB-T3.1 — row-locked OP-number generator, sequence lock readiness, search FTS/trigram indexes, patient/alias constraints.
+BE-T3.1–BE-T3.3, API-T3.1 — patient model/schemas, registration service (inline duplicate check + atomic OP numbering), profile read/update (role-filtered, version-checked, audited), aliases.
+BE-T5.1, API-T5.1 — patient search service (ranked, minimal-identifier, masked mobile, no clinical data).
+BE-T14.1 — optimistic concurrency framework (first real use).
+
 
 Instructions:
 -------------
@@ -1115,8 +1117,11 @@ Files to refer (if required - lazy loading):
 Task to review:
 ---------------
 
-BE-T2.1, BE-T2.2, API-T2.1 — master-data read APIs + OP-sequence service (seed verified in S1).
-BE-T4.1, DB-T4.1, DB-T5.1, DB-T3.1 — row-locked OP-number generator, sequence lock readiness, search FTS/trigram indexes, patient/alias constraints.
+Patient Core (Stage 3)
+
+BE-T3.1–BE-T3.3, API-T3.1 — patient model/schemas, registration service (inline duplicate check + atomic OP numbering), profile read/update (role-filtered, version-checked, audited), aliases.
+BE-T5.1, API-T5.1 — patient search service (ranked, minimal-identifier, masked mobile, no clinical data).
+BE-T14.1 — optimistic concurrency framework (first real use).
 
 
 Objective:
@@ -1133,6 +1138,7 @@ Instructions:
 
 Following are the code change report:
 -------------------------------------
+
 
 ====================================================================================================================================
 

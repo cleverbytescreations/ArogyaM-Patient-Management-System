@@ -7,6 +7,7 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    Computed,
     Date,
     DateTime,
     ForeignKey,
@@ -26,9 +27,7 @@ from app.core.db import Base
 class Patient(Base):
     __tablename__ = "patients"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     op_number: Mapped[str] = mapped_column(String(30), nullable=False, unique=True)
     op_category_code: Mapped[str] = mapped_column(String(40), nullable=False)
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
@@ -57,7 +56,17 @@ class Patient(Base):
     )
     remarks: Mapped[str | None] = mapped_column(Text)
     # search_vector is GENERATED ALWAYS AS STORED — read-only from ORM side
-    search_vector: Mapped[str | None] = mapped_column(TSVECTOR, nullable=True)
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('simple', "
+            "(((COALESCE(full_name, ''::character varying))::text || ' '::text) || "
+            "((COALESCE(op_number, ''::character varying))::text || ' '::text)) || "
+            "(COALESCE(mobile, ''::character varying))::text)",
+            persisted=True,
+        ),
+        nullable=True,
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -80,9 +89,7 @@ class Patient(Base):
 class PatientAlias(Base):
     __tablename__ = "patient_aliases"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     patient_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("patients.id", ondelete="CASCADE"),

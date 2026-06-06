@@ -34,6 +34,7 @@ from app.modules.auth.router import me_router
 from app.modules.auth.router import router as auth_router
 from app.modules.masterdata.router import op_seq_router
 from app.modules.masterdata.router import router as masterdata_router
+from app.modules.patients.router import router as patients_router
 from app.modules.users.router import roles_router
 from app.modules.users.router import router as users_router
 
@@ -80,6 +81,7 @@ app.include_router(users_router, prefix=API_PREFIX)
 app.include_router(roles_router, prefix=API_PREFIX)
 app.include_router(masterdata_router, prefix=API_PREFIX)
 app.include_router(op_seq_router, prefix=API_PREFIX)
+app.include_router(patients_router, prefix=API_PREFIX)
 
 
 @app.get("/", include_in_schema=False)
