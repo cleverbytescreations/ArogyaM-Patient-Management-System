@@ -5,29 +5,30 @@
 @layer base {
   /*
    * ArogyaM brand palette — Kyndryl-inspired editorial system:
-   * a warm cream canvas, charcoal ink, and a single confident coral accent,
-   * with the navy of the Sacred Grove lotus mark as the complementary tone.
-   * Corners are nearly square and type is set in IBM Plex Sans.
+   * a warm light-greige canvas with white surfaces floating on it, a dark-grey
+   * (not black) editorial ink, and a single confident coral/flame accent used
+   * sparingly, with the navy of the Sacred Grove lotus mark as the complementary
+   * tone. Corners are nearly square and type is set light-weight in IBM Plex Sans.
    */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 210 9% 15%;
+    --background: 36 11% 95%;
+    --foreground: 24 6% 22%;
     --card: 0 0% 100%;
-    --card-foreground: 210 9% 15%;
+    --card-foreground: 24 6% 22%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 9% 15%;
+    --popover-foreground: 24 6% 22%;
     --primary: 9 92% 56%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 40 13% 94%;
-    --secondary-foreground: 210 9% 20%;
-    --muted: 40 14% 96%;
-    --muted-foreground: 215 7% 35%;
+    --secondary: 36 12% 91%;
+    --secondary-foreground: 24 6% 24%;
+    --muted: 36 12% 93%;
+    --muted-foreground: 25 5% 42%;
     --accent: 9 100% 96%;
     --accent-foreground: 9 75% 42%;
     --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 30 9% 88%;
-    --input: 30 9% 85%;
+    --border: 36 10% 86%;
+    --input: 36 10% 83%;
     --ring: 9 92% 56%;
     --radius: 0.125rem;
 
@@ -84,6 +85,7 @@
   h1,
   h2,
   h3 {
+    font-weight: 300;
     letter-spacing: -0.02em;
   }
 
@@ -97,6 +99,11 @@
   /* Short coral rule placed under a section heading — the signature Kyndryl accent */
   .accent-rule {
     @apply block h-[3px] w-12 bg-primary;
+  }
+
+  /* Small uppercase tracked label sitting above a heading (the "SERVICES" eyebrow) */
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground;
   }
 
   /* Oversized, faint watermark heading (e.g. the "how kyndryl helps" treatment) */

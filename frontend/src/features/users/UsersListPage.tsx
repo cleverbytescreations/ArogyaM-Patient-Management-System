@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/DataTable";
 import type { Column } from "@/components/DataTable";
+import { PageHeader } from "@/components/PageHeader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { UserFormDialog } from "./UserFormDialog";
 import { ResetPasswordDialog } from "./ResetPasswordDialog";
@@ -189,19 +190,18 @@ export function UsersListPage() {
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground">
-            Manage staff accounts and roles
-          </p>
-        </div>
-        <Button onClick={openCreate} aria-label="Create new user">
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Add User
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Administration"
+        title="User Management"
+        subtitle="Manage staff accounts and roles"
+        actions={
+          <Button onClick={openCreate} aria-label="Create new user">
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Add User
+          </Button>
+        }
+      />
 
       {error && (
         <div

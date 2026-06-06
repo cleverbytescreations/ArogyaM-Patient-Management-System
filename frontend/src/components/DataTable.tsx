@@ -46,7 +46,7 @@ export function DataTable<T>({
 
   return (
     <div className="space-y-2">
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>

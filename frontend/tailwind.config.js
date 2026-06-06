@@ -11,7 +11,7 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          "Inter",
+          "IBM Plex Sans",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
@@ -20,6 +20,13 @@ export default {
           "Helvetica Neue",
           "Arial",
           "sans-serif",
+        ],
+      },
+      fontSize: {
+        // Oversized, light-weight editorial page title (Kyndryl hero treatment)
+        display: [
+          "clamp(2rem, 4vw, 3.25rem)",
+          { lineHeight: "1.05", letterSpacing: "-0.02em", fontWeight: "300" },
         ],
       },
       colors: {

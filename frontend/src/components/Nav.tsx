@@ -67,11 +67,11 @@ export function Nav({ onNavigate }: { onNavigate?: () => void }) {
               onClick={onNavigate}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
+                  "flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors",
+                  "hover:bg-secondary hover:text-foreground",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   isActive
-                    ? "bg-primary/10 text-primary shadow-[inset_3px_0_0_0] shadow-primary"
+                    ? "bg-secondary text-foreground shadow-[inset_3px_0_0_0] shadow-primary"
                     : "text-muted-foreground"
                 )
               }
