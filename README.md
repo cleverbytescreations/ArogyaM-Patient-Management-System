@@ -91,11 +91,8 @@ openssl rand -hex 32   # paste into JWT_SECRET_KEY in .env.dev
 docker compose -f docker-compose.dev.yml --env-file .env.dev up --build
 ```
 
-To also start the optional Redis cache / rate-limiter:
-
-```bash
-docker compose -f docker-compose.dev.yml --env-file .env.dev --profile cache up --build
-```
+The dev stack starts Redis by default so login rate limiting and JWT token
+denylist behavior match production more closely.
 
 Run detached by adding `-d`. To stop:
 

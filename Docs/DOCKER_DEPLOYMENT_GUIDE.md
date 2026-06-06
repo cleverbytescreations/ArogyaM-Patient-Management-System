@@ -32,7 +32,7 @@ Per SAD §5/§18, ArogyaM Phase 1 is a **modular monolith** of small containers:
 | `db` | postgres:16 | ✅ | ✅ | Primary datastore + FTS |
 | `minio` | minio | ✅ | ✅ | Document object storage |
 | `createbuckets` | minio/mc | ✅ | ✅ | One-shot: create private bucket (readiness gate) |
-| `redis` | redis:7 | optional | ✅ | Cache / login rate-limit / token denylist |
+| `redis` | redis:7 | ✅ | ✅ | Cache / login rate-limit / token denylist |
 | `certbot` | certbot | — | ✅ | Let's Encrypt issuance/renewal |
 | `backup` | alpine + tools | — | ✅ | Scheduled DB + document backups with retention |
 
@@ -71,8 +71,9 @@ questions before locking the VM size.
 | Minimum | 2 vCPU | 4 GB | 10 GB free |
 | Recommended | 4 vCPU | 8 GB | 20 GB free (SSD) |
 
-Keep it light: Redis is **off by default** in dev; the database and MinIO use
-Alpine images; bind mounts give hot reload without rebuilds.
+Keep it light: Redis is enabled in dev but remains small and ephemeral; the
+database and MinIO use Alpine images; bind mounts give hot reload without
+rebuilds.
 
 ### 2.2 Production VM (single Linux host)
 
@@ -196,7 +197,7 @@ costs are accepted.
 # 1. Configure
 cp .env.dev.example .env.dev          # tweak ports if needed
 
-# 2. Launch (build + run). Add --profile cache to include Redis.
+# 2. Launch (build + run). Redis starts by default for rate limiting/token denylist.
 docker compose -f docker-compose.dev.yml --env-file .env.dev up --build
 
 # 3. Open
