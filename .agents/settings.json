@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose -f docker-compose.dev.yml:*)",
+      "Bash(cd backend && ruff:*)",
+      "Bash(cd backend && mypy:*)",
+      "Bash(cd backend && python -m pytest:*)",
+      "Bash(cd backend && alembic:*)",
+      "Bash(cd frontend && npm:*)",
+      "Bash(cd frontend && npx tsc:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Edit(.agents/skills/**)",
+      "Edit(.agents/commands/**)",
+      "Edit(.agents/hooks/**)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(rm -rf *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .agents/hooks/prefer_lsp.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .agents/hooks/ts-diagnostics.sh"
+          },
+          {
+            "type": "command",
+            "command": "cd \"/Users/sumeshpraj/Documents/GitHub/ArogyaM-Patient-Management-System/backend\" && ruff check app/ -q 2>&1 | head -15 || true"
+          }
+        ]
+      }
+    ]
+  }
+}
