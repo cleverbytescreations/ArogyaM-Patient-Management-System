@@ -72,7 +72,7 @@ function toApiRequest(values: RegisterPatientFormValues): PatientCreateRequest {
       ? { age_years: Number(values.age_years) }
       : {}),
     ...(values.email?.trim() ? { email: values.email.trim() } : {}),
-    ...(values.address?.trim() ? { address: values.address.trim() } : {}),
+    ...(values.address?.trim() ? { address_line: values.address.trim() } : {}),
     ...(values.blood_group ? { blood_group: values.blood_group } : {}),
     ...(values.marital_status
       ? { marital_status: values.marital_status }
@@ -81,19 +81,13 @@ function toApiRequest(values: RegisterPatientFormValues): PatientCreateRequest {
       ? { dietary_preference: values.dietary_preference }
       : {}),
     ...(values.occupation?.trim()
-      ? { occupation: values.occupation.trim() }
+      ? { profession: values.occupation.trim() }
       : {}),
     ...(values.height_cm?.trim()
       ? { height_cm: Number(values.height_cm) }
       : {}),
     ...(values.weight_kg?.trim()
       ? { weight_kg: Number(values.weight_kg) }
-      : {}),
-    ...(values.hereditary_diseases?.trim()
-      ? { hereditary_diseases: values.hereditary_diseases.trim() }
-      : {}),
-    ...(values.allergies?.trim()
-      ? { allergies: values.allergies.trim() }
       : {}),
     ...(values.remarks?.trim() ? { remarks: values.remarks.trim() } : {}),
   };
@@ -492,9 +486,7 @@ export function RegisterPatientPage() {
                 name="gender"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Gender <span aria-hidden="true">*</span>
-                    </FormLabel>
+                    <FormLabel>Gender</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
@@ -534,9 +526,7 @@ export function RegisterPatientPage() {
                 name="mobile"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Mobile number <span aria-hidden="true">*</span>
-                    </FormLabel>
+                    <FormLabel>Mobile number</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -545,7 +535,6 @@ export function RegisterPatientPage() {
                         maxLength={15}
                         placeholder="10-digit number (e.g. 9876543210)"
                         autoComplete="tel"
-                        aria-required="true"
                         disabled={isPending}
                         onChange={(e) => {
                           field.onChange(

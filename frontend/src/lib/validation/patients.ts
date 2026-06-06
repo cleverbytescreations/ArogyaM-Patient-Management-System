@@ -4,11 +4,14 @@ export const registerPatientSchema = z
   .object({
     full_name: z.string().min(1, "Full name is required").max(200, "Name too long"),
     op_category_code: z.string().min(1, "OP category is required"),
-    gender: z.string().min(1, "Gender is required"),
+    gender: z.string().optional(),
     mobile: z
       .string()
-      .min(1, "Mobile number is required")
-      .regex(/^\d{10,15}$/, "Mobile must be 10–15 digits"),
+      .optional()
+      .refine(
+        (val) => !val?.trim() || /^\d{10,15}$/.test(val.trim()),
+        { message: "Mobile must be 10–15 digits" }
+      ),
     date_of_birth: z.string().optional(),
     age_years: z.string().optional(),
     email: z
@@ -30,6 +33,19 @@ export const registerPatientSchema = z
     remarks: z.string().max(2000, "Too long").optional(),
   })
   .superRefine((data, ctx) => {
+    if (
+      !data.mobile?.trim() &&
+      !data.email?.trim() &&
+      !data.date_of_birth?.trim() &&
+      !data.age_years?.trim()
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one of mobile, email, date of birth, or age is required",
+        path: ["mobile"],
+      });
+    }
+
     if (
       data.date_of_birth?.trim() &&
       !/^\d{4}-\d{2}-\d{2}$/.test(data.date_of_birth.trim())

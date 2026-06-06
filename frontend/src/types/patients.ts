@@ -4,24 +4,28 @@ export type GenderCode = "MALE" | "FEMALE" | "OTHER";
 export interface Patient {
   id: string;
   op_number: string;
+  op_category_code: string;
   full_name: string;
   gender: GenderCode | null;
   date_of_birth: string | null;
   age_years: number | null;
   mobile: string | null;
   email: string | null;
-  address: string | null;
+  address_line: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
   blood_group: string | null;
   marital_status: string | null;
   dietary_preference: string | null;
-  occupation: string | null;
+  profession: string | null;
   height_cm: number | null;
   weight_kg: number | null;
-  hereditary_diseases: string | null;
-  allergies: string | null;
   remarks: string | null;
-  op_category_code: string;
   status: PatientStatus;
+  merged_into: string | null;
+  is_historical: boolean;
+  registration_date: string;
   version: number;
   created_at: string;
   updated_at: string;
@@ -42,16 +46,38 @@ export interface PatientCreateRequest {
   age_years?: number;
   mobile?: string;
   email?: string;
-  address?: string;
+  address_line?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   blood_group?: string;
   marital_status?: string;
   dietary_preference?: string;
-  occupation?: string;
+  profession?: string;
   height_cm?: number;
   weight_kg?: number;
-  hereditary_diseases?: string;
-  allergies?: string;
   remarks?: string;
+}
+
+export interface PatientUpdateRequest {
+  full_name?: string;
+  date_of_birth?: string | null;
+  age_years?: number | null;
+  gender?: GenderCode | null;
+  mobile?: string | null;
+  email?: string | null;
+  address_line?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  marital_status?: string | null;
+  profession?: string | null;
+  dietary_preference?: string | null;
+  blood_group?: string | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  remarks?: string | null;
+  version: number;
 }
 
 export interface PatientSearchResult {

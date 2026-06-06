@@ -103,19 +103,19 @@
       **Implementation Notes:** On `409 DUPLICATE_PATIENT_SUSPECTED`, render suggested matches from `error.details` and offer "register anyway" (`confirm_create=true`) or open the existing profile. `op_number` not entered (server-generated). 422 field errors inline.
       **Acceptance Criteria:** Valid registration shows generated OP number; min-identity enforced with clear messaging; duplicate suggestions shown with override; mandatory fields visibly marked.
 
-- [ ] **UI-T3.2 [L]** — Patient Profile shell with tabs (MVP)
+- [x] **UI-T3.2 [L]** — Patient Profile shell with tabs (MVP)
       **Description:** Patient profile container with tabs: Basic Details · Visits · Case Sheets · Consultation Notes · Prescriptions · Discharge Summaries · Documents · Follow-Ups · Audit History (UC-06, UC-17).
       **Files / Components:** `frontend/src/features/patients/PatientProfilePage.tsx`, tab components.
       **Implementation Notes:** `GET /patients/{id}` (access is audited server-side). Tabs lazy-load. Medical tabs respect field-level visibility (limited roles see reduced view).
       **Acceptance Criteria:** All tabs render the correct module data; limited roles see filtered medical content; profile load works for permitted roles.
 
-- [ ] **UI-T3.3 [M]** — Basic Details view/edit (MVP)
+- [x] **UI-T3.3 [M]** — Basic Details view/edit (MVP)
       **Description:** Basic Details tab: display + edit demographics via `PUT /patients/{id}` (version-checked, audited).
       **Files / Components:** `frontend/src/features/patients/tabs/BasicDetailsTab.tsx`.
       **Implementation Notes:** `op_number` shown read-only (immutable). Stale `version` → 409 reload prompt. Edit gated by `edit_patient`.
       **Acceptance Criteria:** Edits persist with version check; concurrent edit prompts reload; OP number not editable.
 
-- [ ] **UI-T3.4 [S]** — Patient aliases display (MVP)
+- [x] **UI-T3.4 [S]** — Patient aliases display (MVP)
       **Description:** Show old/legacy OP numbers from `GET /patients/{id}/aliases` (merge/historical/correction sources).
       **Files / Components:** `frontend/src/features/patients/tabs/AliasesPanel.tsx`.
       **Acceptance Criteria:** Aliases listed with source; visible within Basic Details/profile.
@@ -136,19 +136,19 @@
 
 ### Module 6 — Visits & Clinical Entry (UC-08/09/10)
 
-- [ ] **UI-T6.1 [M]** — Visit create + visit list (MVP)
+- [x] **UI-T6.1 [M]** — Visit create + visit list (MVP)
       **Description:** Create-visit form and the Visits tab list; `POST/GET /patients/{id}/visits`, `GET/PUT /visits/{id}`.
       **Files / Components:** `frontend/src/features/visits/VisitsTab.tsx`, `.../VisitFormDialog.tsx`.
       **Implementation Notes:** Visit type/consultation category/doctor from master-data + doctor picker (`GET /users?is_doctor=true`). Non-scheduled future date blocked (mirror 422). Version-checked edits.
       **Acceptance Criteria:** Visit created/listed/edited; future non-scheduled date rejected with clear message; doctor picker populated.
 
-- [ ] **UI-T6.2 [M]** — Case Sheet form (paper-like) (MVP)
+- [x] **UI-T6.2 [M]** — Case Sheet form (paper-like) (MVP)
       **Description:** Case Sheet tab form mirroring the paper case sheet; `PUT /visits/{id}/case-sheet` upsert, `GET` read.
       **Files / Components:** `frontend/src/features/visits/CaseSheetTab.tsx`.
       **Implementation Notes:** All clinical free-text fields (appetite, sleep, motion, energy, hereditary, past ailments, surgeries, present complaints, remarks). Write gated by `add_consultation`; read by `view_medical_history`. Version-checked.
       **Acceptance Criteria:** Form resembles paper sheet; save creates-or-updates the single case sheet; concurrent edit → reload prompt; permission-gated.
 
-- [ ] **UI-T6.3 [M]** — Consultation Notes (append-only) (MVP)
+- [x] **UI-T6.3 [M]** — Consultation Notes (append-only) (MVP)
       **Description:** Consultation Notes tab: list + add note; `POST/GET /visits/{id}/consultation-notes`.
       **Files / Components:** `frontend/src/features/visits/ConsultationNotesTab.tsx`.
       **Implementation Notes:** Append-only entries (complaints, diagnosis, observations, treatment/diet advice, review date). Corrections are new entries, never overwrite.

@@ -13,7 +13,7 @@ import { server } from "@/test/mocks/server";
 // pointer events so the ref stays "touch" and selection is reliable in jsdom.
 async function selectOpCategory() {
   fireEvent.click(screen.getByRole("combobox", { name: /op category/i }));
-  fireEvent.click(await screen.findByRole("option", { name: /general outpatient/i }));
+  fireEvent.click(await screen.findByRole("option", { name: /regular/i }));
 }
 
 describe("RegisterPatientPage", () => {

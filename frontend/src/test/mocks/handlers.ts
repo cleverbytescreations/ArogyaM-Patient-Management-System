@@ -4,6 +4,7 @@ import type { User, Role } from "@/types/users";
 import type { PaginatedResponse } from "@/types/api";
 import type { Patient, PatientSearchResult } from "@/types/patients";
 import type { MasterDataItem, OpSequence } from "@/types/masterData";
+import type { Visit, CaseSheet, ConsultationNote, PatientAlias } from "@/types/visits";
 
 const BASE = "/api/v1";
 
@@ -139,28 +140,97 @@ export const mockOpSequences: OpSequence[] = [
 export const mockPatient: Patient = {
   id: "patient-1",
   op_number: "OPN0043",
+  op_category_code: "REGULAR",
   full_name: "Priya Sharma",
   gender: "FEMALE",
   date_of_birth: "1985-06-15",
   age_years: null,
   mobile: "9876543210",
   email: null,
-  address: "12 MG Road, Bengaluru",
+  address_line: "12 MG Road",
+  city: "Bengaluru",
+  state: "Karnataka",
+  pincode: "560001",
   blood_group: "O_POS",
   marital_status: "MARRIED",
   dietary_preference: "VEG",
-  occupation: "Teacher",
+  profession: "Teacher",
   height_cm: 160,
   weight_kg: 58,
-  hereditary_diseases: null,
-  allergies: null,
   remarks: null,
-  op_category_code: "OPN",
   status: "ACTIVE",
+  merged_into: null,
+  is_historical: false,
+  registration_date: "2026-06-01",
   version: 1,
   created_at: "2026-06-01T09:30:00Z",
   updated_at: "2026-06-01T09:30:00Z",
 };
+
+export const mockVisit: Visit = {
+  id: "visit-1",
+  patient_id: "patient-1",
+  visit_date: "2026-06-05",
+  visit_type_code: "NEW",
+  consultation_category: "REGULAR",
+  doctor_id: "user-2",
+  is_scheduled: false,
+  status: "OPEN",
+  reason: "Fever and headache",
+  version: 1,
+  created_at: "2026-06-05T10:00:00Z",
+  updated_at: "2026-06-05T10:00:00Z",
+};
+
+export const mockCaseSheet: CaseSheet = {
+  id: "cs-1",
+  visit_id: "visit-1",
+  patient_id: "patient-1",
+  appetite: "Normal",
+  sleep: "Disturbed",
+  motion: "Regular",
+  energy_level: "Low",
+  hereditary_diseases: null,
+  past_ailments: null,
+  surgeries: null,
+  exercise_routine: null,
+  deliveries: null,
+  present_complaints: "Fever for 3 days, headache",
+  other_observations: null,
+  remarks: null,
+  version: 1,
+  created_at: "2026-06-05T10:05:00Z",
+  updated_at: "2026-06-05T10:05:00Z",
+};
+
+export const mockConsultationNotes: ConsultationNote[] = [
+  {
+    id: "note-1",
+    visit_id: "visit-1",
+    patient_id: "patient-1",
+    doctor_id: "user-2",
+    presenting_complaints: "Fever, headache",
+    diagnosis: "Viral fever",
+    observations: "Temperature 101°F",
+    treatment_advice: "Rest and fluids",
+    diet_advice: "Light diet",
+    yoga_advice: null,
+    review_date: "2026-06-12",
+    version: 1,
+    created_at: "2026-06-05T10:10:00Z",
+  },
+];
+
+export const mockAliases: PatientAlias[] = [
+  {
+    id: "alias-1",
+    patient_id: "patient-1",
+    old_op_number: "OPN0010",
+    source: "CORRECTION",
+    remarks: "OP number corrected",
+    created_at: "2026-05-01T09:00:00Z",
+  },
+];
 
 export const mockPatientSearchResults: PatientSearchResult[] = [
   {
@@ -319,6 +389,20 @@ export const handlers = [
     return HttpResponse.json(mockDietaryOptions);
   }),
 
+  http.get(`${BASE}/master-data/visit_type`, () => {
+    return HttpResponse.json([
+      { id: 12, type: "visit_type", code: "NEW", label: "New Patient", sort_order: 1, is_active: true },
+      { id: 13, type: "visit_type", code: "REVIEW", label: "Review", sort_order: 2, is_active: true },
+    ]);
+  }),
+
+  http.get(`${BASE}/master-data/consultation_category`, () => {
+    return HttpResponse.json([
+      { id: 14, type: "consultation_category", code: "REGULAR", label: "Regular", sort_order: 1, is_active: true },
+      { id: 15, type: "consultation_category", code: "CAMP", label: "Camp", sort_order: 2, is_active: true },
+    ]);
+  }),
+
   http.get(`${BASE}/master-data/:type`, ({ params }) => {
     return HttpResponse.json(
       { error: { code: "RESOURCE_NOT_FOUND", message: `No mock for type ${params.type as string}`, details: [], request_id: "r5" } },
@@ -400,5 +484,128 @@ export const handlers = [
       { error: { code: "RESOURCE_NOT_FOUND", message: "Patient not found.", details: [], request_id: "r7" } },
       { status: 404 }
     );
+  }),
+
+  // Patient update
+  http.put(`${BASE}/patients/:id`, async ({ params, request }) => {
+    if (params.id !== mockPatient.id) {
+      return HttpResponse.json(
+        { error: { code: "RESOURCE_NOT_FOUND", message: "Patient not found.", details: [], request_id: "r8" } },
+        { status: 404 }
+      );
+    }
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({ ...mockPatient, ...body, version: mockPatient.version + 1 });
+  }),
+
+  // Patient aliases
+  http.get(`${BASE}/patients/:id/aliases`, ({ params }) => {
+    if (params.id === mockPatient.id) {
+      return HttpResponse.json(mockAliases);
+    }
+    return HttpResponse.json([]);
+  }),
+
+  // Visits — list
+  http.get(`${BASE}/patients/:id/visits`, ({ params }) => {
+    if (params.id === mockPatient.id) {
+      return HttpResponse.json<{ items: Visit[]; total: number; page: number; page_size: number }>({
+        items: [mockVisit],
+        total: 1,
+        page: 1,
+        page_size: 20,
+      });
+    }
+    return HttpResponse.json({ items: [], total: 0, page: 1, page_size: 20 });
+  }),
+
+  // Visits — create
+  http.post(`${BASE}/patients/:id/visits`, async ({ params, request }) => {
+    const body = await request.json() as Partial<Visit>;
+    const newVisit: Visit = {
+      ...mockVisit,
+      id: "visit-new",
+      patient_id: params.id as string,
+      visit_date: body.visit_date ?? mockVisit.visit_date,
+      visit_type_code: body.visit_type_code ?? mockVisit.visit_type_code,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    return HttpResponse.json(newVisit, { status: 201 });
+  }),
+
+  // Visit — get single
+  http.get(`${BASE}/visits/:id`, ({ params }) => {
+    if (params.id === mockVisit.id) {
+      return HttpResponse.json(mockVisit);
+    }
+    return HttpResponse.json(
+      { error: { code: "RESOURCE_NOT_FOUND", message: "Visit not found.", details: [], request_id: "r9" } },
+      { status: 404 }
+    );
+  }),
+
+  // Visit — update
+  http.put(`${BASE}/visits/:id`, async ({ params, request }) => {
+    if (params.id !== mockVisit.id) {
+      return HttpResponse.json(
+        { error: { code: "RESOURCE_NOT_FOUND", message: "Visit not found.", details: [], request_id: "r10" } },
+        { status: 404 }
+      );
+    }
+    const body = await request.json() as Partial<Visit>;
+    return HttpResponse.json({ ...mockVisit, ...body, version: mockVisit.version + 1 });
+  }),
+
+  // Case sheet — get (404 when no sheet exists for new visits)
+  http.get(`${BASE}/visits/:id/case-sheet`, ({ params }) => {
+    if (params.id === mockVisit.id) {
+      return HttpResponse.json(mockCaseSheet);
+    }
+    return HttpResponse.json(
+      { error: { code: "RESOURCE_NOT_FOUND", message: "Case sheet not found.", details: [], request_id: "r11" } },
+      { status: 404 }
+    );
+  }),
+
+  // Case sheet — save (upsert)
+  http.put(`${BASE}/visits/:id/case-sheet`, async ({ params, request }) => {
+    const body = await request.json() as Partial<CaseSheet>;
+    return HttpResponse.json({
+      ...mockCaseSheet,
+      ...body,
+      visit_id: params.id as string,
+      version: (body.version ?? mockCaseSheet.version) + 1,
+      updated_at: new Date().toISOString(),
+    });
+  }),
+
+  // Consultation notes — list
+  http.get(`${BASE}/visits/:id/consultation-notes`, ({ params }) => {
+    if (params.id === mockVisit.id) {
+      return HttpResponse.json(mockConsultationNotes);
+    }
+    return HttpResponse.json([]);
+  }),
+
+  // Consultation notes — add
+  http.post(`${BASE}/visits/:id/consultation-notes`, async ({ params, request }) => {
+    const body = await request.json() as Partial<ConsultationNote>;
+    const newNote: ConsultationNote = {
+      id: "note-new",
+      visit_id: params.id as string,
+      patient_id: mockPatient.id,
+      doctor_id: body.doctor_id ?? null,
+      presenting_complaints: body.presenting_complaints ?? null,
+      diagnosis: body.diagnosis ?? null,
+      observations: body.observations ?? null,
+      treatment_advice: body.treatment_advice ?? null,
+      diet_advice: body.diet_advice ?? null,
+      yoga_advice: body.yoga_advice ?? null,
+      review_date: body.review_date ?? null,
+      version: 1,
+      created_at: new Date().toISOString(),
+    };
+    return HttpResponse.json(newNote, { status: 201 });
   }),
 ];

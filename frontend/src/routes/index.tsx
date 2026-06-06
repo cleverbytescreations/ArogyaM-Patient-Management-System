@@ -28,10 +28,10 @@ const RegisterPatientPage = lazy(
     }))
 );
 
-const PatientDetailPage = lazy(
+const PatientProfilePage = lazy(
   () =>
-    import("@/features/patients/PatientDetailPage").then((m) => ({
-      default: m.PatientDetailPage,
+    import("@/features/patients/PatientProfilePage").then((m) => ({
+      default: m.PatientProfilePage,
     }))
 );
 
@@ -81,12 +81,12 @@ export function AppRoutes() {
                     }
                   />
 
-                  {/* Patient detail */}
+                  {/* Patient profile */}
                   <Route
                     path="/patients/:id"
                     element={
                       <RequirePermission permission={PERMISSIONS.VIEW_PATIENT}>
-                        <PatientDetailPage />
+                        <PatientProfilePage />
                       </RequirePermission>
                     }
                   />

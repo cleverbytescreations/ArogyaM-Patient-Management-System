@@ -3,6 +3,7 @@ import type { PaginatedResponse } from "@/types/api";
 import type {
   Patient,
   PatientCreateRequest,
+  PatientUpdateRequest,
   PatientSearchResult,
   PatientSearchParams,
 } from "@/types/patients";
@@ -22,4 +23,7 @@ export const patientsApi = {
 
   get: (id: string) =>
     apiClient.get<Patient>(`/patients/${id}`).then((r) => r.data),
+
+  update: (id: string, data: PatientUpdateRequest) =>
+    apiClient.put<Patient>(`/patients/${id}`, data).then((r) => r.data),
 };

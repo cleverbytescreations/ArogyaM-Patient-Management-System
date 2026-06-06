@@ -153,7 +153,7 @@ function PatientDetailView({
           label="Dietary preference"
           value={codeLabel(dietaryOptions, patient.dietary_preference)}
         />
-        <DetailRow label="Occupation" value={patient.occupation} />
+        <DetailRow label="Occupation" value={patient.profession} />
       </DetailSection>
 
       <DetailSection title="Physical Measurements">
@@ -167,13 +167,11 @@ function PatientDetailView({
         />
       </DetailSection>
 
-      <DetailSection title="Medical Background">
-        <DetailRow label="Hereditary diseases" value={patient.hereditary_diseases} />
-        <DetailRow label="Known allergies" value={patient.allergies} />
-      </DetailSection>
-
       <DetailSection title="Address">
-        <DetailRow label="Residential address" value={patient.address} />
+        <DetailRow label="Residential address" value={patient.address_line} />
+        <DetailRow label="City" value={patient.city} />
+        <DetailRow label="State" value={patient.state} />
+        <DetailRow label="PIN code" value={patient.pincode} />
       </DetailSection>
 
       <DetailSection title="Additional Remarks">
