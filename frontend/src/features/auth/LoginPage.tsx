@@ -96,11 +96,12 @@ export function LoginPage() {
         />
 
         <div className="relative z-10 flex flex-1 flex-col justify-between px-12 py-12 xl:px-16">
-          {/* Brand lockup + tagline (text, renders crisply over the photo) */}
+          {/* Brand lockup + tagline */}
           <div>
-            <p className="text-3xl font-semibold tracking-tight text-white">
-              Arogya<span className="text-primary">M</span>
-            </p>
+            <div className="flex items-center gap-3">
+              <BrandLogo variant="mark" decorative className="h-12 w-12" />
+              <BrandLogo variant="wordmark" decorative className="h-10 w-auto" />
+            </div>
             <p className="mt-3 text-lg font-light leading-snug text-white/80">
               Compassionate care, precisely kept.
             </p>
