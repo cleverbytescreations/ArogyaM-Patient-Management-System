@@ -1078,11 +1078,7 @@ Objective:
 ----------
 Implement the following task from the task list. If any task is already implemented, please validate the feature:
 
-Backend / Core
-BE-TF.1–BE-TF.9 — scaffold, config, DB session, security primitives (JWT + hashing), auth & RBAC dependencies, structured logging + redaction, audit helper, error envelope, request-ID/pagination plumbing.
-BE-T1.1–BE-T1.5 — auth models/schemas, login with lockout & no-enumeration, refresh/logout, /me + permissions, user management (CRUD, enable/disable, reset password).
-API-T1.1, API-T1.2, API-T0.1 — auth/session routes, user/role routes, /api/v1 conventions & envelopes.
-
+<TASK LIST>
 
 Instructions:
 -------------
@@ -1109,10 +1105,8 @@ Files to refer (if required - lazy loading):
 
 Task to review:
 ---------------
-Database / DevOps
-DB-T0.1–DB-T0.4 — Alembic baseline from DDL, seed lookups, first-admin seed script, migration discipline.
-DEV-TF.1 — Docker Compose dev env (proxy, frontend, api, postgres, minio, redis-optional) with seed data.
-DEV-TF.4 (skeleton), TST-T0.1 — CI test pipeline + ephemeral Postgres.
+
+<TASK LIST>
 
 
 Objective:
@@ -1146,10 +1140,7 @@ Objective:
 ----------
 Implement the following UI task from the checklist: If any task is already implemented, please review the changes are in alignment with the scope.
 
-Frontend
-UI-TF.1–UI-TF.7 — Vite/React/MUI scaffold, axios+JWT interceptor, auth context + route guards, shared component library, app shell + role nav + session timeout, zod/format/constants, CI lint/type/a11y.
-UI-T1.1, UI-T1.2 — Login screen, logout/current-user menu.
-UI-T1.3 — User Management screen (admin).
+<TASK LIST> 
 
 Instructions:
 -------------
@@ -1261,6 +1252,41 @@ Output:
 
 Following are the code change report:
 -------------------------------------
+
+
+====================================================================================================================================
+
+>>> Create skill/command for api development
+
+please create a new command "implement-api" such that when user passes the task list (separated by comma) it will execute the following prompt, by replacing <TASK LIST> with user given task list and execute this prompt?
+
+e.g. 
+/implement-api SEC-T1.1, SEC-T0.1–SEC-T0.3 
+
+#################################################################
+
+< API Task implementation prompt >
+
+
+====================================================================================================================================
+
+>>> Create skill/command for ui development
+
+please create a new command "implement-ui" such that when user passes the task list (separated by comma) it will execute the following prompt, by replacing <TASK LIST> with user given task list and execute this prompt?
+
+e.g. 
+/implement-ui UI-T3.1, UI-T5.1, UI-TF.6
+
+#################################################################
+
+< UI implementation tasks (Lite - React) >
+
+
+
+====================================================================================================================================
+
+
+====================================================================================================================================
 
 
 ====================================================================================================================================
