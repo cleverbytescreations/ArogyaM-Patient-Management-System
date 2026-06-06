@@ -2,9 +2,15 @@
 
 >>> Prompt to Generate System Architecture Document:
 
-You are an experienced Enterprise Solution Architect.
+You are an experienced System Architect / Technical Architect.
 
-Using the provided use case, requirement, scope, or functional specification documents, create a practical and implementation-ready **System Architecture Document** for the application described below.
+Using the provided use case, requirement, scope, functional specification, solution architecture, or implementation planning documents, create a practical and implementation-ready **System Architecture Document** for the application described below.
+
+The document must focus on **System Architecture / Technical Architecture**, not Solution Architecture.
+
+It should explain how the proposed solution will be technically implemented using application components, APIs, databases, storage, infrastructure, deployment units, security controls, observability, integrations, and operational mechanisms.
+
+Do not repeat business proposal, product vision, commercial justification, stakeholder benefits, or detailed functional scope unless they are required to explain a technical design decision.
 
 ---
 
@@ -1267,7 +1273,7 @@ please create a new command "implement-api" such that when user passes the task 
 e.g. 
 /implement-api SEC-T1.1, SEC-T0.1–SEC-T0.3 
 
-#################################################################
+##############################################
 
 < API Task implementation prompt >
 
@@ -1281,13 +1287,18 @@ please create a new command "implement-ui" such that when user passes the task l
 e.g. 
 /implement-ui UI-T3.1, UI-T5.1, UI-TF.6
 
-#################################################################
+###############################################
 
 < UI implementation tasks (Lite - React) >
 
-
-
 ====================================================================================================================================
+
+>>> Memory update for agent boundary restrictions
+
+simialr to the below memory instruction for codex, please update memory with instruction that you (Claude code) will not cahnge any settigns related to CODEX.
+
+memory/MEMORY.md
+- [No Claude edits](no-claude-edits.md) — Codex must not change Claude-related files; Claude Code may manage them
 
 
 ====================================================================================================================================

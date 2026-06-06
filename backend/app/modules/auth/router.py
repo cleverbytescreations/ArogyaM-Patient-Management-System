@@ -16,6 +16,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import CurrentUser, get_db
+from app.core.ratelimit import check_login_rate_limit
 from app.core.tokens import deny
 from app.modules.auth import service
 from app.modules.auth.schemas import (
@@ -30,12 +31,30 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 me_router = APIRouter(tags=["auth"])
 
 
+def _client_identifier(request: Request) -> str:
+    """Resolve the real client IP for rate limiting.
+
+    Behind the reverse proxy the TCP peer (``request.client.host``) is the proxy
+    container, so every client would otherwise share one bucket. nginx sets
+    ``X-Real-IP`` to ``$remote_addr`` (the client as seen by the proxy) — trust
+    that first. We deliberately do NOT trust the leftmost ``X-Forwarded-For``
+    entry, which is client-supplied and therefore spoofable.
+    """
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("/login", response_model=TokenResponse, summary="Authenticate and receive JWT tokens")
 def login(
     body: LoginRequest,
     request: Request,
     db: Annotated[Session, Depends(get_db)],
 ) -> TokenResponse:
+    # Rate limit by real client IP (X-Real-IP behind the proxy, TCP peer
+    # otherwise). Raises 429 when exceeded.
+    check_login_rate_limit(_client_identifier(request))
     return service.login(db, body.username, body.password, request)
 
 

@@ -3,16 +3,14 @@
 # -----------------------------------------------------------------------------
 # Purpose : Lightweight, low-resource stack for a developer laptop.
 # Profile : Hot-reload API + Vite dev server, plain HTTP, seedable Postgres,
-#           local MinIO. Redis is OPTIONAL (enable with --profile cache).
+#           local MinIO + Redis (rate-limiter / token denylist, always-on).
 #
 # Architecture (SAD §5/§18): React SPA -> Nginx (dev proxy, HTTP) -> FastAPI
-#           -> PostgreSQL + MinIO (+ optional Redis).
+#           -> PostgreSQL + MinIO + Redis.
 #
 # Usage:
 #   cp .env.dev.example .env.dev
 #   docker compose -f docker-compose.dev.yml --env-file .env.dev up --build
-#   # With optional Redis cache/limiter:
-#   docker compose -f docker-compose.dev.yml --env-file .env.dev --profile cache up --build
 #
 # Recommended developer hardware (see Docs/DOCKER_DEPLOYMENT_GUIDE.md §2):
 #   Minimum     : 2 vCPU / 4 GB RAM / 10 GB free disk
@@ -120,14 +118,18 @@ services:
     networks: [arogyam]
 
   # ---------------------------------------------------------------------------
-  # Redis — OPTIONAL cache / rate-limiter / token denylist (SAD §4, MVP-light).
-  # Disabled by default. Enable with: --profile cache
+  # Redis — cache / rate-limiter / token denylist (SAD §4, MVP-light).
+  # Always-on in dev; mirrors prod behaviour so the rate-limiter and JWT
+  # denylist are exercised locally. Ephemeral (no persistence, no password).
   # ---------------------------------------------------------------------------
   redis:
     image: ${REDIS_IMAGE:-redis:7-alpine}
-    profiles: ["cache"]
     restart: unless-stopped
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    # Ephemeral in dev (no persistence). maxmemory caps the footprint and
+    # `noeviction` fails writes rather than silently dropping denylist/rate-limit
+    # keys (security-relevant — see prod note). Working set is tiny (kBs), so the
+    # cap is never hit in practice.
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "${REDIS_MAXMEMORY:-128mb}", "--maxmemory-policy", "noeviction"]
     ports:
       - "${REDIS_PORT:-6379}:6379"
     healthcheck:
@@ -135,6 +137,11 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "${REDIS_CPU_LIMIT:-0.25}"
+          memory: ${REDIS_MEM_LIMIT:-192m}
     logging: *default-logging
     networks: [arogyam]
 
@@ -151,7 +158,10 @@ services:
       context: ./backend
       target: ${API_BUILD_TARGET:-dev}
     restart: unless-stopped
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    # --proxy-headers lets uvicorn populate request.client from the proxy's
+    # X-Forwarded-* so audit/rate-limit see the real client (the API is only
+    # reachable via the reverse proxy, so trusting all upstreams is safe here).
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--proxy-headers", "--forwarded-allow-ips", "*"]
     env_file:
       - .env.dev
     environment:
@@ -178,6 +188,8 @@ services:
         condition: service_healthy
       createbuckets:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     healthcheck:
       # Uses Python (always present in the API image) so we don't depend on curl.
       test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/health').status==200 else 1)\" || exit 1"]

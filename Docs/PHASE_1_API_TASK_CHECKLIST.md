@@ -518,7 +518,7 @@
       **Implementation Notes:** Map permissions from SAD §11.2 / API spec §2.3. Field-level visibility filtering for limited roles.
       **Acceptance Criteria:** Negative RBAC tests (no token/expired/wrong role/disabled) all blocked; permission map matches matrix.
 
-- [ ] **SEC-T1.2 [S]** — Auth rate limiting (optional Redis) (MVP-light)
+- [x] **SEC-T1.2 [S]** — Auth rate limiting (optional Redis) (MVP-light)
       **Description:** Implement login throttling (`429 RATE_LIMITED` + `Retry-After`) via Redis when enabled.
       **Files / Components:** `backend/app/core/ratelimit.py`, `auth/router.py`.
       **Acceptance Criteria:** Excess login attempts throttled with 429 when Redis on; disabled cleanly when off.
@@ -557,13 +557,13 @@
 
 ## 6. Logging and Audit Tasks
 
-- [ ] **LOG-T1.1 [M]** — Audit writes on all sensitive actions (MVP)
+- [x] **LOG-T1.1 [M]** — Audit writes on all sensitive actions (MVP)
       **Description:** Wire `core/audit.py` into: login (incl. failures), view profile, create/update patient & clinical records, upload, download, export, merge request/decision, user/role/master-data changes, backup events.
       **Files / Components:** services across all modules.
       **Implementation Notes:** Capture user, role snapshot, action, entity type/id, affected patient, old/new JSON, IP, user agent, `request_id`. Append-only.
       **Acceptance Criteria:** Each listed action writes exactly one audit row with required fields; audit is the only store holding clinical/PII detail.
 
-- [ ] **LOG-T0.1 [M]** — PII/PHI-safe application logging (MVP)
+- [x] **LOG-T0.1 [M]** — PII/PHI-safe application logging (MVP)
       **Description:** Apply the redaction filter + allow-listed structured fields everywhere; no request/response bodies on clinical/patient endpoints; uploads log metadata only; search terms omitted/hashed; `echo=False`, debug off in prod; exception handler logs type+stack+`request_id` only.
       **Files / Components:** `core/logging.py`, `core/errors.py`, all routers.
       **Acceptance Criteria:** Representative clinical request logs contain no PII; route templates logged not resolved ids; covered by CI log-privacy guard (TST-T0.2).

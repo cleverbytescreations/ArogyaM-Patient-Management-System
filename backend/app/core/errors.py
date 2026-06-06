@@ -73,6 +73,15 @@ class RateLimitError(AppError):
     http_status = status.HTTP_429_TOO_MANY_REQUESTS
     error_code = "RATE_LIMITED"
 
+    def __init__(
+        self,
+        message: str = "Too many requests. Please slow down.",
+        retry_after: int = 60,
+        details: list | None = None,
+    ):
+        super().__init__(message, details)
+        self.retry_after = retry_after
+
 
 class FileTooLargeError(AppError):
     http_status = 413
@@ -170,6 +179,15 @@ async def db_data_error_handler(request: Request, exc: DataError) -> JSONRespons
             [],
             _get_request_id(request),
         ),
+    )
+
+
+async def rate_limit_error_handler(request: Request, exc: RateLimitError) -> JSONResponse:
+    """429 handler — adds ``Retry-After`` so clients know when to retry (SEC-T1.2)."""
+    return JSONResponse(
+        status_code=exc.http_status,
+        content=_error_body(exc.error_code, exc.message, exc.details, _get_request_id(request)),
+        headers={"Retry-After": str(exc.retry_after)},
     )
 
 

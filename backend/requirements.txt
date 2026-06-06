@@ -11,6 +11,8 @@ passlib[bcrypt]>=1.7,<2.0
 bcrypt>=3.2.0,<4.0
 python-multipart>=0.0.9,<1.0
 email-validator>=2.0,<3.0
+# optional cache/limiter backend — required when REDIS_URL is set (SEC-T1.2, BE-T1.3)
+redis>=5.0,<6.0
 # testing
 pytest>=8.2,<9.0
 pytest-asyncio>=0.23,<1.0

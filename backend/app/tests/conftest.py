@@ -204,3 +204,13 @@ def _reset_token_denylist() -> Generator[None, None, None]:
     reset()
     yield
     reset()
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limit() -> Generator[None, None, None]:
+    """The in-process rate-limit counter is module-global; clear it between tests."""
+    from app.core.ratelimit import reset
+
+    reset()
+    yield
+    reset()

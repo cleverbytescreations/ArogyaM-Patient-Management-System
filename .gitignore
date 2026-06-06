@@ -126,5 +126,5 @@ frontend/storybook-static/
 frontend/.eslintcache
 *.local
 
-# Claude Code user-specific settings (machine-local, not shared)
-.claude/settings.local.json
+# Agent user-specific settings (machine-local, not shared)
+.agents/settings.local.json

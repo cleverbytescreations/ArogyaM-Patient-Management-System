@@ -20,10 +20,12 @@ from app.api import health
 from app.core.config import settings
 from app.core.errors import (
     AppError,
+    RateLimitError,
     app_error_handler,
     db_data_error_handler,
     generic_error_handler,
     jwt_error_handler,
+    rate_limit_error_handler,
     validation_error_handler,
 )
 from app.core.logging import setup_logging
@@ -59,6 +61,9 @@ app.add_middleware(
 )
 
 # ── Global exception handlers ──────────────────────────────────────────────────
+# Register RateLimitError before AppError so its specific handler wins
+# (Starlette resolves by MRO — most specific type in the handler map wins).
+app.add_exception_handler(RateLimitError, rate_limit_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
 app.add_exception_handler(JWTError, jwt_error_handler)

@@ -51,6 +51,14 @@ class Settings(BaseSettings):
     login_max_attempts: int = Field(default=5)
     login_lockout_min: int = Field(default=30)
 
+    # --- Login rate limiting (SEC-T1.2) --------------------------------------
+    # Disabled when rate_limit_enabled=False (or RATE_LIMIT_ENABLED=false env).
+    # When Redis is configured (REDIS_URL), uses Redis for multi-worker safety;
+    # otherwise falls back to an in-process dict (single-process dev deployment).
+    rate_limit_enabled: bool = Field(default=True)
+    rate_limit_login_max: int = Field(default=10)   # max attempts per window
+    rate_limit_login_window_sec: int = Field(default=60)  # window size in seconds
+
     # --- Bootstrap admin (auto-created on startup by migration 0003) ----------
     # The super-user gets the ADMIN role => all permissions (see core/permissions).
     # In production ADMIN_PASSWORD must be supplied; otherwise creation is skipped
