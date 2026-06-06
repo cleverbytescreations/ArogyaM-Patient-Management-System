@@ -1084,11 +1084,10 @@ Objective:
 ----------
 Implement the following task from the task list. If any task is already implemented, please validate the feature:
 
-Tests / Security
+Backend (Stage 4, part 1)
 
-TST-T4.1 — OP-numbering & concurrency (parallel registrations → unique numbers).
-TST-T3.1 — patient lifecycle (register → OP → search); role field-filtering; duplicate advisory.
-LOG-T0.2 — proxy query-string redaction for /patients/search.
+BE-T3.x profile shell support; BE-T6.1–BE-T6.3, API-T6.1 — visits (future-date rule), case-sheet upsert (one per visit), append-only consultation notes.
+Field-level visibility filtering exercised end-to-end (limited roles → reduced clinical view).
 
 
 Instructions:
@@ -1116,11 +1115,10 @@ Files to refer (if required - lazy loading):
 Task to review:
 ---------------
 
-Tests / Security
+Backend (Stage 4, part 1)
 
-TST-T4.1 — OP-numbering & concurrency (parallel registrations → unique numbers).
-TST-T3.1 — patient lifecycle (register → OP → search); role field-filtering; duplicate advisory.
-LOG-T0.2 — proxy query-string redaction for /patients/search.
+BE-T3.x profile shell support; BE-T6.1–BE-T6.3, API-T6.1 — visits (future-date rule), case-sheet upsert (one per visit), append-only consultation notes.
+Field-level visibility filtering exercised end-to-end (limited roles → reduced clinical view).
 
 
 Objective:
@@ -1156,9 +1154,8 @@ Implement the following UI task from the checklist: If any task is already imple
 
 Frontend
 
-UI-T3.1 — New Patient Registration (mandatory-field marking, min-identity hint, confirm_create duplicate override).
-UI-T5.1 — Patient Search (dashboard-first landing).
-UI-TF.6 selects fed from live master-data; UI-TX.1 global 409 conflict UX (first edit forms).
+UI-T3.2, UI-T3.3, UI-T3.4 — Patient Profile shell with tabs, Basic Details view/edit, aliases panel.
+UI-T6.1–UI-T6.3 — Visit create + list, Case Sheet form (paper-like), Consultation Notes (append-only).
 
 
 Instructions:
@@ -1226,9 +1223,8 @@ Implemented task:
 
 Frontend
 
-UI-T3.1 — New Patient Registration (mandatory-field marking, min-identity hint, confirm_create duplicate override).
-UI-T5.1 — Patient Search (dashboard-first landing).
-UI-TF.6 selects fed from live master-data; UI-TX.1 global 409 conflict UX (first edit forms).
+UI-T3.2, UI-T3.3, UI-T3.4 — Patient Profile shell with tabs, Basic Details view/edit, aliases panel.
+UI-T6.1–UI-T6.3 — Visit create + list, Case Sheet form (paper-like), Consultation Notes (append-only).
 
 
 Review and fix:

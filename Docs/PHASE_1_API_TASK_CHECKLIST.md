@@ -172,19 +172,19 @@
 
 ### Module 6 — Visit & Consultation
 
-- [ ] **BE-T6.1 [M]** — Visit model, schemas, service (MVP)
+- [x] **BE-T6.1 [M]** — Visit model, schemas, service (MVP)
       **Description:** Model `visits`; schemas `Visit`, `VisitCreateRequest`, `VisitUpdateRequest`; service for create, list-by-patient, get, update (version-checked).
       **Files / Components:** `backend/app/modules/visits/`.
       **Implementation Notes:** Non-scheduled visit cannot be future-dated (UC-08 BR4) → 422. `visit_type_code`, `consultation_category`, `doctor_id` validated against master data / doctor list. `status ∈ {OPEN, COMPLETED, CANCELLED}`.
       **Acceptance Criteria:** Create returns 201; future non-scheduled date rejected; invalid lookup → 422; update version-checked.
 
-- [ ] **BE-T6.2 [M]** — Case sheet upsert service (MVP)
+- [x] **BE-T6.2 [M]** — Case sheet upsert service (MVP)
       **Description:** Implement `PUT /visits/{id}/case-sheet` upsert (one per visit via `uq_case_sheets_visit`), version-checked, audited; `GET` read (`view_medical_history`).
       **Files / Components:** `backend/app/modules/visits/case_sheet_service.py`.
       **Implementation Notes:** Singleton sub-resource → idempotent PUT (API spec §7.6 deviation). All clinical free-text fields from DDL. Permission `add_consultation` to write.
       **Acceptance Criteria:** First save creates, second updates (no spurious 409); concurrent edit → 409; read gated by `view_medical_history`.
 
-- [ ] **BE-T6.3 [M]** — Consultation notes service (MVP)
+- [x] **BE-T6.3 [M]** — Consultation notes service (MVP)
       **Description:** Implement append-only `POST /visits/{id}/consultation-notes` and list `GET`; corrections are new amended entries, never overwrite.
       **Files / Components:** `backend/app/modules/visits/consultation_service.py`.
       **Implementation Notes:** Fields: complaints, diagnosis, observations, treatment_advice, diet_advice, review_date, doctor_id. Write `add_consultation`; read `view_medical_history`. Audited.
@@ -355,7 +355,7 @@
       **Files / Components:** `backend/app/modules/search/router.py`.
       **Acceptance Criteria:** Matches API spec §7.5; minimal-identifier results; ranked; search terms not logged; advanced filters wired when BE-T5.2 lands.
 
-- [ ] **API-T6.1 [M]** — Visit & consultation routes (MVP)
+- [x] **API-T6.1 [M]** — Visit & consultation routes (MVP)
       **Description:** `POST/GET /patients/{id}/visits`, `GET/PUT /visits/{id}`, `PUT/GET /visits/{id}/case-sheet`, `POST/GET /visits/{id}/consultation-notes`.
       **Files / Components:** `backend/app/modules/visits/router.py`.
       **Implementation Notes:** Case sheet uses idempotent `PUT` upsert (documented deviation).
@@ -607,7 +607,7 @@
       **Files / Components:** `tests/patients/`.
       **Acceptance Criteria:** Full vertical slice passes; limited-role responses filtered.
 
-- [ ] **TST-T6.1 [M]** — Clinical workflow tests (MVP)
+- [x] **TST-T6.1 [M]** — Clinical workflow tests (MVP)
       **Description:** visit → case-sheet upsert → consultation notes → prescription → discharge finalize/amend; date rules; finalize-blocks-edit.
       **Files / Components:** `tests/clinical/`.
       **Acceptance Criteria:** Lifecycle correct; `DISCHARGE_ALREADY_FINALIZED` on finalized edit; date validation enforced.

@@ -37,6 +37,8 @@ from app.modules.masterdata.router import router as masterdata_router
 from app.modules.patients.router import router as patients_router
 from app.modules.users.router import roles_router
 from app.modules.users.router import router as users_router
+from app.modules.visits.router import patients_router as visit_patients_router
+from app.modules.visits.router import visits_router
 
 setup_logging(settings.log_level)
 
@@ -82,6 +84,8 @@ app.include_router(roles_router, prefix=API_PREFIX)
 app.include_router(masterdata_router, prefix=API_PREFIX)
 app.include_router(op_seq_router, prefix=API_PREFIX)
 app.include_router(patients_router, prefix=API_PREFIX)
+app.include_router(visit_patients_router, prefix=API_PREFIX)
+app.include_router(visits_router, prefix=API_PREFIX)
 
 
 @app.get("/", include_in_schema=False)
