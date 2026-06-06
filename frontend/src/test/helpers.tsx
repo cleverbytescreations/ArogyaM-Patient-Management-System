@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
+import { AuthProvider } from "@/auth/AuthContext";
 
 interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper"> {
   initialRoute?: string;
@@ -22,7 +23,7 @@ export function renderWithProviders(
     return (
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={[initialRoute]}>
-          {children}
+          <AuthProvider>{children}</AuthProvider>
         </MemoryRouter>
       </QueryClientProvider>
     );

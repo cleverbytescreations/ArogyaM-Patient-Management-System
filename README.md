@@ -130,6 +130,27 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev down -v
 Source for `api` and `frontend` is bind-mounted, so edits hot-reload (uvicorn `--reload`
 and Vite HMR) without rebuilding the image.
 
+## Development User Accounts
+
+After starting the stack, seed the dummy users for all roles by running:
+
+```bash
+docker compose -f docker-compose.dev.yml --env-file .env.dev exec api python scripts/seed_dummy_users.py
+```
+
+The script is idempotent — safe to run multiple times.
+
+| Role | Username | Password | Email | Mobile |
+|---|---|---|---|---|
+| Administrator | `admin` | `Admin@12345` | — | — |
+| Doctor | `dr.priya` | `Doctor@12345` | dr.priya@arogyam.dev | 9876543201 |
+| Receptionist | `receptionist.ravi` | `Reception@12345` | ravi.kumar@arogyam.dev | 9876543202 |
+| Data Entry Staff | `dataentry.meena` | `DataEntry@12345` | meena.sharma@arogyam.dev | 9876543203 |
+
+> The `admin` user is automatically seeded by migration `0003` on first startup.
+> All other users are seeded by the script above.
+> These credentials are **development only** — never use them in production.
+
 ## Production
 
 Production runs from [docker-compose.prod.yml](docker-compose.prod.yml) with TLS, hardened

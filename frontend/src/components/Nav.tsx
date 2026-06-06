@@ -5,6 +5,7 @@ import {
   FileText,
   HardDrive,
   Activity,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/auth/usePermissions";
@@ -18,6 +19,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  {
+    to: "/patients/search",
+    label: "Patient Search",
+    icon: Search,
+    permission: PERMISSIONS.VIEW_PATIENT,
+  },
   {
     to: "/users",
     label: "User Management",

@@ -14,6 +14,20 @@ const UsersListPage = lazy(
     }))
 );
 
+const PatientSearchPage = lazy(
+  () =>
+    import("@/features/search/PatientSearchPage").then((m) => ({
+      default: m.PatientSearchPage,
+    }))
+);
+
+const RegisterPatientPage = lazy(
+  () =>
+    import("@/features/patients/RegisterPatientPage").then((m) => ({
+      default: m.RegisterPatientPage,
+    }))
+);
+
 function DashboardPlaceholder() {
   return (
     <div className="space-y-2">
@@ -40,6 +54,27 @@ export function AppRoutes() {
                 <Routes>
                   <Route path="/" element={<DashboardPlaceholder />} />
 
+                  {/* Patient search — default landing for staff */}
+                  <Route
+                    path="/patients/search"
+                    element={
+                      <RequirePermission permission={PERMISSIONS.VIEW_PATIENT}>
+                        <PatientSearchPage />
+                      </RequirePermission>
+                    }
+                  />
+
+                  {/* Patient registration */}
+                  <Route
+                    path="/patients/new"
+                    element={
+                      <RequirePermission permission={PERMISSIONS.CREATE_PATIENT}>
+                        <RegisterPatientPage />
+                      </RequirePermission>
+                    }
+                  />
+
+                  {/* User management */}
                   <Route
                     path="/users"
                     element={

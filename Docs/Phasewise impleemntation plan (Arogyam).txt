@@ -1084,11 +1084,11 @@ Objective:
 ----------
 Implement the following task from the task list. If any task is already implemented, please validate the feature:
 
-Patient Core (Stage 3)
+Tests / Security
 
-BE-T3.1–BE-T3.3, API-T3.1 — patient model/schemas, registration service (inline duplicate check + atomic OP numbering), profile read/update (role-filtered, version-checked, audited), aliases.
-BE-T5.1, API-T5.1 — patient search service (ranked, minimal-identifier, masked mobile, no clinical data).
-BE-T14.1 — optimistic concurrency framework (first real use).
+TST-T4.1 — OP-numbering & concurrency (parallel registrations → unique numbers).
+TST-T3.1 — patient lifecycle (register → OP → search); role field-filtering; duplicate advisory.
+LOG-T0.2 — proxy query-string redaction for /patients/search.
 
 
 Instructions:
@@ -1117,11 +1117,11 @@ Files to refer (if required - lazy loading):
 Task to review:
 ---------------
 
-Patient Core (Stage 3)
+Tests / Security
 
-BE-T3.1–BE-T3.3, API-T3.1 — patient model/schemas, registration service (inline duplicate check + atomic OP numbering), profile read/update (role-filtered, version-checked, audited), aliases.
-BE-T5.1, API-T5.1 — patient search service (ranked, minimal-identifier, masked mobile, no clinical data).
-BE-T14.1 — optimistic concurrency framework (first real use).
+TST-T4.1 — OP-numbering & concurrency (parallel registrations → unique numbers).
+TST-T3.1 — patient lifecycle (register → OP → search); role field-filtering; duplicate advisory.
+LOG-T0.2 — proxy query-string redaction for /patients/search.
 
 
 Objective:
@@ -1156,7 +1156,12 @@ Objective:
 ----------
 Implement the following UI task from the checklist: If any task is already implemented, please review the changes are in alignment with the scope.
 
-<TASK LIST> 
+Frontend
+
+UI-T3.1 — New Patient Registration (mandatory-field marking, min-identity hint, confirm_create duplicate override).
+UI-T5.1 — Patient Search (dashboard-first landing).
+UI-TF.6 selects fed from live master-data; UI-TX.1 global 409 conflict UX (first edit forms).
+
 
 Instructions:
 -------------
@@ -1213,7 +1218,7 @@ Files to refer (if required - lazy loading):
 2. Docs/API_SPECIFICATION_OPENAPI.md
 3. Docs/PHASE_1_UI_TASK_CHECKLIST.md
 4. Docs/PHASE_1_SPRINT_PLAN.md
-5. docker-compose.yml
+5. docker-compose.dev.yml
 
 Objective:
 ----------
@@ -1222,9 +1227,11 @@ Review the recently generated/modified React UI code for possible errors, securi
 Implemented task:
 
 Frontend
-UI-TF.1–UI-TF.7 — Vite/React/MUI scaffold, axios+JWT interceptor, auth context + route guards, shared component library, app shell + role nav + session timeout, zod/format/constants, CI lint/type/a11y.
-UI-T1.1, UI-T1.2 — Login screen, logout/current-user menu.
-UI-T1.3 — User Management screen (admin).
+
+UI-T3.1 — New Patient Registration (mandatory-field marking, min-identity hint, confirm_create duplicate override).
+UI-T5.1 — Patient Search (dashboard-first landing).
+UI-TF.6 selects fed from live master-data; UI-TX.1 global 409 conflict UX (first edit forms).
+
 
 Review and fix:
 - React/TS syntax errors

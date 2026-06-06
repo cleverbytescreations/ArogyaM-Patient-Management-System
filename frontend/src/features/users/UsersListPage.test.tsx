@@ -103,7 +103,11 @@ describe("UsersListPage", () => {
   it("opens Edit User dialog when Edit is clicked", async () => {
     const user = userEvent.setup();
     renderWithProviders(<UsersListPage />);
-    const editButtons = await screen.findAllByRole("button", { name: /edit admin user/i });
+    // Admin User (user-1) is a superuser — edit button is intentionally hidden.
+    // Dr. John Smith (user-2) is not a superuser so the edit button appears.
+    const editButtons = await screen.findAllByRole("button", {
+      name: /edit dr\. john smith/i,
+    });
     await user.click(editButtons[0]);
     expect(
       await screen.findByRole("dialog", { name: /edit user/i })
@@ -126,9 +130,10 @@ describe("UsersListPage", () => {
   it("shows disable confirmation dialog on Disable click", async () => {
     const user = userEvent.setup();
     renderWithProviders(<UsersListPage />);
-    await screen.findByText("Admin User");
+    await screen.findByText("Dr. John Smith");
+    // Admin User is a superuser — disable button hidden. Use Dr. John Smith (non-superuser).
     const disableButtons = await screen.findAllByRole("button", {
-      name: /disable admin user/i,
+      name: /disable dr\. john smith/i,
     });
     await user.click(disableButtons[0]);
     expect(

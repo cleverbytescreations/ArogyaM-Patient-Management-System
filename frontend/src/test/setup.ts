@@ -31,6 +31,9 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
+// scrollIntoView polyfill for Radix UI Select (not implemented in jsdom)
+window.HTMLElement.prototype.scrollIntoView = function () {};
+
 // Pointer events polyfill for Radix UI interactive components
 Object.defineProperty(window.HTMLElement.prototype, "hasPointerCapture", {
   value: () => false,

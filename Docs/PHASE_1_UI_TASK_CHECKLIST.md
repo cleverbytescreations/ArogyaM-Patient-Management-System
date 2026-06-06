@@ -97,7 +97,7 @@
 
 ### Module 3 — Patient Registration & Profile (UC-03, UC-06, UC-07, UC-16, UC-18 inline)
 
-- [ ] **UI-T3.1 [L]** — New Patient Registration screen (MVP)
+- [x] **UI-T3.1 [L]** — New Patient Registration screen (MVP)
       **Description:** Registration form calling `POST /patients`; mandatory fields marked; min-identity hint; OP category select; inline duplicate warning (UC-18) with `confirm_create` override flow.
       **Files / Components:** `frontend/src/features/patients/RegisterPatientPage.tsx`.
       **Implementation Notes:** On `409 DUPLICATE_PATIENT_SUSPECTED`, render suggested matches from `error.details` and offer "register anyway" (`confirm_create=true`) or open the existing profile. `op_number` not entered (server-generated). 422 field errors inline.
@@ -122,7 +122,7 @@
 
 ### Module 5 — Patient Search (UC-05)
 
-- [ ] **UI-T5.1 [L]** — Patient Search screen (dashboard-first) (MVP)
+- [x] **UI-T5.1 [L]** — Patient Search screen (dashboard-first) (MVP)
       **Description:** Search UI by OP number, mobile, partial/full name, with paginated results table; click-through to profile.
       **Files / Components:** `frontend/src/features/search/PatientSearchPage.tsx`.
       **Implementation Notes:** `GET /patients/search`. Results show **minimal identifiers only — no medical data** (masked mobile). Ranked exact-first. This is the default landing for staff.

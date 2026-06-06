@@ -99,7 +99,6 @@ export function LoginPage() {
           {/* Brand lockup + tagline */}
           <div>
             <div className="flex items-center gap-3">
-              <BrandLogo variant="mark" decorative className="h-12 w-12" />
               <BrandLogo variant="wordmark" decorative className="h-10 w-auto" />
             </div>
             <p className="mt-3 text-lg font-light leading-snug text-white/80">
