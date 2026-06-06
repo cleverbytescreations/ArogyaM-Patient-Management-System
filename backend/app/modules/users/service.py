@@ -232,6 +232,8 @@ def set_user_status(
     user = user_repo.get_user_by_id(db, user_id)
     if user is None:
         raise NotFoundError(f"User {user_id} not found")
+    if user.version != body.version:
+        raise VersionConflictError("Record was modified by another request; reload and retry")
     if user.is_superuser:
         raise ConflictError("The super-user account cannot be disabled")
     if str(user.id) == str(actor_id) and body.status == "DISABLED":
@@ -239,6 +241,7 @@ def set_user_status(
 
     old_status = user.status
     user.status = body.status
+    user.version += 1
     user.updated_by = actor_id
 
     write_audit(

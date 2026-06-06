@@ -173,12 +173,16 @@ class TestUserStatus:
             headers=_auth(admin_token),
         )
         user_id = create_resp.json()["id"]
+        version = create_resp.json()["version"]
 
         resp = client.put(
-            f"{BASE}/{user_id}/status", json={"status": "DISABLED"}, headers=_auth(admin_token)
+            f"{BASE}/{user_id}/status",
+            json={"status": "DISABLED", "version": version},
+            headers=_auth(admin_token),
         )
         assert resp.status_code == 200
         assert resp.json()["status"] == "DISABLED"
+        assert resp.json()["version"] == version + 1
 
     def test_enable_user(self, client: TestClient, admin_token: str):
         create_resp = client.post(
@@ -191,15 +195,40 @@ class TestUserStatus:
             headers=_auth(admin_token),
         )
         user_id = create_resp.json()["id"]
+        version = create_resp.json()["version"]
 
-        client.put(
-            f"{BASE}/{user_id}/status", json={"status": "DISABLED"}, headers=_auth(admin_token)
+        disable_resp = client.put(
+            f"{BASE}/{user_id}/status",
+            json={"status": "DISABLED", "version": version},
+            headers=_auth(admin_token),
         )
         resp = client.put(
-            f"{BASE}/{user_id}/status", json={"status": "ACTIVE"}, headers=_auth(admin_token)
+            f"{BASE}/{user_id}/status",
+            json={"status": "ACTIVE", "version": disable_resp.json()["version"]},
+            headers=_auth(admin_token),
         )
         assert resp.status_code == 200
         assert resp.json()["status"] == "ACTIVE"
+
+    def test_status_version_conflict(self, client: TestClient, admin_token: str):
+        create_resp = client.post(
+            BASE,
+            json={
+                "username": f"verconf_{uuid.uuid4().hex[:6]}",
+                "full_name": "Version Conflict",
+                "password": "SecurePass1!",
+            },
+            headers=_auth(admin_token),
+        )
+        user_id = create_resp.json()["id"]
+
+        # Stale version (real version is 1 for a freshly created user) → 409.
+        resp = client.put(
+            f"{BASE}/{user_id}/status",
+            json={"status": "DISABLED", "version": 99},
+            headers=_auth(admin_token),
+        )
+        assert resp.status_code == 409
 
     def test_invalid_status_value(self, client: TestClient, admin_token: str, admin_user: User):
         resp = client.put(

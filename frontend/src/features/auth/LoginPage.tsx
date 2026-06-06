@@ -102,7 +102,7 @@ export function LoginPage() {
               Arogya<span className="text-primary">M</span>
             </p>
             <p className="mt-3 text-lg font-light leading-snug text-white/80">
-              Timeless healing, modern records.
+              Compassionate care, precisely kept.
             </p>
           </div>
 

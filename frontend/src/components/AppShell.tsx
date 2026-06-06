@@ -105,7 +105,7 @@ export function AppShell({ children }: AppShellProps) {
               <span aria-hidden="true" className="h-3 w-0.5 bg-primary" />
               {APP_NAME} — secure patient record management
             </p>
-            <p>© {new Date().getFullYear()} ArogyaM Clinic. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} The Satsang Foundation. All rights reserved.</p>
           </div>
         </footer>
       </div>

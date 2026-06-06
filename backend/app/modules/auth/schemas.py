@@ -104,6 +104,7 @@ class UserUpdateRequest(BaseModel):
 class UserStatusUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: str = Field(pattern="^(ACTIVE|DISABLED)$")
+    version: int
 
 
 class PasswordResetRequest(BaseModel):
