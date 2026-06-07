@@ -697,6 +697,13 @@ export const handlers = [
     });
   }),
 
+  // Prescription — report PDF (download/print)
+  http.get(`${BASE}/prescriptions/:id/report.pdf`, () => {
+    return new HttpResponse(new Blob(["%PDF-1.4 mock"], { type: "application/pdf" }), {
+      headers: { "Content-Type": "application/pdf" },
+    });
+  }),
+
   // Consultation notes — list
   http.get(`${BASE}/visits/:id/consultation-notes`, ({ params }) => {
     if (params.id === mockVisit.id) {

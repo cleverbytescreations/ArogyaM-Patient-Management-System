@@ -29,6 +29,14 @@ export const clinicalApi = {
       .put<Prescription>(`/prescriptions/${prescriptionId}`, data)
       .then((r) => r.data),
 
+  getPrescriptionReportPdf: (prescriptionId: string, disposition: "inline" | "attachment") =>
+    apiClient
+      .get<Blob>(`/prescriptions/${prescriptionId}/report.pdf`, {
+        params: { disposition },
+        responseType: "blob",
+      })
+      .then((r) => r.data),
+
   getCurrentDischargeSummary: (visitId: string) =>
     apiClient
       .get<DischargeSummary>(`/visits/${visitId}/discharge-summary`)

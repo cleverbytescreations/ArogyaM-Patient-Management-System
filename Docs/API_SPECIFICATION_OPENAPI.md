@@ -444,10 +444,12 @@ Endpoints are grouped by module exactly per SAD §9.2 / Plan §3. Each endpoint 
 | 1 | `POST /visits/{visit_id}/prescriptions` | Create a prescription with structured `items[]` (and/or free-text) |
 | 2 | `GET /visits/{visit_id}/prescriptions` | List prescriptions for a visit |
 | 3 | `GET /prescriptions/{prescription_id}` | Get a prescription with its items |
+| 4 | `PUT /prescriptions/{prescription_id}` | Update a prescription within the edit window (version-checked) |
+| 5 | `GET /prescriptions/{prescription_id}/report.pdf` | Download or print the prescription as a PDF — `export` **and** `view_medical_history` |
 
 - **Request:** `PrescriptionCreateRequest` — `{ doctor_id?, prescription_date?, instructions?, review_advice?, medicine_details?, items: [ PrescriptionItem ] }`.
 - `PrescriptionItem` = `{ line_no?, medicine_name, dosage?, timing?, duration?, usage_instruction?, application_route? (INTERNAL|EXTERNAL) }`.
-- **Assumption:** structured PDF generation of a prescription is Full-Scope; in MVP a scanned prescription can instead be attached via the Documents module (`document_type=PRESCRIPTION`).
+- **Prescription PDF report** (`GET /prescriptions/{id}/report.pdf`) renders the structured prescription (patient identity, medicine items table, instructions/review advice, doctor signature) as a print-faithful PDF — same server-side Jinja2 + WeasyPrint approach and shared letterhead as the case sheet report (see §7.6). Query param `disposition=inline|attachment` (default `attachment`); `inline` is used by the frontend's Print button (hidden iframe), `attachment` by Download. Requires **both** `export` and `view_medical_history` (neither alone is sufficient). Every render writes an `EXPORT` audit row (`entity_type=prescription`).
 
 ---
 

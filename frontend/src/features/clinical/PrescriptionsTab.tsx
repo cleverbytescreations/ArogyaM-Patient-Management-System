@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileUp, Loader2, Pencil, Plus } from "lucide-react";
+import { Download, FileUp, Loader2, Pencil, Plus, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,8 @@ export function PrescriptionsTab({ selectedVisit, onSelectVisitTab, onUploadScan
   const { hasPermission } = usePermissions();
   const canWrite = hasPermission(PERMISSIONS.ADD_PRESCRIPTION);
   const canRead = hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY) || canWrite;
+  const canExportReport = hasPermission(PERMISSIONS.EXPORT) && hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY);
+  const printFrameRef = useRef<HTMLIFrameElement | null>(null);
   const queryClient = useQueryClient();
 
   const { data = [], isLoading, error } = useQuery({
@@ -138,6 +140,38 @@ export function PrescriptionsTab({ selectedVisit, onSelectVisitTab, onUploadScan
     },
   });
 
+  const { mutate: downloadReport, isPending: isDownloadingReport, variables: downloadingId } = useMutation({
+    mutationFn: (prescriptionId: string) => clinicalApi.getPrescriptionReportPdf(prescriptionId, "attachment"),
+    onSuccess: (blob, prescriptionId) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `prescription-${prescriptionId}.pdf`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, "Could not generate the prescription report."));
+    },
+  });
+
+  const { mutate: printReport, isPending: isPrintingReport, variables: printingId } = useMutation({
+    mutationFn: (prescriptionId: string) => clinicalApi.getPrescriptionReportPdf(prescriptionId, "inline"),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const frame = printFrameRef.current;
+      if (!frame) return;
+      frame.onload = () => {
+        frame.contentWindow?.print();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      };
+      frame.src = url;
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, "Could not generate the prescription report."));
+    },
+  });
+
   if (!selectedVisit) {
     return (
       <div className="flex flex-col items-center gap-3 py-16 text-center text-muted-foreground">
@@ -151,6 +185,9 @@ export function PrescriptionsTab({ selectedVisit, onSelectVisitTab, onUploadScan
 
   return (
     <div className="space-y-5 pt-4">
+      {/* Hidden iframe used to load the inline PDF and trigger the browser print dialog. */}
+      <iframe ref={printFrameRef} title="Prescription report" className="hidden" aria-hidden="true" />
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           Visit: <span className="font-medium text-foreground">{formatDate(selectedVisit.visit_date)}</span>
@@ -182,6 +219,42 @@ export function PrescriptionsTab({ selectedVisit, onSelectVisitTab, onUploadScan
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold">Prescription from {formatDate(prescription.prescription_date)}</h3>
                 <div className="flex items-center gap-2">
+                  {canExportReport && (
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        disabled={isPrintingReport && printingId === prescription.id}
+                        aria-busy={isPrintingReport && printingId === prescription.id}
+                        onClick={() => printReport(prescription.id)}
+                      >
+                        {isPrintingReport && printingId === prescription.id ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Printer className="mr-1 h-3 w-3" aria-hidden="true" />
+                        )}
+                        Print
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        disabled={isDownloadingReport && downloadingId === prescription.id}
+                        aria-busy={isDownloadingReport && downloadingId === prescription.id}
+                        onClick={() => downloadReport(prescription.id)}
+                      >
+                        {isDownloadingReport && downloadingId === prescription.id ? (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Download className="mr-1 h-3 w-3" aria-hidden="true" />
+                        )}
+                        Download
+                      </Button>
+                    </div>
+                  )}
                   {canWrite && isWithinEditWindow(prescription) && (
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-muted-foreground">

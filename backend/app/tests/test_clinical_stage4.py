@@ -164,6 +164,97 @@ class TestPrescriptions:
         assert count == 1
 
 
+class TestPrescriptionReportPdf:
+    def _create_prescription(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> tuple[dict, dict]:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+        created = client.post(
+            f"/api/v1/visits/{visit['id']}/prescriptions",
+            json={
+                "prescription_date": str(date.today()),
+                "review_advice": "Review after 10 days",
+                "items": [
+                    {
+                        "medicine_name": "Manjishtadi kashayam",
+                        "dosage": "15",
+                        "dosage_unit": "ML",
+                        "timing": "BD",
+                        "duration": "30",
+                        "duration_unit": "DAYS",
+                        "usage_instruction": "With 60 mL warm water",
+                        "application_route": "PO",
+                    }
+                ],
+            },
+            headers=_auth(doctor_token),
+        ).json()
+        return patient, created
+
+    def test_doctor_downloads_report_pdf_and_audits(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient, prescription = self._create_prescription(client, db, doctor_token, reception_token)
+
+        r = client.get(
+            f"/api/v1/prescriptions/{prescription['id']}/report.pdf",
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 200, r.text
+        assert r.headers["content-type"] == "application/pdf"
+        assert r.content.startswith(b"%PDF")
+        assert patient["op_number"] in r.headers["content-disposition"]
+        assert "attachment" in r.headers["content-disposition"]
+
+        count = db.execute(
+            text(
+                "SELECT count(*) FROM audit_log "
+                "WHERE action = 'EXPORT' AND entity_type = 'prescription' AND entity_id = :pid"
+            ),
+            {"pid": prescription["id"]},
+        ).scalar_one()
+        assert count >= 1
+
+    def test_report_supports_inline_disposition(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        _, prescription = self._create_prescription(client, db, doctor_token, reception_token)
+
+        r = client.get(
+            f"/api/v1/prescriptions/{prescription['id']}/report.pdf",
+            params={"disposition": "inline"},
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 200, r.text
+        assert "inline" in r.headers["content-disposition"]
+
+    def test_report_returns_404_for_missing_prescription(
+        self, client, db: Session, doctor_token: str
+    ) -> None:
+        r = client.get(
+            f"/api/v1/prescriptions/{uuid.uuid4()}/report.pdf",
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 404
+
+    def test_report_requires_export_and_view_medical_history_permissions(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        _, prescription = self._create_prescription(client, db, doctor_token, reception_token)
+
+        # Receptionist has neither export nor view_medical_history
+        r = client.get(
+            f"/api/v1/prescriptions/{prescription['id']}/report.pdf",
+            headers=_auth(reception_token),
+        )
+        assert r.status_code == 403
+
+    def test_unauthenticated_report_download_returns_401(self, client) -> None:
+        r = client.get(f"/api/v1/prescriptions/{uuid.uuid4()}/report.pdf")
+        assert r.status_code == 401
+
+
 class TestDischargeSummaries:
     def test_draft_update_finalize_blocks_edit_and_amend_chain(
         self, client, db: Session, doctor_token: str, reception_token: str

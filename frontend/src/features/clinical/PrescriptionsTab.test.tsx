@@ -1,6 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithQuery } from "@/test/helpers";
 import { PrescriptionsTab } from "./PrescriptionsTab";
 import { mockVisit } from "@/test/mocks/handlers";
@@ -57,5 +57,54 @@ describe("PrescriptionsTab", () => {
     expect(await screen.findByText(/paracetamol/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /new prescription/i })).not.toBeInTheDocument();
     permissions = ["view_medical_history", "add_prescription"];
+  });
+});
+
+describe("PrescriptionsTab — report print/download", () => {
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => "blob:prescription-report");
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  afterEach(() => {
+    permissions = ["view_medical_history", "add_prescription"];
+  });
+
+  it("shows Print and Download buttons when the user has export + medical history permissions", async () => {
+    permissions = ["view_medical_history", "add_prescription", "export"];
+    renderWithQuery(<PrescriptionsTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} onUploadScanned={vi.fn()} />);
+
+    expect(await screen.findByRole("button", { name: /^print$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^download$/i })).toBeInTheDocument();
+  });
+
+  it("hides report buttons when the user lacks the export permission", async () => {
+    permissions = ["view_medical_history", "add_prescription"];
+    renderWithQuery(<PrescriptionsTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} onUploadScanned={vi.fn()} />);
+
+    expect(await screen.findByText(/paracetamol/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^print$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^download$/i })).not.toBeInTheDocument();
+  });
+
+  it("downloads the report PDF when Download is clicked", async () => {
+    permissions = ["view_medical_history", "add_prescription", "export"];
+    const user = userEvent.setup();
+    const clickSpy = vi.fn();
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const el = originalCreateElement(tag);
+      if (tag === "a") el.click = clickSpy;
+      return el;
+    });
+
+    renderWithQuery(<PrescriptionsTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} onUploadScanned={vi.fn()} />);
+    const downloadButton = await screen.findByRole("button", { name: /^download$/i });
+    await user.click(downloadButton);
+
+    await waitFor(() => expect(clickSpy).toHaveBeenCalled());
+    expect(URL.createObjectURL).toHaveBeenCalled();
+
+    vi.restoreAllMocks();
   });
 });
