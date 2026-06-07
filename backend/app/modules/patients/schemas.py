@@ -67,7 +67,7 @@ class PatientCreateRequest(BaseModel):
     marital_status: str | None = Field(default=None, max_length=20)
     profession: str | None = Field(default=None, max_length=120)
     dietary_preference: str | None = Field(default=None, max_length=30)
-    blood_group: str | None = Field(default=None, max_length=5)
+    blood_group: str | None = Field(default=None, max_length=6)
     height_cm: float | None = Field(default=None, gt=0)
     weight_kg: float | None = Field(default=None, gt=0)
     is_historical: bool = False
@@ -89,7 +89,7 @@ class PatientUpdateRequest(BaseModel):
     marital_status: str | None = Field(default=None, max_length=20)
     profession: str | None = Field(default=None, max_length=120)
     dietary_preference: str | None = Field(default=None, max_length=30)
-    blood_group: str | None = Field(default=None, max_length=5)
+    blood_group: str | None = Field(default=None, max_length=6)
     height_cm: float | None = Field(default=None, gt=0)
     weight_kg: float | None = Field(default=None, gt=0)
     remarks: str | None = None

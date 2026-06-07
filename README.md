@@ -151,6 +151,36 @@ The script is idempotent — safe to run multiple times.
 > All other users are seeded by the script above.
 > These credentials are **development only** — never use them in production.
 
+## Roles & permissions
+
+Access is **deny-by-default** and role-based. Every API endpoint declares the permission
+it requires, and the backend enforces it authoritatively. The matrix below is the single
+source of truth defined in [`ROLE_PERMISSIONS`](backend/app/core/permissions.py) (SAD §11.2);
+the frontend reads each user's effective permissions from `/me/permissions` and never
+hard-codes this matrix.
+
+| Permission | Administrator | Doctor | Receptionist | Data Entry Staff |
+|---|:---:|:---:|:---:|:---:|
+| `create_patient` — register a new patient | ✅ | — | ✅ | ✅ |
+| `view_patient` — search / view patient profiles | ✅ | ✅ | ✅ | ✅ |
+| `edit_patient` — update patient profiles | ✅ | — | ✅ | ✅ |
+| `view_medical_history` — view clinical history | ✅ | ✅ | — | — |
+| `add_consultation` — add consultation / case-sheet notes | ✅ | ✅ | — | — |
+| `add_prescription` — add prescriptions | ✅ | ✅ | — | — |
+| `manage_followups` — manage follow-up tracking | ✅ | ✅ | ✅ | ✅ |
+| `request_merge` — request a duplicate-record merge | ✅ | — | ✅ | ✅ |
+| `merge_records` — approve / perform a merge | ✅ | — | — | — |
+| `export` — export records / case-sheet PDF | ✅ | ✅ | — | — |
+| `view_reports` — dashboard & reports | ✅ | ✅ | — | — |
+| `manage_users` — user & access management | ✅ | — | — | — |
+| `manage_master_data` — master data management | ✅ | — | — | — |
+| `view_audit` — view the audit trail | ✅ | — | — | — |
+| `backup_control` — backup & recovery controls | ✅ | — | — | — |
+
+> **Note:** Creating a **visit** (`POST /patients/{id}/visits`) currently requires only
+> `view_patient`, so every role can create a visit. There is no dedicated "create visit"
+> permission. The Administrator role implicitly holds **all** permissions.
+
 ## Production
 
 Production runs from [docker-compose.prod.yml](docker-compose.prod.yml) with TLS, hardened

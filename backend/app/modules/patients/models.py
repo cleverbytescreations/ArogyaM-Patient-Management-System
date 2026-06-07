@@ -43,7 +43,7 @@ class Patient(Base):
     marital_status: Mapped[str | None] = mapped_column(String(20))
     profession: Mapped[str | None] = mapped_column(String(120))
     dietary_preference: Mapped[str | None] = mapped_column(String(30))
-    blood_group: Mapped[str | None] = mapped_column(String(5))
+    blood_group: Mapped[str | None] = mapped_column(String(6))
     height_cm: Mapped[float | None] = mapped_column(Numeric(5, 2))
     weight_kg: Mapped[float | None] = mapped_column(Numeric(5, 2))
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="ACTIVE")

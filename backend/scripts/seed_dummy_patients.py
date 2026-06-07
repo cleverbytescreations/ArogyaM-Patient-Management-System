@@ -21,8 +21,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sqlalchemy import select
 
 from app.core.db import SessionLocal
+
+# Register all model tables so SQLAlchemy can resolve cross-module foreign
+# keys (e.g. patients.updated_by -> users) when flushing. Mirrors the model
+# imports in app/migrations/env.py.
+from app.modules.auth import models as _auth_models  # noqa: F401  register tables
+from app.modules.clinical.discharge import models as _discharge_models  # noqa: F401
+from app.modules.clinical.prescriptions import models as _prescription_models  # noqa: F401
+from app.modules.masterdata import models as _masterdata_models  # noqa: F401
 from app.modules.patients.models import Patient
 from app.modules.patients.op_number import generate_op_number
+from app.modules.visits import models as _visit_models  # noqa: F401
 
 DUMMY_PATIENTS = [
     {
