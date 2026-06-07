@@ -47,9 +47,9 @@ export const clinicalApi = {
   updateDischargeSummary: (id: string, data: DischargeSummaryUpdateRequest) =>
     apiClient.put<DischargeSummary>(`/discharge-summaries/${id}`, data).then((r) => r.data),
 
-  finalizeDischargeSummary: (id: string) =>
+  finalizeDischargeSummary: (id: string, version: number) =>
     apiClient
-      .put<DischargeSummary>(`/discharge-summaries/${id}/finalize`)
+      .put<DischargeSummary>(`/discharge-summaries/${id}/finalize`, { version })
       .then((r) => r.data),
 
   amendDischargeSummary: (id: string, data: DischargeSummaryCreateRequest) =>

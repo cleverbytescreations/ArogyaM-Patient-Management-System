@@ -79,8 +79,7 @@ function toPayload(values: DischargeSummaryFormValues) {
 }
 
 function toUpdatePayload(values: DischargeSummaryFormValues, version: number) {
-  const { doctor_id: _doctorId, ...payload } = toPayload(values);
-  return { ...payload, version };
+  return { ...toPayload(values), version };
 }
 
 interface DischargeSummaryTabProps {
@@ -116,7 +115,7 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
 
   const visitDoctorId = selectedVisit?.doctor_id ?? "";
   const currentDoctorId = current?.doctor_id ?? "";
-  const doctorFieldLocked = Boolean(current) && !amendMode;
+  const doctorFieldLocked = locked;
   const [doctorOverrideEnabled, setDoctorOverrideEnabled] = useState(!visitDoctorId);
   const [doctorSearch, setDoctorSearch] = useState("");
   const [doctorDropdownOpen, setDoctorDropdownOpen] = useState(false);
@@ -218,7 +217,7 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
   });
 
   const finalizeMutation = useMutation({
-    mutationFn: () => clinicalApi.finalizeDischargeSummary(current!.id),
+    mutationFn: () => clinicalApi.finalizeDischargeSummary(current!.id, current!.version),
     onSuccess: () => {
       invalidate();
       setFinalizeOpen(false);
@@ -341,14 +340,14 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70"
                         aria-label="Doctor"
                       >
-                        <option value="">{visitDoctorId ? "Loading doctor..." : "No doctor mapped"}</option>
+                        <option value="">{currentDoctorId ? "Loading doctor..." : "No doctor recorded"}</option>
                         {doctors.map((doctor) => (
                           <option key={doctor.id} value={doctor.id}>{doctor.full_name}</option>
                         ))}
                       </select>
                     )}
                   </FormControl>
-                  {visitDoctorId && !doctorOverrideEnabled && !doctorFieldLocked && (
+                  {!doctorOverrideEnabled && !doctorFieldLocked && (
                     <Button
                       type="button"
                       variant="outline"
