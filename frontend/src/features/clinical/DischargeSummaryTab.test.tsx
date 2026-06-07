@@ -7,7 +7,7 @@ import { mockVisit } from "@/test/mocks/handlers";
 
 vi.mock("@/auth/usePermissions", () => ({
   usePermissions: () => ({
-    hasPermission: (permission: string) => ["view_medical_history", "add_discharge_summary"].includes(permission),
+    hasPermission: (permission: string) => ["view_medical_history", "add_consultation"].includes(permission),
   }),
 }));
 

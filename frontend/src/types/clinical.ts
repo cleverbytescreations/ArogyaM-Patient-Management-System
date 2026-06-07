@@ -1,13 +1,13 @@
-export type ApplicationRoute = "INTERNAL" | "EXTERNAL";
-
 export interface PrescriptionItem {
   line_no?: number | null;
   medicine_name: string;
   dosage?: string | null;
+  dosage_unit?: string | null;
   timing?: string | null;
   duration?: string | null;
+  duration_unit?: string | null;
   usage_instruction?: string | null;
-  application_route?: ApplicationRoute | null;
+  application_route?: string | null;
 }
 
 export interface Prescription {
@@ -31,6 +31,10 @@ export interface PrescriptionCreateRequest {
   review_advice?: string | null;
   medicine_details?: string | null;
   items: PrescriptionItem[];
+}
+
+export interface PrescriptionUpdateRequest extends PrescriptionCreateRequest {
+  version: number;
 }
 
 export interface DischargeSummary {

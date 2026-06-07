@@ -2,23 +2,30 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useFieldArray, useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit2, Loader2, Plus, Trash2 } from "lucide-react";
+import { Clock, Edit2, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { usersApi } from "@/features/users/usersApi";
+import { masterDataApi } from "@/api/masterDataApi";
 import { prescriptionSchema, type PrescriptionFormValues } from "@/lib/validation/clinical";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/users";
 import type { Visit } from "@/types/visits";
 
+export const PRESCRIPTION_EDIT_WINDOW_HOURS = 8;
+
+const SELECT_CLASS = "flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-70";
+
 const EMPTY_ITEM: PrescriptionFormValues["items"][number] = {
   medicine_name: "",
   dosage: "",
+  dosage_unit: "",
   timing: "",
   duration: "",
+  duration_unit: "",
   usage_instruction: "",
   application_route: "",
 };
@@ -29,9 +36,12 @@ interface PrescriptionFormDialogProps {
   isPending: boolean;
   onSubmit: (values: PrescriptionFormValues) => void;
   selectedVisit: Visit;
+  mode?: "create" | "edit";
+  initialValues?: PrescriptionFormValues;
+  prescriptionCreatedAt?: string;
 }
 
-export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit, selectedVisit }: PrescriptionFormDialogProps) {
+export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit, selectedVisit, mode = "create", initialValues, prescriptionCreatedAt }: PrescriptionFormDialogProps) {
   const visitDoctorId = selectedVisit.doctor_id ?? "";
   const [doctorOverrideEnabled, setDoctorOverrideEnabled] = useState(!visitDoctorId);
   const [doctorSearch, setDoctorSearch] = useState("");
@@ -55,6 +65,34 @@ export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit
     queryFn: () => usersApi.list({ is_doctor: true, q: doctorSearch, page_size: 10 }),
     staleTime: 60 * 1000,
     enabled: open && doctorOverrideEnabled && doctorSearch.trim().length >= 3,
+  });
+
+  const { data: routes = [] } = useQuery({
+    queryKey: ["master-data", "medicine_route"],
+    queryFn: () => masterDataApi.list("medicine_route"),
+    staleTime: 10 * 60 * 1000,
+    enabled: open,
+  });
+
+  const { data: dosageUnits = [] } = useQuery({
+    queryKey: ["master-data", "dosage_unit"],
+    queryFn: () => masterDataApi.list("dosage_unit"),
+    staleTime: 10 * 60 * 1000,
+    enabled: open,
+  });
+
+  const { data: frequencies = [] } = useQuery({
+    queryKey: ["master-data", "medicine_frequency"],
+    queryFn: () => masterDataApi.list("medicine_frequency"),
+    staleTime: 10 * 60 * 1000,
+    enabled: open,
+  });
+
+  const { data: durationUnits = [] } = useQuery({
+    queryKey: ["master-data", "duration_unit"],
+    queryFn: () => masterDataApi.list("duration_unit"),
+    staleTime: 10 * 60 * 1000,
+    enabled: open,
   });
 
   const doctors = useMemo(() => {
@@ -82,19 +120,28 @@ export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit
   const selectedDoctor = doctors.find((doctor) => doctor.id === selectedDoctorId);
   const searchResults = doctorSearchPage?.items ?? [];
 
+  const defaultValues = useMemo(
+    () =>
+      mode === "edit" && initialValues
+        ? initialValues
+        : {
+            doctor_id: visitDoctorId,
+            prescription_date: new Date().toISOString().slice(0, 10),
+            instructions: "",
+            review_advice: "",
+            medicine_details: "",
+            items: [EMPTY_ITEM],
+          },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [open]
+  );
+
   useEffect(() => {
     if (!open) return;
-    form.reset({
-      doctor_id: visitDoctorId,
-      prescription_date: new Date().toISOString().slice(0, 10),
-      instructions: "",
-      review_advice: "",
-      medicine_details: "",
-      items: [EMPTY_ITEM],
-    });
-    setDoctorOverrideEnabled(!visitDoctorId);
+    form.reset(defaultValues);
+    setDoctorOverrideEnabled(mode === "edit" ? true : !visitDoctorId);
     setDoctorSearch("");
-  }, [form, open, visitDoctorId]);
+  }, [form, open, defaultValues, mode, visitDoctorId]);
 
   const close = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
@@ -108,11 +155,20 @@ export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>New prescription</DialogTitle>
+          <DialogTitle>{mode === "edit" ? "Edit prescription" : "New prescription"}</DialogTitle>
           <DialogDescription>Add structured medicines or use free-text medicine details.</DialogDescription>
         </DialogHeader>
+        {mode === "edit" && prescriptionCreatedAt && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              Editing is only allowed within {PRESCRIPTION_EDIT_WINDOW_HOURS} hours of creation.
+              Created at <span className="font-medium">{new Date(prescriptionCreatedAt).toLocaleString()}</span>.
+            </span>
+          </div>
+        )}
         <Form {...form}>
           <form
             id="prescription-form"
@@ -219,61 +275,144 @@ export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit
 
             <fieldset className="space-y-3 rounded-md border p-4">
               <legend className="px-1 text-sm font-semibold">Medicine items</legend>
-              {fields.map((item, index) => (
-                <div key={item.id} className="grid gap-3 rounded-md border bg-muted/20 p-3 md:grid-cols-6">
-                  <FormField control={form.control} name={`items.${index}.medicine_name`} render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Medicine</FormLabel>
-                      <FormControl><Input {...field} disabled={isPending} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name={`items.${index}.dosage`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dosage</FormLabel>
-                      <FormControl><Input {...field} disabled={isPending} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name={`items.${index}.timing`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Timing</FormLabel>
-                      <FormControl><Input {...field} disabled={isPending} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name={`items.${index}.duration`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Duration</FormLabel>
-                      <FormControl><Input {...field} disabled={isPending} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name={`items.${index}.application_route`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Route</FormLabel>
-                      <FormControl>
-                        <select {...field} disabled={isPending} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-                          <option value="">Select</option>
-                          <option value="INTERNAL">Internal</option>
-                          <option value="EXTERNAL">External</option>
-                        </select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name={`items.${index}.usage_instruction`} render={({ field }) => (
-                    <FormItem className="md:col-span-5">
-                      <FormLabel>Usage instruction</FormLabel>
-                      <FormControl><Input {...field} disabled={isPending} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={isPending || fields.length === 1} aria-label={`Remove medicine row ${index + 1}`}>
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </div>
-              ))}
+              {fields.map((item, index) => {
+                const durationUnitVal = form.watch(`items.${index}.duration_unit`);
+                const isOngoing = durationUnitVal === "ONGOING";
+                return (
+                  <div key={item.id} className="grid gap-3 rounded-md border bg-muted/20 p-3 md:grid-cols-8">
+                    {/* Medicine name — 2 cols */}
+                    <FormField control={form.control} name={`items.${index}.medicine_name`} render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Medicine</FormLabel>
+                        <FormControl><Input {...field} disabled={isPending} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Dosage value */}
+                    <FormField control={form.control} name={`items.${index}.dosage`} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dosage</FormLabel>
+                        <FormControl><Input {...field} disabled={isPending} placeholder="e.g. 500" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Dosage unit */}
+                    <FormField control={form.control} name={`items.${index}.dosage_unit`} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unit</FormLabel>
+                        <FormControl>
+                          <select {...field} disabled={isPending} className={SELECT_CLASS}>
+                            <option value="">—</option>
+                            {dosageUnits.map((u) => (
+                              <option key={u.code} value={u.code}>{u.label}</option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Timing / Frequency */}
+                    <FormField control={form.control} name={`items.${index}.timing`} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Timing</FormLabel>
+                        <FormControl>
+                          <select {...field} disabled={isPending} className={SELECT_CLASS}>
+                            <option value="">—</option>
+                            {frequencies.map((f) => (
+                              <option key={f.code} value={f.code}>{f.label}</option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Duration value */}
+                    <FormField control={form.control} name={`items.${index}.duration`} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duration</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            disabled={isPending || isOngoing}
+                            placeholder={isOngoing ? "—" : "e.g. 5"}
+                            value={isOngoing ? "" : field.value}
+                            onChange={(e) => {
+                              if (!isOngoing) field.onChange(e);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Duration unit */}
+                    <FormField control={form.control} name={`items.${index}.duration_unit`} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unit</FormLabel>
+                        <FormControl>
+                          <select
+                            {...field}
+                            disabled={isPending}
+                            className={SELECT_CLASS}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              if (e.target.value === "ONGOING") {
+                                form.setValue(`items.${index}.duration`, "");
+                              }
+                            }}
+                          >
+                            <option value="">—</option>
+                            {durationUnits.map((u) => (
+                              <option key={u.code} value={u.code}>{u.label}</option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Route */}
+                    <FormField control={form.control} name={`items.${index}.application_route`} render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Route</FormLabel>
+                        <FormControl>
+                          <select {...field} disabled={isPending} className={SELECT_CLASS}>
+                            <option value="">—</option>
+                            {routes.map((r) => (
+                              <option key={r.code} value={r.code}>{r.label}</option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Usage instruction — 7 cols + trash */}
+                    <FormField control={form.control} name={`items.${index}.usage_instruction`} render={({ field }) => (
+                      <FormItem className="md:col-span-7">
+                        <FormLabel>Usage instruction</FormLabel>
+                        <FormControl><Input {...field} disabled={isPending} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => remove(index)}
+                      disabled={isPending || fields.length === 1}
+                      aria-label={`Remove medicine row ${index + 1}`}
+                      className="self-end"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </div>
+                );
+              })}
               <Button type="button" variant="outline" size="sm" onClick={() => append(EMPTY_ITEM)} disabled={isPending}>
                 <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
                 Add medicine
@@ -310,7 +449,7 @@ export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit
           <Button variant="outline" onClick={() => close(false)} disabled={isPending}>Cancel</Button>
           <Button type="submit" form="prescription-form" disabled={isPending} aria-busy={isPending}>
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
-            Save prescription
+            {mode === "edit" ? "Save changes" : "Save prescription"}
           </Button>
         </DialogFooter>
       </DialogContent>

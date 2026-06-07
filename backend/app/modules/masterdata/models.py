@@ -23,6 +23,10 @@ VALID_MASTER_DATA_TYPES: frozenset[str] = frozenset(
         "marital_status",
         "gender",
         "condition_at_discharge",
+        "medicine_route",
+        "dosage_unit",
+        "medicine_frequency",
+        "duration_unit",
     }
 )
 

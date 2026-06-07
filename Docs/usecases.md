@@ -1,3 +1,19 @@
+
+Files to refer:
+1. Docs/queue-management-plan.md
+
+please proceed with the implementation along with the following inputs:
+
+1. OP/IP driver: assume that now it is always OP. Also the token services should be unique for (day, OP, and Doctor)
+2. /queue response shape: paginated envelope - queue should be paginated based on the day, OP and doctor name (data should come from API not Mockdata )
+3. Doctor-staff mapping screen permission: Administrator-only permission
+4. special_category codes/labels: VIP / SENIOR_CITIZEN / EMERGENCY is fine for now. However should be able to configure via backedn or Admin screen later (master data).
+5. visits.status should be followed so that once the consultation is completed, that specific patient should be moved to 2nd tab (API can be refreshed say every 30 sec - configurable)
+
+
+
+
+
 # ArogyaM Patient Management System
 
 ## Phase 1 – Detailed Use Case Document

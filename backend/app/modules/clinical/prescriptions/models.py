@@ -65,8 +65,10 @@ class PrescriptionItem(Base):
     line_no: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     medicine_name: Mapped[str] = mapped_column(String(200), nullable=False)
     dosage: Mapped[str | None] = mapped_column(String(100))
+    dosage_unit: Mapped[str | None] = mapped_column(String(20))
     timing: Mapped[str | None] = mapped_column(String(100))
     duration: Mapped[str | None] = mapped_column(String(100))
+    duration_unit: Mapped[str | None] = mapped_column(String(20))
     usage_instruction: Mapped[str | None] = mapped_column(Text)
     application_route: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(

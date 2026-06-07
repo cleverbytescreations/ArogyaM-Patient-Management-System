@@ -106,6 +106,10 @@ class DuplicatePatientError(ConflictError):
     error_code = "DUPLICATE_PATIENT_SUSPECTED"
 
 
+class EditWindowExpiredError(ForbiddenError):
+    error_code = "EDIT_WINDOW_EXPIRED"
+
+
 class DischargeAlreadyFinalizedError(ConflictError):
     error_code = "DISCHARGE_ALREADY_FINALIZED"
 

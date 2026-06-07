@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, FilePlus2, Loader2, Save } from "lucide-react";
+import { CheckCircle, Edit2, FilePlus2, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +11,15 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { clinicalApi } from "@/api/clinicalApi";
+import { usersApi } from "@/features/users/usersApi";
 import { usePermissions } from "@/auth/usePermissions";
 import { PERMISSIONS } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { getApiErrorCode, getApiErrorMessage, getFieldErrors } from "@/api/errors";
 import { dischargeSummarySchema, type DischargeSummaryFormValues } from "@/lib/validation/clinical";
 import type { DischargeSummary } from "@/types/clinical";
+import type { User } from "@/types/users";
 import type { Visit } from "@/types/visits";
 
 const TEXT_FIELDS: { name: keyof DischargeSummaryFormValues; label: string; rows?: number }[] = [
@@ -84,7 +87,7 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
   const [finalizeOpen, setFinalizeOpen] = useState(false);
   const [amendMode, setAmendMode] = useState(false);
   const { hasPermission } = usePermissions();
-  const canWrite = hasPermission(PERMISSIONS.ADD_DISCHARGE_SUMMARY);
+  const canWrite = hasPermission(PERMISSIONS.ADD_CONSULTATION);
   const canRead = hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY) || canWrite;
   const queryClient = useQueryClient();
 

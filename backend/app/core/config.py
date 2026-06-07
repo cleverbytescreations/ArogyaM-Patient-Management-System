@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     login_max_attempts: int = Field(default=5)
     login_lockout_min: int = Field(default=30)
 
+    # --- Clinical rules ------------------------------------------------------
+    # Maximum hours after creation during which a prescription can be edited.
+    prescription_edit_window_hours: int = Field(default=8)
+
     # --- Login rate limiting (SEC-T1.2) --------------------------------------
     # Disabled when rate_limit_enabled=False (or RATE_LIMIT_ENABLED=false env).
     # When Redis is configured (REDIS_URL), uses Redis for multi-worker safety;

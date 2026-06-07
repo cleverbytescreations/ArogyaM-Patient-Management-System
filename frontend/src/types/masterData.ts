@@ -7,7 +7,11 @@ export type MasterDataType =
   | "dietary_preference"
   | "marital_status"
   | "gender"
-  | "condition_at_discharge";
+  | "condition_at_discharge"
+  | "medicine_route"
+  | "dosage_unit"
+  | "medicine_frequency"
+  | "duration_unit";
 
 export interface MasterDataItem {
   id: number;

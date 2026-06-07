@@ -10,7 +10,6 @@ export const PERMISSIONS = {
   VIEW_MEDICAL_HISTORY: "view_medical_history",
   ADD_CONSULTATION: "add_consultation",
   ADD_PRESCRIPTION: "add_prescription",
-  ADD_DISCHARGE_SUMMARY: "add_discharge_summary",
   UPLOAD_DOCUMENT: "upload_document",
   MANAGE_FOLLOWUPS: "manage_followups",
   REQUEST_MERGE: "request_merge",

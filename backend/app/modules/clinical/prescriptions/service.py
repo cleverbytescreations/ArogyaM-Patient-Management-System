@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.core.audit import extract_request_meta, write_audit
-from app.core.errors import NotFoundError, ValidationAppError
+from app.core.config import settings
+from app.core.errors import EditWindowExpiredError, NotFoundError, ValidationAppError, VersionConflictError
 from app.modules.auth import repository as auth_repo
 from app.modules.clinical.prescriptions import repository as repo
 from app.modules.clinical.prescriptions.models import Prescription, PrescriptionItem
-from app.modules.clinical.prescriptions.schemas import PrescriptionCreateRequest, PrescriptionOut
+from app.modules.clinical.prescriptions.schemas import (
+    PrescriptionCreateRequest,
+    PrescriptionOut,
+    PrescriptionUpdateRequest,
+)
 from app.modules.visits import repository as visit_repo
 
 
@@ -77,8 +82,10 @@ def create_prescription(
                 line_no=item.line_no or idx,
                 medicine_name=item.medicine_name,
                 dosage=item.dosage,
+                dosage_unit=item.dosage_unit,
                 timing=item.timing,
                 duration=item.duration,
+                duration_unit=item.duration_unit,
                 usage_instruction=item.usage_instruction,
                 application_route=item.application_route,
             )
@@ -134,4 +141,65 @@ def get_prescription(
     prescription = repo.get_prescription_by_id(db, prescription_id)
     if prescription is None:
         raise NotFoundError(f"Prescription {prescription_id} not found")
+    return PrescriptionOut.model_validate(prescription)
+
+
+def update_prescription(
+    db: Session,
+    prescription_id: uuid.UUID,
+    body: PrescriptionUpdateRequest,
+    actor_payload: dict,
+    request: Any = None,
+) -> PrescriptionOut:
+    prescription = repo.get_prescription_by_id(db, prescription_id)
+    if prescription is None:
+        raise NotFoundError(f"Prescription {prescription_id} not found")
+
+    if prescription.version != body.version:
+        raise VersionConflictError(
+            "Prescription was modified by another user. Please reload and try again."
+        )
+
+    created_at = prescription.created_at
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    window = timedelta(hours=settings.prescription_edit_window_hours)
+    if datetime.now(timezone.utc) - created_at > window:
+        raise EditWindowExpiredError(
+            f"Prescriptions can only be edited within "
+            f"{settings.prescription_edit_window_hours} hours of creation."
+        )
+
+    _validate_doctor(db, body.doctor_id)
+
+    actor_id = _actor_id(actor_payload)
+    old_value = _snapshot(prescription)
+
+    prescription.doctor_id = body.doctor_id
+    prescription.prescription_date = body.prescription_date or date.today()
+    prescription.instructions = body.instructions
+    prescription.review_advice = body.review_advice
+    prescription.medicine_details = body.medicine_details
+    prescription.version = prescription.version + 1
+    prescription.updated_by = actor_id
+
+    repo.replace_prescription_items(db, prescription, body.items)
+
+    ip, ua, rid = extract_request_meta(request)
+    write_audit(
+        db,
+        action="UPDATE",
+        user_id=actor_id,
+        user_role=_role_snapshot(actor_payload),
+        entity_type="prescription",
+        entity_id=str(prescription.id),
+        patient_id=prescription.patient_id,
+        old_value=old_value,
+        new_value=_snapshot(prescription),
+        description="Updated prescription (within edit window)",
+        ip_address=ip,
+        user_agent=ua,
+        request_id=rid,
+    )
+    db.commit()
     return PrescriptionOut.model_validate(prescription)

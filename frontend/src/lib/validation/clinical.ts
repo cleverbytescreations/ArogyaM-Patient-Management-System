@@ -2,11 +2,13 @@ import { z } from "zod";
 
 export const prescriptionItemSchema = z.object({
   medicine_name: z.string().max(120, "Too long").optional(),
-  dosage: z.string().max(120, "Too long").optional(),
-  timing: z.string().max(120, "Too long").optional(),
-  duration: z.string().max(120, "Too long").optional(),
+  dosage: z.string().max(100, "Too long").optional(),
+  dosage_unit: z.string().max(20).optional(),
+  timing: z.string().max(100, "Too long").optional(),
+  duration: z.string().max(100, "Too long").optional(),
+  duration_unit: z.string().max(20).optional(),
   usage_instruction: z.string().max(500, "Too long").optional(),
-  application_route: z.enum(["INTERNAL", "EXTERNAL", ""]).optional(),
+  application_route: z.string().max(20).optional(),
 });
 
 export const prescriptionSchema = z

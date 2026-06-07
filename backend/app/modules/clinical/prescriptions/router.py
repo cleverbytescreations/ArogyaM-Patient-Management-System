@@ -11,7 +11,11 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_db, require_permission
 from app.core.permissions import PERM_ADD_PRESCRIPTION, PERM_VIEW_MEDICAL_HISTORY
 from app.modules.clinical.prescriptions import service as svc
-from app.modules.clinical.prescriptions.schemas import PrescriptionCreateRequest, PrescriptionOut
+from app.modules.clinical.prescriptions.schemas import (
+    PrescriptionCreateRequest,
+    PrescriptionOut,
+    PrescriptionUpdateRequest,
+)
 
 AddPrescription = Annotated[dict, Depends(require_permission(PERM_ADD_PRESCRIPTION))]
 ViewMedicalHistory = Annotated[dict, Depends(require_permission(PERM_VIEW_MEDICAL_HISTORY))]
@@ -58,3 +62,18 @@ def get_prescription(
     db: Annotated[Session, Depends(get_db)],
 ) -> PrescriptionOut:
     return svc.get_prescription(db, prescription_id, payload)
+
+
+@router.put(
+    "/{prescription_id}",
+    response_model=PrescriptionOut,
+    summary="Update a prescription within the edit window",
+)
+def update_prescription(
+    prescription_id: uuid.UUID,
+    body: PrescriptionUpdateRequest,
+    payload: AddPrescription,
+    db: Annotated[Session, Depends(get_db)],
+    request: Request,
+) -> PrescriptionOut:
+    return svc.update_prescription(db, prescription_id, body, payload, request)

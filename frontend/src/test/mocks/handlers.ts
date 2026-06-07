@@ -28,7 +28,6 @@ export const mockUser: UserProfile = {
     "view_medical_history",
     "add_consultation",
     "add_prescription",
-    "add_discharge_summary",
     "upload_document",
     "manage_followups",
     "request_merge",

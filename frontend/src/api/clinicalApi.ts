@@ -5,6 +5,7 @@ import type {
   DischargeSummaryUpdateRequest,
   Prescription,
   PrescriptionCreateRequest,
+  PrescriptionUpdateRequest,
 } from "@/types/clinical";
 
 export const clinicalApi = {
@@ -21,6 +22,11 @@ export const clinicalApi = {
   getPrescription: (prescriptionId: string) =>
     apiClient
       .get<Prescription>(`/prescriptions/${prescriptionId}`)
+      .then((r) => r.data),
+
+  updatePrescription: (prescriptionId: string, data: PrescriptionUpdateRequest) =>
+    apiClient
+      .put<Prescription>(`/prescriptions/${prescriptionId}`, data)
       .then((r) => r.data),
 
   getCurrentDischargeSummary: (visitId: string) =>
