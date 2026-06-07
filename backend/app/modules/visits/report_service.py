@@ -34,6 +34,12 @@ def _signature_line(doctor: User | None) -> str:
     return doctor.full_name if doctor is not None else ""
 
 
+def _format_measurement(value: float | None, unit: str) -> str:
+    if value is None:
+        return ""
+    return f"{value:g} {unit}"
+
+
 def _build_context(
     visit: Visit, patient: Patient, case_sheet: CaseSheet, doctor: User | None
 ) -> dict[str, Any]:
@@ -47,8 +53,8 @@ def _build_context(
         "date_of_birth": _format_date(patient.date_of_birth),
         "marital_status": patient.marital_status,
         "dietary_preference": patient.dietary_preference,
-        "height_cm": patient.height_cm,
-        "weight_kg": patient.weight_kg,
+        "height_display": _format_measurement(patient.height_cm, "cm"),
+        "weight_display": _format_measurement(patient.weight_kg, "kg"),
         "blood_group": patient.blood_group,
         "address_line": patient.address_line,
         "profession": patient.profession,
@@ -60,6 +66,7 @@ def _build_context(
         "energy_level": case_sheet.energy_level,
         "hereditary_diseases_mother": case_sheet.hereditary_diseases_mother,
         "hereditary_diseases_father": case_sheet.hereditary_diseases_father,
+        "show_deliveries": (patient.gender or "").upper() == "FEMALE",
         "normal_deliveries": case_sheet.normal_deliveries,
         "caesarian_deliveries": case_sheet.caesarian_deliveries,
         "surgeries": case_sheet.surgeries,

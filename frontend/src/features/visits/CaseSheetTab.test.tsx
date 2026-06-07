@@ -161,6 +161,34 @@ describe("CaseSheetTab — form content", () => {
     expect(screen.getByLabelText(/hereditary diseases \(father\)/i)).toBeInTheDocument();
   });
 
+  it("shows delivery count fields for a female patient", async () => {
+    render(
+      <CaseSheetTab selectedVisit={mockVisit} patientGender="FEMALE" onSelectVisitTab={vi.fn()} />,
+      { wrapper: makeWrapper() }
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("form", { name: /case sheet form/i })
+      ).toBeInTheDocument()
+    );
+    expect(screen.getByLabelText(/normal deliveries/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/caesarian deliveries/i)).toBeInTheDocument();
+  });
+
+  it("hides delivery count fields for a male patient", async () => {
+    render(
+      <CaseSheetTab selectedVisit={mockVisit} patientGender="MALE" onSelectVisitTab={vi.fn()} />,
+      { wrapper: makeWrapper() }
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("form", { name: /case sheet form/i })
+      ).toBeInTheDocument()
+    );
+    expect(screen.queryByLabelText(/normal deliveries/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/caesarian deliveries/i)).not.toBeInTheDocument();
+  });
+
   it("pre-populates fields with data from the fetched case sheet", async () => {
     render(
       <CaseSheetTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} />,

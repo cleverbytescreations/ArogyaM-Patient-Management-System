@@ -23,6 +23,7 @@ import { useConflictHandler } from "@/lib/conflict";
 import { caseSheetSchema, type CaseSheetFormValues } from "@/lib/validation/visits";
 import { formatDate } from "@/lib/format";
 import type { Visit } from "@/types/visits";
+import type { GenderCode } from "@/types/patients";
 
 const CASE_SHEET_FIELDS: { name: keyof CaseSheetFormValues; label: string; rows?: number }[] = [
   { name: "present_complaints", label: "Present complaints", rows: 4 },
@@ -67,11 +68,13 @@ function toApiCount(value: string | undefined): number | null {
 
 interface CaseSheetTabProps {
   selectedVisit: Visit | null;
+  patientGender?: GenderCode | null;
   onSelectVisitTab: () => void;
 }
 
-export function CaseSheetTab({ selectedVisit, onSelectVisitTab }: CaseSheetTabProps) {
+export function CaseSheetTab({ selectedVisit, patientGender, onSelectVisitTab }: CaseSheetTabProps) {
   const { hasPermission } = usePermissions();
+  const showDeliveryFields = patientGender === "FEMALE";
   const canWrite = hasPermission(PERMISSIONS.ADD_CONSULTATION);
   const canRead = hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY) || canWrite;
   const canExportReport = hasPermission(PERMISSIONS.EXPORT) && hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY);
@@ -355,48 +358,50 @@ export function CaseSheetTab({ selectedVisit, onSelectVisitTab }: CaseSheetTabPr
                 />
               ))}
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="normal_deliveries"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Normal deliveries</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          min={0}
-                          max={99}
-                          inputMode="numeric"
-                          disabled={isPending || !canWrite}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="caesarian_deliveries"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Caesarian deliveries</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          min={0}
-                          max={99}
-                          inputMode="numeric"
-                          disabled={isPending || !canWrite}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {showDeliveryFields && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="normal_deliveries"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Normal deliveries</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="number"
+                            min={0}
+                            max={99}
+                            inputMode="numeric"
+                            disabled={isPending || !canWrite}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="caesarian_deliveries"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Caesarian deliveries</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="number"
+                            min={0}
+                            max={99}
+                            inputMode="numeric"
+                            disabled={isPending || !canWrite}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
             </fieldset>
 
             {canWrite && (

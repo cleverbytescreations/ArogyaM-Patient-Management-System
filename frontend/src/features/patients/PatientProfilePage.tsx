@@ -164,6 +164,7 @@ export function PatientProfilePage() {
         <TabsContent value="case-sheet" className="pt-0">
           <CaseSheetTab
             selectedVisit={selectedVisit ?? null}
+            patientGender={patient.gender}
             onSelectVisitTab={() => setActiveTab("visits")}
           />
         </TabsContent>
