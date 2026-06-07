@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.modules.visits.models import CaseSheet, ConsultationNote, Visit
@@ -53,6 +53,17 @@ def save_case_sheet(db: Session, case_sheet: CaseSheet) -> CaseSheet:
     return case_sheet
 
 
+def get_visit_ids_with_case_sheet(db: Session, visit_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """Visit IDs (from the given set) that already have a case sheet recorded."""
+    if not visit_ids:
+        return set()
+    return set(
+        db.execute(
+            select(CaseSheet.visit_id).where(CaseSheet.visit_id.in_(visit_ids))
+        ).scalars()
+    )
+
+
 # ── Consultation notes ─────────────────────────────────────────────────────────
 
 
@@ -70,3 +81,17 @@ def list_consultation_notes(db: Session, visit_id: uuid.UUID) -> list[Consultati
             .order_by(ConsultationNote.created_at)
         ).scalars()
     )
+
+
+def count_consultation_notes_by_visit(
+    db: Session, visit_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, int]:
+    """Map of visit_id → consultation note count, for the given visit IDs."""
+    if not visit_ids:
+        return {}
+    rows = db.execute(
+        select(ConsultationNote.visit_id, func.count(ConsultationNote.id))
+        .where(ConsultationNote.visit_id.in_(visit_ids))
+        .group_by(ConsultationNote.visit_id)
+    ).all()
+    return {visit_id: count for visit_id, count in rows}

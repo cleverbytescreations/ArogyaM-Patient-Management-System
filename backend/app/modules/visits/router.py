@@ -31,6 +31,7 @@ from app.modules.visits.schemas import (
     ConsultationNoteCreateRequest,
     ConsultationNoteOut,
     VisitCreateRequest,
+    VisitListItemOut,
     VisitOut,
     VisitUpdateRequest,
 )
@@ -63,14 +64,14 @@ def create_visit(
 
 @patients_router.get(
     "/{patient_id}/visits",
-    response_model=list[VisitOut],
+    response_model=list[VisitListItemOut],
     summary="List all visits for a patient (most-recent first)",
 )
 def list_visits(
     patient_id: uuid.UUID,
     payload: ViewPatient,
     db: Annotated[Session, Depends(get_db)],
-) -> list[VisitOut]:
+) -> list[VisitListItemOut]:
     return svc.list_visits(db, patient_id, payload)
 
 

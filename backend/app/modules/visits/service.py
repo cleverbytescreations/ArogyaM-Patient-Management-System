@@ -26,6 +26,7 @@ from app.modules.visits.schemas import (
     ConsultationNoteOut,
     PatientProfileShell,
     VisitCreateRequest,
+    VisitListItemOut,
     VisitOut,
     VisitUpdateRequest,
 )
@@ -199,12 +200,24 @@ def list_visits(
     db: Session,
     patient_id: uuid.UUID,
     actor_payload: dict,
-) -> list[VisitOut]:
+) -> list[VisitListItemOut]:
     patient = patient_repo.get_patient_by_id(db, patient_id)
     if patient is None:
         raise NotFoundError(f"Patient {patient_id} not found")
     visits = repo.list_visits_for_patient(db, patient_id)
-    return [_visit_out(v, patient) for v in visits]
+
+    visit_ids = [v.id for v in visits]
+    case_sheet_visit_ids = repo.get_visit_ids_with_case_sheet(db, visit_ids)
+    notes_count_by_visit = repo.count_consultation_notes_by_visit(db, visit_ids)
+
+    return [
+        VisitListItemOut(
+            **_visit_out(v, patient).model_dump(),
+            has_case_sheet=v.id in case_sheet_visit_ids,
+            consultation_notes_count=notes_count_by_visit.get(v.id, 0),
+        )
+        for v in visits
+    ]
 
 
 def get_visit(

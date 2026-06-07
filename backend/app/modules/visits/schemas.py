@@ -68,6 +68,13 @@ class VisitOut(BaseModel):
     patient_shell: PatientProfileShell | None = None
 
 
+class VisitListItemOut(VisitOut):
+    """Visit row for list views — adds at-a-glance clinical record indicators."""
+
+    has_case_sheet: bool = False
+    consultation_notes_count: int = 0
+
+
 # ── Case sheet ─────────────────────────────────────────────────────────────────
 
 # All content fields are marked optional so a partial upsert is possible.

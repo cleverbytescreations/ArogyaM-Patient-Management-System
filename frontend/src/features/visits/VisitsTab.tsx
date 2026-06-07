@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Plus, CheckCircle, Clock, XCircle, FileText, NotebookPen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/DataTable";
@@ -105,6 +105,29 @@ export function VisitsTab({ patientId, selectedVisitId, onVisitSelect }: VisitsT
       key: "reason",
       header: "Reason",
       render: (v) => <span className="max-w-[200px] truncate block">{v.reason ?? "—"}</span>,
+    },
+    {
+      key: "records",
+      header: "Records",
+      render: (v) => (
+        <div className="flex flex-wrap items-center gap-1">
+          {v.has_case_sheet && (
+            <Badge variant="success" className="flex w-fit items-center gap-1">
+              <FileText className="h-3 w-3" aria-hidden="true" />
+              Case sheet
+            </Badge>
+          )}
+          {!!v.consultation_notes_count && (
+            <Badge variant="success" className="flex w-fit items-center gap-1">
+              <NotebookPen className="h-3 w-3" aria-hidden="true" />
+              Notes ({v.consultation_notes_count})
+            </Badge>
+          )}
+          {!v.has_case_sheet && !v.consultation_notes_count && (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </div>
+      ),
     },
     {
       key: "actions",

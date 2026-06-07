@@ -14,6 +14,8 @@ export interface Visit {
   version: number;
   created_at: string;
   updated_at: string;
+  has_case_sheet?: boolean;
+  consultation_notes_count?: number;
 }
 
 export interface VisitCreateRequest {

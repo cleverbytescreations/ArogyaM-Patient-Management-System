@@ -12,7 +12,7 @@ export function formatDate(iso: string | null | undefined): string {
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
-    return format(parseISO(iso), "dd MMM yyyy, HH:mm");
+    return format(parseISO(iso), "dd MMM yyyy, hh:mm a");
   } catch {
     return "—";
   }
