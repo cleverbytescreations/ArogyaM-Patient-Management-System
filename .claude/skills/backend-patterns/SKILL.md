@@ -182,7 +182,9 @@ write path leaves stale data forever).
 - Cache key format: `masterdata:{type}:all` and `masterdata:{type}:active` (one key per filter variant)
 - Always pass `ttl_sec=settings.master_data_cache_ttl_sec` to `cache_set`
 - Call `cache_delete` for all key variants of the affected type **after** `db.commit()`
-- Serialize to/from JSON using `model_dump()` / `model_validate()` on the Pydantic output schema
+- Serialize to/from JSON using `model_dump(mode="json")` / `model_validate()` on the Pydantic output
+  schema — plain `model_dump()` leaves `datetime`/`UUID` fields as Python objects, which `json.dumps`
+  cannot serialize (`TypeError: Object of type datetime is not JSON serializable`)
 - The in-process fallback in `cache.py` is TTL-aware (uses `time.monotonic()`); it covers single-worker dev but multi-worker prod **must** set `REDIS_URL`
 
 ### Canonical service pattern
