@@ -584,9 +584,19 @@ class TestConsultationNotes:
         )
         notes = r.json()
         assert len(notes) == 3
-        # Verify chronological order (timestamps are ascending)
+        # Verify chronological order (timestamps are ascending). Note: `id` is
+        # a randomly-generated UUID (no insertion-order meaning), so it can't
+        # serve as a tiebreaker — instead we assert directly on the submitted
+        # content order, which is the thing the "chronological order" contract
+        # actually promises to callers and is robust to timestamp-resolution
+        # ties (PostgreSQL `now()` is transaction-scoped and could coincide).
         created_ats = [n["created_at"] for n in notes]
         assert created_ats == sorted(created_ats)
+        assert [n["presenting_complaints"] for n in notes] == [
+            "Note 1",
+            "Note 2",
+            "Note 3",
+        ]
 
     def test_add_note_requires_add_consultation(
         self, client, db: Session, reception_token: str

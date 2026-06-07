@@ -8,8 +8,10 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { axe } from "jest-axe";
+import { http, HttpResponse } from "msw";
 import { BasicDetailsTab } from "./BasicDetailsTab";
 import { useAuth } from "@/auth/AuthContext";
+import { server } from "@/test/mocks/server";
 import {
   mockPatient,
   mockGenderOptions,
@@ -18,6 +20,8 @@ import {
   mockDietaryOptions,
   mockOpSequences,
 } from "@/test/mocks/handlers";
+
+const BASE = "/api/v1";
 
 vi.mock("@/auth/AuthContext");
 
@@ -207,6 +211,21 @@ describe("BasicDetailsTab — edit form validation", () => {
   });
 
   it("returns to view mode on successful save", async () => {
+    // Capture the actual PUT payload so we can confirm the form really
+    // submitted the edited value to the API — not just that *some* request
+    // succeeded and the component exited edit mode.
+    let capturedBody: Record<string, unknown> | null = null;
+    server.use(
+      http.put(`${BASE}/patients/:id`, async ({ request }) => {
+        capturedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          ...mockPatient,
+          ...capturedBody,
+          version: mockPatient.version + 1,
+        });
+      })
+    );
+
     const user = userEvent.setup();
     render(<BasicDetailsTab {...defaultTabProps} />, { wrapper: makeWrapper() });
     await user.click(screen.getByRole("button", { name: /edit details/i }));
@@ -227,6 +246,10 @@ describe("BasicDetailsTab — edit form validation", () => {
     expect(
       screen.getByRole("button", { name: /edit details/i })
     ).toBeInTheDocument();
+    // The save actually carried the edited value to the API — guards against
+    // the component exiting edit mode without applying the user's changes.
+    expect(capturedBody).not.toBeNull();
+    expect(capturedBody?.full_name).toBe("Updated Name");
   });
 
   it("has no a11y violations in edit mode", async () => {

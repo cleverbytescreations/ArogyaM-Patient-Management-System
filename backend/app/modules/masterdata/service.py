@@ -54,7 +54,7 @@ def list_items(
         return [MasterDataItemOut.model_validate(row) for row in json.loads(cached)]
     items = repo.list_by_type(db, data_type, active_only=active_only)
     result = [_to_out(i) for i in items]
-    cache_set(key, json.dumps([r.model_dump() for r in result]), ttl_sec=settings.master_data_cache_ttl_sec)
+    cache_set(key, json.dumps([r.model_dump(mode="json") for r in result]), ttl_sec=settings.master_data_cache_ttl_sec)
     return result
 
 

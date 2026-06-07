@@ -3,7 +3,7 @@
  * Covers UI-TX.2 (a11y pass on clinical forms) and UI-TX.3 (component & validation tests).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -226,11 +226,9 @@ describe("CaseSheetTab — form content", () => {
       { wrapper: makeWrapper() }
     );
     // Wait for the form to load
-    const formEl = await screen.findByRole("form", { name: /case sheet form/i });
-    // Submit the form directly to bypass any pointer-event issues
-    await act(async () => {
-      fireEvent.submit(formEl);
-    });
+    await screen.findByRole("form", { name: /case sheet form/i });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /save case sheet/i }));
     // The conflict alert replaces the form
     await waitFor(
       () =>

@@ -11,7 +11,6 @@ import { axe } from "jest-axe";
 import { http, HttpResponse } from "msw";
 import { VisitFormDialog } from "./VisitFormDialog";
 import { server } from "@/test/mocks/server";
-import { mockVisit } from "@/test/mocks/handlers";
 
 function makeWrapper() {
   const qc = new QueryClient({
@@ -230,8 +229,4 @@ describe("VisitFormDialog — successful submission", () => {
     );
     expect(defaultProps.onCreated).not.toHaveBeenCalled();
   });
-
-  // Keep a reference so tests can compare
-  const _mockVisit = mockVisit;
-  void _mockVisit;
 });
