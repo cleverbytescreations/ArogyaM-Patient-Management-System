@@ -19,8 +19,11 @@ from sqlalchemy import engine_from_config, pool
 # as each sprint lands new models.
 from app.core.db import Base
 from app.modules.auth import models as _auth_models  # noqa: F401  register tables
+from app.modules.clinical.discharge import models as _discharge_models  # noqa: F401
+from app.modules.clinical.prescriptions import models as _prescription_models  # noqa: F401
 from app.modules.masterdata import models as _masterdata_models  # noqa: F401
 from app.modules.patients import models as _patient_models  # noqa: F401
+from app.modules.visits import models as _visit_models  # noqa: F401
 
 # ── Alembic Config object ─────────────────────────────────────────────────────
 config = context.config

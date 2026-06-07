@@ -1084,15 +1084,14 @@ Objective:
 ----------
 Implement the following task from the task list. If any task is already implemented, please validate the feature:
 
-Tests / Cross-cutting
-
-TST-T6.1 (clinical lifecycle, partial — visits/case-sheet/notes), UI-TX.2 a11y pass on profile + clinical forms.
-UI-TX.3 — frontend component & validation tests (route-guard/permission gating, form zod validation) established now that real edit forms exist; continues every sprint after.
+Backend (Stage 4 part 2 + Stage 5)
+BE-T9.1, BE-T9.2, API-T9.1, INT-T9.1, INT-T9.2 — document upload (type/size/sniff), secure proxied/pre-signed download, MinIO client + bucket, optional AV hook.
+BE-T10.1, API-T3.2 — timeline aggregation.
 
 
 Instructions:
--------------
-1. Review the referenced files before implementation.
+------------- 
+1. Review only the sections relevant to the selected task
 2. Follow the existing project architecture and coding standards.
 3. Add or update required backend, frontend, API, database, validation, security, logging, and test files as needed.
 4. When creating a new Alembic migration, set down_revision to the current single head by running alembic heads first and chaining to it   never hardcode a revision without verifying it is the actual head.
@@ -1115,10 +1114,10 @@ Files to refer (if required - lazy loading):
 Task to review:
 ---------------
 
-Tests / Cross-cutting
+Backend (Stage 4 part 2 + Stage 5)
 
-TST-T6.1 (clinical lifecycle, partial — visits/case-sheet/notes), UI-TX.2 a11y pass on profile + clinical forms.
-UI-TX.3 — frontend component & validation tests (route-guard/permission gating, form zod validation) established now that real edit forms exist; continues every sprint after.
+BE-T7.1, API-T7.1 — prescriptions (+items).
+BE-T8.1, API-T8.1 — discharge summaries with finalize/amend chain.
 
 
 Objective:
