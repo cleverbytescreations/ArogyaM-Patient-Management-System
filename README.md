@@ -158,6 +158,49 @@ configuration, and `.env.prod` (see [.env.prod.example](.env.prod.example)). Ref
 [Docker Deployment Guide](Docs/DOCKER_DEPLOYMENT_GUIDE.md) for the full procedure. Backup
 and restore helpers live in [scripts/](scripts/).
 
+```bash
+cp .env.prod.example .env.prod && chmod 600 .env.prod
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+```
+
+### Migrating from the dev stack to production
+
+The dev stack ([docker-compose.dev.yml](docker-compose.dev.yml) / `.env.dev`) intentionally
+runs with weakened, convenience-oriented settings — **do not lift `.env.dev` into
+production**. Start from [.env.prod.example](.env.prod.example) and replace every
+`CHANGE_ME` placeholder, then verify each of the following dev → prod changes:
+
+| Setting | Dev value | Production requirement |
+|---|---|---|
+| `ENV` | `development` | `production` — flips on the [`Settings._require_secrets_in_production`](backend/app/core/config.py) startup guard, which **refuses to boot** if `JWT_SECRET_KEY`, `S3_SECRET_KEY`, or `DATABASE_URL` still hold dev sentinel values, or if `CORS_ALLOW_ORIGINS` is `*` |
+| `JWT_SECRET_KEY` | `dev-only-change-me-...` placeholder | Generate a unique secret with `openssl rand -hex 32`; never reuse the dev value |
+| `POSTGRES_PASSWORD` / `DATABASE_URL` | `arogyam_dev_pw` | Strong, unique password (`openssl rand -hex 32`); never contains `arogyam_dev_pw` |
+| `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` (→ `S3_ACCESS_KEY`/`S3_SECRET_KEY`) | `minioadmin` / `minioadmin_dev_pw` | Strong, unique credentials; the secret must differ from the dev sentinel `minioadmin_dev_pw` (checked at startup) |
+| `REDIS_URL` | `redis://redis:6379` (no auth) | `redis://:<REDIS_PASSWORD>@redis:6379/0` — set `REDIS_PASSWORD` to a strong value; Redis is **mandatory** in prod (multi-worker rate limiting + JWT denylist need a shared store, see `core/tokens.py` / `core/ratelimit.py`) |
+| `ADMIN_PASSWORD` | falls back to `Admin@12345` if blank | **Must** be set to a strong password, or left blank to *skip* auto-creation and instead create the admin via `backend/scripts/create_admin.py` — never ship the dev fallback password |
+| **Transport encryption (TLS)** | HTTP only — [nginx.dev.conf](nginx/nginx.dev.conf), no certs | [nginx.prod.conf](nginx/nginx.prod.conf) terminates TLS 1.2/1.3 via Let's Encrypt; set `DOMAIN` and `PUBLIC_BASE_URL`, provision certs with the `certbot` service, and add HSTS (already wired in the prod template) — see [Docker Deployment Guide §6](Docs/DOCKER_DEPLOYMENT_GUIDE.md) |
+| **Encryption at rest — object storage (`S3_SSE`)** | `s3_sse=False` (server-side encryption **disabled**; `S3_USE_SSL=false`) | Add `S3_SSE=true` to `.env.prod` (it is **not** in `.env.prod.example` by default — pass it through so MinIO stores documents with `ServerSideEncryption: AES256`, see [storage.py](backend/app/modules/documents/storage.py)). `S3_USE_SSL` may stay `false` only if MinIO is reached over a private network/internal hop — set it `true` if the object store is remote |
+| **Encryption at rest — disk/volumes** | Plain Docker volumes | Provision the Postgres data volume, MinIO data volume, and `BACKUP_HOST_PATH` on encrypted disks/filesystems (LUKS, cloud-provider disk encryption, etc.) — see [Docker Deployment Guide §11 checklist](Docs/DOCKER_DEPLOYMENT_GUIDE.md) |
+| `MINIO_BROWSER` | console exposed on `:9001` | `off` (already defaulted in [docker-compose.prod.yml](docker-compose.prod.yml)) — never expose the MinIO web console publicly |
+| `CORS_ALLOW_ORIGINS` | `http://localhost:8080` | Set to `PUBLIC_BASE_URL` (your real HTTPS origin); a wildcard (`*`) is rejected at startup |
+| `LOG_LEVEL` | `DEBUG` | `INFO` — debug logging is more likely to capture request details; `SQL_ECHO` must remain `false` in **every** environment (hard-enforced — SQL parameter logging would leak PHI, SAD §10.1) |
+| `AV_SCAN_ENABLED` / `AV_SCAN_COMMAND` | `false` / empty (no scanning) | Consider deploying ClamAV (or similar) and setting `AV_SCAN_ENABLED=true` with `AV_SCAN_COMMAND` so uploaded documents are scanned (see [documents/service.py](backend/app/modules/documents/service.py)) |
+| API process model | `uvicorn --reload` (hot reload, single worker, source bind-mounted) | No `--reload`; runs `API_WORKERS` (rule of thumb `(2 × vCPU) + 1`, capped to `API_CPU_LIMIT`) workers from a versioned, immutable image (`IMAGE_TAG`) |
+| `FORWARDED_ALLOW_IPS` | `*` (dev: only the local proxy is upstream) | Defaults to `*` (the proxy is the sole ingress); for defence-in-depth, scope it to the proxy's container subnet, e.g. `172.20.0.0/16` |
+| Secrets storage | `.env.dev`, gitignored, weak by design | `.env.prod` must be gitignored, `chmod 600`, owned by the deploy user, and contain only generated/strong secrets — never commit it. For higher assurance, migrate to Docker secrets / a secrets manager (SAD §10) |
+| Backups | Not configured | Configure `BACKUP_HOST_PATH` (separate/off-server disk), `BACKUP_RETENTION_DAYS`, `BACKUP_CRON_DB`/`BACKUP_CRON_MINIO`, and optionally SMTP/webhook alerting — see [scripts/](scripts/) and [Docker Deployment Guide §9](Docs/DOCKER_DEPLOYMENT_GUIDE.md) |
+| Image pinning | Local builds (`API_BUILD_TARGET=dev`, `:latest` tags) | Pin `IMAGE_TAG` to a tested release and pin every third-party image (`POSTGRES_IMAGE`, `MINIO_IMAGE`, etc.) to a specific, vetted version — never `:latest` in prod |
+
+> **Encryption summary:** the dev stack deliberately runs with **both** transport
+> encryption (TLS) and storage-level encryption (`S3_SSE`, `S3_USE_SSL`) turned off for
+> local convenience. Before going live, confirm: (1) the edge proxy serves HTTPS only
+> (HTTP redirects to HTTPS), (2) `S3_SSE=true` is set so documents are encrypted at rest
+> in the object store, and (3) the underlying DB/object-store/backup volumes sit on
+> encrypted disks. None of these are optional for handling real patient data (SAD §10).
+
+Run through the full [Docker Deployment Guide §11 go-live checklist](Docs/DOCKER_DEPLOYMENT_GUIDE.md)
+before pointing real traffic at a production deployment.
+
 ## Repository layout
 
 ```
