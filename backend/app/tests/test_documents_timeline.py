@@ -238,6 +238,47 @@ class TestDocuments:
         )
         assert actions == ["DOWNLOAD", "PRESIGN", "UPLOAD"]
 
+    def test_upload_rejects_disguised_file_type(
+        self, client, db: Session, reception_token: str, fake_storage: FakeStorage
+    ) -> None:
+        """SEC-T9.1: file with .pdf extension but non-PDF magic bytes must be rejected."""
+        patient = _make_patient(client, db, reception_token)
+        response = client.post(
+            f"/api/v1/patients/{patient['id']}/documents",
+            data={"document_type_code": _doc_type(db)},
+            files={"file": ("malicious.pdf", b"MZ\x90\x00evil_executable", "application/pdf")},
+            headers=_auth(reception_token),
+        )
+        assert response.status_code == 415
+        assert response.json()["error"]["code"] == "INVALID_FILE_TYPE"
+        assert fake_storage.objects == {}
+
+    def test_denied_content_access_does_not_create_audit_entry(
+        self,
+        client,
+        db: Session,
+        reception_token: str,
+        doctor_token: str,
+        fake_storage: FakeStorage,
+    ) -> None:
+        """SEC-T9.2: an unauthorized /content request must not write a DOWNLOAD audit row."""
+        patient = _make_patient(client, db, reception_token)
+        doc = _upload_pdf(client, db, patient["id"], reception_token)
+
+        denied = client.get(
+            f"/api/v1/documents/{doc['id']}/content", headers=_auth(reception_token)
+        )
+        assert denied.status_code == 403
+
+        download_count = db.execute(
+            text(
+                "SELECT count(*) FROM audit_log "
+                "WHERE action = 'DOWNLOAD' AND entity_id = :doc_id"
+            ),
+            {"doc_id": doc["id"]},
+        ).scalar_one()
+        assert download_count == 0
+
     def test_metadata_update_and_soft_delete(
         self, client, db: Session, reception_token: str, fake_storage: FakeStorage
     ) -> None:

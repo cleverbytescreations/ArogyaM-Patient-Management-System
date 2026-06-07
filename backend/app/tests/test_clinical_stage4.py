@@ -354,6 +354,92 @@ class TestDischargeSummaries:
         assert response.status_code == 409
         assert response.json()["error"]["code"] == "INVALID_STATE_TRANSITION"
 
+    def test_update_draft_date_rule_discharge_before_admission_rejected(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+
+        draft = client.post(
+            f"/api/v1/visits/{visit['id']}/discharge-summary",
+            json={
+                "admission_date": str(date.today() - timedelta(days=3)),
+                "discharge_date": str(date.today()),
+                "diagnosis": "Date rule update test",
+            },
+            headers=_auth(doctor_token),
+        ).json()
+
+        response = client.put(
+            f"/api/v1/discharge-summaries/{draft['id']}",
+            json={
+                "discharge_date": str(date.today() - timedelta(days=5)),
+                "version": draft["version"],
+            },
+            headers=_auth(doctor_token),
+        )
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+        assert any(
+            d["field"] == "discharge_date" for d in response.json()["error"]["details"]
+        )
+
+    def test_amend_date_rule_discharge_before_admission_rejected(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+
+        draft = client.post(
+            f"/api/v1/visits/{visit['id']}/discharge-summary",
+            json={
+                "admission_date": str(date.today() - timedelta(days=2)),
+                "discharge_date": str(date.today()),
+                "diagnosis": "Date rule amend test",
+            },
+            headers=_auth(doctor_token),
+        ).json()
+        finalized = client.put(
+            f"/api/v1/discharge-summaries/{draft['id']}/finalize",
+            json={"version": draft["version"]},
+            headers=_auth(doctor_token),
+        ).json()
+
+        response = client.post(
+            f"/api/v1/discharge-summaries/{finalized['id']}/amend",
+            json={"discharge_date": str(date.today() - timedelta(days=5))},
+            headers=_auth(doctor_token),
+        )
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+        assert any(
+            d["field"] == "discharge_date" for d in response.json()["error"]["details"]
+        )
+
+    def test_update_draft_stale_version_returns_409(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+
+        draft = client.post(
+            f"/api/v1/visits/{visit['id']}/discharge-summary",
+            json={"diagnosis": "Version conflict test"},
+            headers=_auth(doctor_token),
+        ).json()
+        client.put(
+            f"/api/v1/discharge-summaries/{draft['id']}",
+            json={"diagnosis": "First edit", "version": draft["version"]},
+            headers=_auth(doctor_token),
+        )
+        stale = client.put(
+            f"/api/v1/discharge-summaries/{draft['id']}",
+            json={"diagnosis": "Stale edit", "version": draft["version"]},
+            headers=_auth(doctor_token),
+        )
+        assert stale.status_code == 409
+        assert stale.json()["error"]["code"] == "VERSION_CONFLICT"
+
     def test_discharge_read_requires_medical_history(
         self, client, db: Session, doctor_token: str, reception_token: str
     ) -> None:
