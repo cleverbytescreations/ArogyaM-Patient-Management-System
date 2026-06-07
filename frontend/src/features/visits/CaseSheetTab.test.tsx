@@ -157,7 +157,8 @@ describe("CaseSheetTab — form content", () => {
     expect(screen.getByLabelText(/present complaints/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/appetite/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/sleep/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/hereditary/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/hereditary diseases \(mother\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/hereditary diseases \(father\)/i)).toBeInTheDocument();
   });
 
   it("pre-populates fields with data from the fetched case sheet", async () => {
@@ -254,5 +255,89 @@ describe("CaseSheetTab — form content", () => {
     );
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+});
+
+describe("CaseSheetTab — report print/download", () => {
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => "blob:case-sheet-report");
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  it("shows Print and Download buttons when user has export + medical history permissions", async () => {
+    setAuth(["view_medical_history", "add_consultation", "export"]);
+    render(
+      <CaseSheetTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} />,
+      { wrapper: makeWrapper() }
+    );
+    expect(await screen.findByRole("button", { name: /^print$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /download pdf/i })).toBeInTheDocument();
+  });
+
+  it("hides report buttons when user lacks the export permission", async () => {
+    setAuth(["view_medical_history", "add_consultation"]);
+    render(
+      <CaseSheetTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} />,
+      { wrapper: makeWrapper() }
+    );
+    await screen.findByRole("form", { name: /case sheet form/i });
+    expect(screen.queryByRole("button", { name: /^print$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /download pdf/i })).not.toBeInTheDocument();
+  });
+
+  it("downloads the report PDF when Download is clicked", async () => {
+    setAuth(["view_medical_history", "add_consultation", "export"]);
+    const user = userEvent.setup();
+    const clickSpy = vi.fn();
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const el = originalCreateElement(tag);
+      if (tag === "a") el.click = clickSpy;
+      return el;
+    });
+
+    render(
+      <CaseSheetTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} />,
+      { wrapper: makeWrapper() }
+    );
+    const downloadButton = await screen.findByRole("button", { name: /download pdf/i });
+    await user.click(downloadButton);
+
+    await waitFor(() => expect(clickSpy).toHaveBeenCalled());
+    expect(URL.createObjectURL).toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
+
+  it("does not trigger a download when the report endpoint 404s (no saved case sheet)", async () => {
+    server.use(
+      http.get("/api/v1/visits/:id/case-sheet/report.pdf", () =>
+        HttpResponse.json(
+          { error: { code: "RESOURCE_NOT_FOUND", message: "No case sheet for visit", details: [], request_id: "r" } },
+          { status: 404 }
+        )
+      )
+    );
+    setAuth(["view_medical_history", "add_consultation", "export"]);
+    const user = userEvent.setup();
+    const clickSpy = vi.fn();
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const el = originalCreateElement(tag);
+      if (tag === "a") el.click = clickSpy;
+      return el;
+    });
+
+    render(
+      <CaseSheetTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} />,
+      { wrapper: makeWrapper() }
+    );
+    const downloadButton = await screen.findByRole("button", { name: /download pdf/i });
+    await user.click(downloadButton);
+
+    await waitFor(() => expect(downloadButton).not.toBeDisabled());
+    expect(clickSpy).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
   });
 });

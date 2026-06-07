@@ -383,10 +383,14 @@ CREATE TABLE IF NOT EXISTS case_sheets (
     motion              TEXT,
     energy_level        TEXT,
     hereditary_diseases TEXT,
+    hereditary_diseases_mother TEXT,                      -- split mother/father intake (case-sheet report parity, migration 0007)
+    hereditary_diseases_father TEXT,
     past_ailments       TEXT,
     surgeries           TEXT,
     exercise_routine    TEXT,
     deliveries          TEXT,                             -- normal/caesarean where applicable (UC-09)
+    normal_deliveries   SMALLINT,                         -- structured delivery counts (case-sheet report parity, migration 0007)
+    caesarian_deliveries SMALLINT,
     present_complaints  TEXT,
     other_observations  TEXT,
     remarks             TEXT,

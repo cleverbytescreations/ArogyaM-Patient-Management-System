@@ -5,7 +5,17 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    SmallInteger,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -74,10 +84,14 @@ class CaseSheet(Base):
     motion: Mapped[str | None] = mapped_column(Text)
     energy_level: Mapped[str | None] = mapped_column(Text)
     hereditary_diseases: Mapped[str | None] = mapped_column(Text)
+    hereditary_diseases_mother: Mapped[str | None] = mapped_column(Text)
+    hereditary_diseases_father: Mapped[str | None] = mapped_column(Text)
     past_ailments: Mapped[str | None] = mapped_column(Text)
     surgeries: Mapped[str | None] = mapped_column(Text)
     exercise_routine: Mapped[str | None] = mapped_column(Text)
     deliveries: Mapped[str | None] = mapped_column(Text)
+    normal_deliveries: Mapped[int | None] = mapped_column(SmallInteger)
+    caesarian_deliveries: Mapped[int | None] = mapped_column(SmallInteger)
     present_complaints: Mapped[str | None] = mapped_column(Text)
     other_observations: Mapped[str | None] = mapped_column(Text)
     remarks: Mapped[str | None] = mapped_column(Text)

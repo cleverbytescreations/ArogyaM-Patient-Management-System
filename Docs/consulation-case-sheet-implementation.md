@@ -217,37 +217,37 @@ italic, value text olive italic. Iterate on the template CSS until it matches.
 ## 8. Task checklist
 
 ### Data model & migration
-- [ ] Add 4 columns to `CaseSheet` model (`backend/app/modules/visits/models.py`)
-- [ ] Write migration `0007_case_sheet_intake_fields.py` (add cols + backfill + downgrade)
-- [ ] Run `docker compose exec api alembic upgrade head`; verify schema
+- [x] Add 4 columns to `CaseSheet` model (`backend/app/modules/visits/models.py`)
+- [x] Write migration `0007_case_sheet_intake_fields.py` (add cols + backfill + downgrade)
+- [x] Run `docker compose exec api alembic upgrade head`; verify schema
 
 ### Backend API
-- [ ] Extend `CaseSheetUpsertRequest` / `CaseSheetOut` schemas with the 4 fields
-- [ ] Update repository upsert/select mapping
-- [ ] Add `weasyprint` dependency + native libs in the `api` Dockerfile; rebuild image
-- [ ] Copy logos to `backend/app/modules/visits/report_assets/` (1=left, 2=center, 3=right)
-- [ ] Create `templates/case_sheet.html` + print CSS (header band, identity grid, blocks, signature)
-- [ ] Implement report context builder (patient + case sheet + doctor; date/age formatting)
-- [ ] Implement `report_pdf.py` (Jinja2 + base64 logos + WeasyPrint → bytes)
-- [ ] Add `GET /visits/{visit_id}/case-sheet/report.pdf` endpoint with `disposition` param
-- [ ] Enforce `export` + medical-history permission; write `audit_log` (`EXPORT_CASE_SHEET`)
+- [x] Extend `CaseSheetUpsertRequest` / `CaseSheetOut` schemas with the 4 fields
+- [x] Update repository upsert/select mapping
+- [x] Add `weasyprint` dependency + native libs in the `api` Dockerfile; rebuild image
+- [x] Copy logos to `backend/app/modules/visits/report_assets/` (1=left, 2=center, 3=right)
+- [x] Create `templates/case_sheet.html` + print CSS (header band, identity grid, blocks, signature)
+- [x] Implement report context builder (patient + case sheet + doctor; date/age formatting)
+- [x] Implement `report_pdf.py` (Jinja2 + base64 logos + WeasyPrint → bytes)
+- [x] Add `GET /visits/{visit_id}/case-sheet/report.pdf` endpoint with `disposition` param
+- [x] Enforce `export` + medical-history permission; write `audit_log` (`action=EXPORT`, `entity_type=case_sheet`)
 
 ### Frontend
-- [ ] Update `CaseSheet` / `CaseSheetUpsertRequest` types
-- [ ] Update `caseSheetSchema` (mother/father + 2 delivery counts)
-- [ ] Update `CaseSheetTab.tsx` form fields, defaults, reset, save payload
-- [ ] Add `getCaseSheetReportPdf(visitId, disposition)` to `visitsApi.ts`
-- [ ] Add Download PDF + Print buttons (permission-gated, disabled until saved)
-- [ ] (Optional) "Print case sheet" entry from Consultation Notes tab
+- [x] Update `CaseSheet` / `CaseSheetUpsertRequest` types
+- [x] Update `caseSheetSchema` (mother/father + 2 delivery counts)
+- [x] Update `CaseSheetTab.tsx` form fields, defaults, reset, save payload
+- [x] Add `getCaseSheetReportPdf(visitId, disposition)` to `visitsApi.ts`
+- [x] Add Download PDF + Print buttons (permission-gated, disabled until saved)
+- [ ] (Optional) "Print case sheet" entry from Consultation Notes tab — not implemented; Print/Download live on the Case Sheet tab only (where the data and version live)
 
 ### Testing & QA
-- [ ] Backend: migration, upsert round-trip, endpoint (200/403/404 + audit), renderer
-- [ ] Frontend: CaseSheetTab field + button tests; MSW blob handler
-- [ ] Manual header diff vs `Docs/online consulation casesheet.png` until pixel-faithful
+- [x] Backend: migration, upsert round-trip, endpoint (200/403/404 + audit), renderer
+- [x] Frontend: CaseSheetTab field + button tests; MSW blob handler
+- [x] Manual header diff vs `Docs/online consulation casesheet.png` until pixel-faithful
 
 ### Docs
-- [ ] Update API spec (`Docs/API_SPECIFICATION_OPENAPI.md`) with the new endpoint
-- [ ] Note new fields in the data model docs (`Docs/DDL_DATAMODEL.sql` reference)
+- [x] Update API spec (`Docs/API_SPECIFICATION_OPENAPI.md`) with the new endpoint
+- [x] Note new fields in the data model docs (`Docs/DDL_DATAMODEL.sql` reference)
 
 ---
 

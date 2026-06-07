@@ -199,10 +199,14 @@ export const mockCaseSheet: CaseSheet = {
   motion: "Regular",
   energy_level: "Low",
   hereditary_diseases: null,
+  hereditary_diseases_mother: null,
+  hereditary_diseases_father: null,
   past_ailments: null,
   surgeries: null,
   exercise_routine: null,
   deliveries: null,
+  normal_deliveries: null,
+  caesarian_deliveries: null,
   present_complaints: "Fever for 3 days, headache",
   other_observations: null,
   remarks: null,
@@ -677,6 +681,19 @@ export const handlers = [
       visit_id: params.id as string,
       version: (body.version ?? mockCaseSheet.version) + 1,
       updated_at: new Date().toISOString(),
+    });
+  }),
+
+  // Case sheet — report PDF (download/print)
+  http.get(`${BASE}/visits/:id/case-sheet/report.pdf`, ({ params }) => {
+    if (params.id !== mockVisit.id) {
+      return HttpResponse.json(
+        { error: { code: "RESOURCE_NOT_FOUND", message: "Case sheet not found.", details: [], request_id: "r12" } },
+        { status: 404 }
+      );
+    }
+    return new HttpResponse(new Blob(["%PDF-1.4 mock"], { type: "application/pdf" }), {
+      headers: { "Content-Type": "application/pdf" },
     });
   }),
 

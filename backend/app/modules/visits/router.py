@@ -7,6 +7,7 @@ Routes:
   PUT    /visits/{id}                     — update visit
   PUT    /visits/{id}/case-sheet          — upsert case sheet (idempotent)
   GET    /visits/{id}/case-sheet          — read case sheet
+  GET    /visits/{id}/case-sheet/report.pdf — download/print case sheet report (PDF)
   POST   /visits/{id}/consultation-notes  — append consultation note
   GET    /visits/{id}/consultation-notes  — list consultation notes
 """
@@ -14,16 +15,21 @@ Routes:
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi.responses import Response as RawResponse
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_db, require_permission
+from app.core.dependencies import get_current_user, get_db, require_permission
+from app.core.errors import ForbiddenError
 from app.core.permissions import (
     PERM_ADD_CONSULTATION,
+    PERM_EXPORT,
+    PERM_VIEW_MEDICAL_HISTORY,
     PERM_VIEW_PATIENT,
 )
+from app.modules.visits import report_service
 from app.modules.visits import service as svc
 from app.modules.visits.schemas import (
     CaseSheetOut,
@@ -40,6 +46,19 @@ from app.modules.visits.schemas import (
 
 ViewPatient = Annotated[dict, Depends(require_permission(PERM_VIEW_PATIENT))]
 AddConsultation = Annotated[dict, Depends(require_permission(PERM_ADD_CONSULTATION))]
+
+
+def _require_case_sheet_export(payload: Annotated[dict, Depends(get_current_user)]) -> dict:
+    """Exporting the full case sheet PDF needs export rights AND clinical-data
+    visibility — neither permission alone is sufficient (avoids leaking PHI to
+    a role that has one but not the other)."""
+    perms: list[str] = payload.get("permissions", [])
+    if PERM_EXPORT not in perms or PERM_VIEW_MEDICAL_HISTORY not in perms:
+        raise ForbiddenError(f"Permission required: {PERM_EXPORT} and {PERM_VIEW_MEDICAL_HISTORY}")
+    return payload
+
+
+ExportCaseSheet = Annotated[dict, Depends(_require_case_sheet_export)]
 
 # ── Patient-scoped visit routes ────────────────────────────────────────────────
 
@@ -134,6 +153,30 @@ def get_case_sheet(
     db: Annotated[Session, Depends(get_db)],
 ) -> CaseSheetOut:
     return svc.get_case_sheet(db, visit_id, payload)
+
+
+@visits_router.get(
+    "/{visit_id}/case-sheet/report.pdf",
+    summary="Download or print the Online Consultations Case Sheet as a PDF",
+)
+def get_case_sheet_report_pdf(
+    visit_id: uuid.UUID,
+    payload: ExportCaseSheet,
+    db: Annotated[Session, Depends(get_db)],
+    request: Request,
+    disposition: Literal["inline", "attachment"] = "attachment",
+) -> RawResponse:
+    pdf_bytes, filename = report_service.generate_case_sheet_report_pdf(
+        db, visit_id, payload, request
+    )
+    return RawResponse(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 # ── Consultation notes ─────────────────────────────────────────────────────────

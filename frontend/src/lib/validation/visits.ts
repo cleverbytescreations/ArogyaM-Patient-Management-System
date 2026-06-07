@@ -29,16 +29,26 @@ export const visitSchema = z
 
 export type VisitFormValues = z.infer<typeof visitSchema>;
 
+const deliveryCountField = z
+  .string()
+  .optional()
+  .refine(
+    (val) => !val?.trim() || /^\d{1,2}$/.test(val.trim()),
+    { message: "Must be a whole number (0–99)" }
+  );
+
 export const caseSheetSchema = z.object({
   appetite: z.string().max(500, "Too long").optional(),
   sleep: z.string().max(500, "Too long").optional(),
   motion: z.string().max(500, "Too long").optional(),
   energy_level: z.string().max(500, "Too long").optional(),
-  hereditary_diseases: z.string().max(2000, "Too long").optional(),
+  hereditary_diseases_mother: z.string().max(1000, "Too long").optional(),
+  hereditary_diseases_father: z.string().max(1000, "Too long").optional(),
   past_ailments: z.string().max(2000, "Too long").optional(),
   surgeries: z.string().max(2000, "Too long").optional(),
   exercise_routine: z.string().max(1000, "Too long").optional(),
-  deliveries: z.string().max(1000, "Too long").optional(),
+  normal_deliveries: deliveryCountField,
+  caesarian_deliveries: deliveryCountField,
   present_complaints: z.string().max(2000, "Too long").optional(),
   other_observations: z.string().max(2000, "Too long").optional(),
   remarks: z.string().max(2000, "Too long").optional(),

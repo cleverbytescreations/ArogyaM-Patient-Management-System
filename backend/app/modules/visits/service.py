@@ -34,9 +34,18 @@ from app.modules.visits.schemas import (
 # Clinical fields hidden from roles lacking view_medical_history
 _CASE_SHEET_CLINICAL_FIELDS: frozenset[str] = frozenset({
     "appetite", "sleep", "motion", "energy_level",
-    "hereditary_diseases", "past_ailments", "surgeries",
-    "exercise_routine", "deliveries", "present_complaints",
-    "other_observations", "remarks",
+    "hereditary_diseases", "hereditary_diseases_mother", "hereditary_diseases_father",
+    "past_ailments", "surgeries",
+    "exercise_routine", "deliveries", "normal_deliveries", "caesarian_deliveries",
+    "present_complaints", "other_observations", "remarks",
+})
+
+_CASE_SHEET_CONTENT_FIELDS: frozenset[str] = frozenset({
+    "appetite", "sleep", "motion", "energy_level",
+    "hereditary_diseases", "hereditary_diseases_mother", "hereditary_diseases_father",
+    "past_ailments", "surgeries", "exercise_routine",
+    "deliveries", "normal_deliveries", "caesarian_deliveries",
+    "present_complaints", "other_observations", "remarks",
 })
 
 _CONSULT_NOTE_CLINICAL_FIELDS: frozenset[str] = frozenset({
@@ -309,10 +318,14 @@ def upsert_case_sheet(
             motion=body.motion,
             energy_level=body.energy_level,
             hereditary_diseases=body.hereditary_diseases,
+            hereditary_diseases_mother=body.hereditary_diseases_mother,
+            hereditary_diseases_father=body.hereditary_diseases_father,
             past_ailments=body.past_ailments,
             surgeries=body.surgeries,
             exercise_routine=body.exercise_routine,
             deliveries=body.deliveries,
+            normal_deliveries=body.normal_deliveries,
+            caesarian_deliveries=body.caesarian_deliveries,
             present_complaints=body.present_complaints,
             other_observations=body.other_observations,
             remarks=body.remarks,
@@ -345,12 +358,7 @@ def upsert_case_sheet(
         ensure_current_version(existing, body.version)
 
         old_snap = _snapshot(existing, CaseSheetOut)
-        content_fields = {
-            "appetite", "sleep", "motion", "energy_level", "hereditary_diseases",
-            "past_ailments", "surgeries", "exercise_routine", "deliveries",
-            "present_complaints", "other_observations", "remarks",
-        }
-        for field in content_fields:
+        for field in _CASE_SHEET_CONTENT_FIELDS:
             val = getattr(body, field, None)
             if val is not None or field in (body.model_fields_set - {"version"}):
                 setattr(existing, field, getattr(body, field))

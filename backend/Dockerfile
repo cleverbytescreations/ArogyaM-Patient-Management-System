@@ -19,6 +19,19 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# Native libs required by WeasyPrint (HTML->PDF case sheet report rendering):
+# Pango/Cairo for text shaping & layout, gdk-pixbuf for embedded PNG logos,
+# plus shared-mime-info and fonts so generated PDFs render text crisply.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf-2.0-0 \
+    libffi8 \
+    shared-mime-info \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
 # Isolated virtualenv so the bind-mounted source never shadows the packages.
 RUN python -m venv /app/.venv
 

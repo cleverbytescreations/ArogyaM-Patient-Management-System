@@ -424,12 +424,14 @@ Endpoints are grouped by module exactly per SAD §9.2 / Plan §3. Each endpoint 
 | 4 | `PUT /visits/{visit_id}` | Update visit (status/doctor/reason; version-checked) | clinical |
 | 5 | `PUT /visits/{visit_id}/case-sheet` | Create/update the visit's case sheet (one per visit) | `add_consultation` |
 | 6 | `GET /visits/{visit_id}/case-sheet` | Get the case sheet | `view_medical_history` |
-| 7 | `POST /visits/{visit_id}/consultation-notes` | Add a doctor consultation note | `add_consultation` |
-| 8 | `GET /visits/{visit_id}/consultation-notes` | List consultation notes for the visit | `view_medical_history` |
+| 7 | `GET /visits/{visit_id}/case-sheet/report.pdf` | Download or print the Online Consultations Case Sheet as a PDF | `export` **and** `view_medical_history` |
+| 8 | `POST /visits/{visit_id}/consultation-notes` | Add a doctor consultation note | `add_consultation` |
+| 9 | `GET /visits/{visit_id}/consultation-notes` | List consultation notes for the visit | `view_medical_history` |
 
 - **`POST /patients/{id}/visits` request:** `VisitCreateRequest` — `{ visit_date, visit_type_code, consultation_category?, doctor_id?, is_scheduled?, reason? }`. Non-scheduled visits cannot be future-dated (UC-08 BR4) → `422 VALIDATION_ERROR`.
 - **Case sheet** uses `PUT` (upsert; unique per visit) — version-checked, audited.
   > **Deviation from SoW (intentional):** SAD §7.8 / Plan §3 name this `POST /visits/{id}/case-sheet`. Because the data model enforces **one case sheet per visit** (`uq_case_sheets_visit`), an idempotent `PUT` upsert is the correct REST verb (create-or-update on a singleton sub-resource) and avoids a spurious `409` on the second save. The path is unchanged; only the verb is refined. Sign-off recommended.
+- **Case sheet PDF report** (`GET /visits/{id}/case-sheet/report.pdf`) renders the "Online Consultations – Case Sheet" as a print-faithful PDF (server-side Jinja2 + WeasyPrint; header reproduces the paper form's logos and address block). Query param `disposition=inline|attachment` (default `attachment`) controls `Content-Disposition` — `inline` is used by the frontend's Print button (loaded into a hidden iframe), `attachment` by Download. Requires **both** `export` and `view_medical_history` (neither alone is sufficient — avoids leaking PHI to a role with only one of the two). Returns `404` if the visit has no saved case sheet yet. Every render writes an `EXPORT` audit row (`entity_type=case_sheet`).
 - **Consultation notes** are append-only entries; corrections are amended entries (never silent overwrite).
 
 ---
@@ -1327,6 +1329,35 @@ paths:
               schema: { $ref: '#/components/schemas/CaseSheet' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /visits/{visit_id}/case-sheet/report.pdf:
+    parameters:
+      - { $ref: '#/components/parameters/VisitId' }
+    get:
+      tags: [Visits]
+      summary: Download or print the Online Consultations Case Sheet as a PDF
+      description: >
+        Renders the visit's case sheet as a print-faithful PDF (server-side
+        Jinja2 + WeasyPrint), reproducing the paper "Online Consultations –
+        Case Sheet" form's header (logos and address block) exactly.
+        Requires both `export` and `view_medical_history` permissions.
+        Writes an `EXPORT` audit row on every render.
+      parameters:
+        - name: disposition
+          in: query
+          schema: { type: string, enum: [inline, attachment], default: attachment }
+          description: >
+            Controls the `Content-Disposition` header. `inline` is used by the
+            frontend's Print action (loaded into a hidden iframe and printed);
+            `attachment` triggers a file download.
+      responses:
+        '200':
+          description: Case sheet report PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /visits/{visit_id}/consultation-notes:
     parameters:
@@ -2455,10 +2486,14 @@ components:
         motion: { type: string, nullable: true }
         energy_level: { type: string, nullable: true }
         hereditary_diseases: { type: string, nullable: true }
+        hereditary_diseases_mother: { type: string, nullable: true }
+        hereditary_diseases_father: { type: string, nullable: true }
         past_ailments: { type: string, nullable: true }
         surgeries: { type: string, nullable: true }
         exercise_routine: { type: string, nullable: true }
         deliveries: { type: string, nullable: true }
+        normal_deliveries: { type: integer, nullable: true }
+        caesarian_deliveries: { type: integer, nullable: true }
         present_complaints: { type: string, nullable: true }
         other_observations: { type: string, nullable: true }
         remarks: { type: string, nullable: true }
@@ -2472,10 +2507,14 @@ components:
         motion: { type: string, nullable: true }
         energy_level: { type: string, nullable: true }
         hereditary_diseases: { type: string, nullable: true }
+        hereditary_diseases_mother: { type: string, nullable: true }
+        hereditary_diseases_father: { type: string, nullable: true }
         past_ailments: { type: string, nullable: true }
         surgeries: { type: string, nullable: true }
         exercise_routine: { type: string, nullable: true }
         deliveries: { type: string, nullable: true }
+        normal_deliveries: { type: integer, nullable: true, minimum: 0 }
+        caesarian_deliveries: { type: integer, nullable: true, minimum: 0 }
         present_complaints: { type: string, nullable: true }
         other_observations: { type: string, nullable: true }
         remarks: { type: string, nullable: true }

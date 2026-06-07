@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Save } from "lucide-react";
+import { Download, Loader2, Printer, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
@@ -29,11 +30,11 @@ const CASE_SHEET_FIELDS: { name: keyof CaseSheetFormValues; label: string; rows?
   { name: "sleep", label: "Sleep" },
   { name: "motion", label: "Motion / bowel habits" },
   { name: "energy_level", label: "Energy level" },
-  { name: "hereditary_diseases", label: "Hereditary / family diseases", rows: 3 },
+  { name: "hereditary_diseases_mother", label: "Hereditary diseases (mother)", rows: 3 },
+  { name: "hereditary_diseases_father", label: "Hereditary diseases (father)", rows: 3 },
   { name: "past_ailments", label: "Past ailments", rows: 3 },
   { name: "surgeries", label: "Previous surgeries", rows: 3 },
   { name: "exercise_routine", label: "Exercise routine" },
-  { name: "deliveries", label: "Deliveries (obstetric history)" },
   { name: "other_observations", label: "Other observations", rows: 3 },
   { name: "remarks", label: "Remarks", rows: 3 },
 ];
@@ -43,15 +44,26 @@ const EMPTY_DEFAULTS: CaseSheetFormValues = {
   sleep: "",
   motion: "",
   energy_level: "",
-  hereditary_diseases: "",
+  hereditary_diseases_mother: "",
+  hereditary_diseases_father: "",
   past_ailments: "",
   surgeries: "",
   exercise_routine: "",
-  deliveries: "",
+  normal_deliveries: "",
+  caesarian_deliveries: "",
   present_complaints: "",
   other_observations: "",
   remarks: "",
 };
+
+function toFormValue(value: number | null): string {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+function toApiCount(value: string | undefined): number | null {
+  const trimmed = value?.trim();
+  return trimmed ? Number(trimmed) : null;
+}
 
 interface CaseSheetTabProps {
   selectedVisit: Visit | null;
@@ -62,6 +74,9 @@ export function CaseSheetTab({ selectedVisit, onSelectVisitTab }: CaseSheetTabPr
   const { hasPermission } = usePermissions();
   const canWrite = hasPermission(PERMISSIONS.ADD_CONSULTATION);
   const canRead = hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY) || canWrite;
+  const canExportReport = hasPermission(PERMISSIONS.EXPORT) && hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY);
+
+  const printFrameRef = useRef<HTMLIFrameElement | null>(null);
 
   const queryClient = useQueryClient();
   const { hasConflict, handlePossibleConflict, clearConflict } = useConflictHandler();
@@ -93,11 +108,13 @@ export function CaseSheetTab({ selectedVisit, onSelectVisitTab }: CaseSheetTabPr
         sleep: caseSheet.sleep ?? "",
         motion: caseSheet.motion ?? "",
         energy_level: caseSheet.energy_level ?? "",
-        hereditary_diseases: caseSheet.hereditary_diseases ?? "",
+        hereditary_diseases_mother: caseSheet.hereditary_diseases_mother ?? "",
+        hereditary_diseases_father: caseSheet.hereditary_diseases_father ?? "",
         past_ailments: caseSheet.past_ailments ?? "",
         surgeries: caseSheet.surgeries ?? "",
         exercise_routine: caseSheet.exercise_routine ?? "",
-        deliveries: caseSheet.deliveries ?? "",
+        normal_deliveries: toFormValue(caseSheet.normal_deliveries),
+        caesarian_deliveries: toFormValue(caseSheet.caesarian_deliveries),
         present_complaints: caseSheet.present_complaints ?? "",
         other_observations: caseSheet.other_observations ?? "",
         remarks: caseSheet.remarks ?? "",
@@ -107,13 +124,17 @@ export function CaseSheetTab({ selectedVisit, onSelectVisitTab }: CaseSheetTabPr
   }, [caseSheet, form, clearConflict]);
 
   const { mutate: saveCaseSheet, isPending } = useMutation({
-    mutationFn: (values: CaseSheetFormValues) =>
-      visitsApi.saveCaseSheet(selectedVisit!.id, {
+    mutationFn: (values: CaseSheetFormValues) => {
+      const { normal_deliveries, caesarian_deliveries, ...rest } = values;
+      return visitsApi.saveCaseSheet(selectedVisit!.id, {
         ...Object.fromEntries(
-          Object.entries(values).map(([k, v]) => [k, (v as string).trim() || null])
+          Object.entries(rest).map(([k, v]) => [k, (v as string).trim() || null])
         ),
+        normal_deliveries: toApiCount(normal_deliveries),
+        caesarian_deliveries: toApiCount(caesarian_deliveries),
         version: caseSheet?.version ?? null,
-      }),
+      });
+    },
     onSuccess: (saved) => {
       void queryClient.invalidateQueries({ queryKey: ["case-sheet", selectedVisit?.id] });
       toast.success("Case sheet saved.");
@@ -122,11 +143,13 @@ export function CaseSheetTab({ selectedVisit, onSelectVisitTab }: CaseSheetTabPr
         sleep: saved.sleep ?? "",
         motion: saved.motion ?? "",
         energy_level: saved.energy_level ?? "",
-        hereditary_diseases: saved.hereditary_diseases ?? "",
+        hereditary_diseases_mother: saved.hereditary_diseases_mother ?? "",
+        hereditary_diseases_father: saved.hereditary_diseases_father ?? "",
         past_ailments: saved.past_ailments ?? "",
         surgeries: saved.surgeries ?? "",
         exercise_routine: saved.exercise_routine ?? "",
-        deliveries: saved.deliveries ?? "",
+        normal_deliveries: toFormValue(saved.normal_deliveries),
+        caesarian_deliveries: toFormValue(saved.caesarian_deliveries),
         present_complaints: saved.present_complaints ?? "",
         other_observations: saved.other_observations ?? "",
         remarks: saved.remarks ?? "",
@@ -144,6 +167,48 @@ export function CaseSheetTab({ selectedVisit, onSelectVisitTab }: CaseSheetTabPr
         return;
       }
       toast.error(getApiErrorMessage(error, "Could not save case sheet."));
+    },
+  });
+
+  const { mutate: downloadReport, isPending: isDownloadingReport } = useMutation({
+    mutationFn: () => visitsApi.getCaseSheetReportPdf(selectedVisit!.id, "attachment"),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `case-sheet-${selectedVisit!.id}.pdf`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
+    onError: (error: unknown) => {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
+        toast.error("Save the case sheet before downloading the report.");
+        return;
+      }
+      toast.error(getApiErrorMessage(error, "Could not generate the case sheet report."));
+    },
+  });
+
+  const { mutate: printReport, isPending: isPrintingReport } = useMutation({
+    mutationFn: () => visitsApi.getCaseSheetReportPdf(selectedVisit!.id, "inline"),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const frame = printFrameRef.current;
+      if (!frame) return;
+      frame.onload = () => {
+        frame.contentWindow?.print();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      };
+      frame.src = url;
+    },
+    onError: (error: unknown) => {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
+        toast.error("Save the case sheet before printing the report.");
+        return;
+      }
+      toast.error(getApiErrorMessage(error, "Could not generate the case sheet report."));
     },
   });
 
@@ -195,19 +260,63 @@ export function CaseSheetTab({ selectedVisit, onSelectVisitTab }: CaseSheetTabPr
 
   const is404 = (fetchError as { response?: { status?: number } } | null)?.response?.status === 404;
 
+  const reportDisabled = !caseSheet || is404;
+
   return (
     <div className="space-y-4 pt-4">
-      <div className="text-sm text-muted-foreground">
-        Visit: <span className="font-medium text-foreground">{formatDate(selectedVisit.visit_date)}</span>
-        {" · "}
-        Type: <span className="font-medium text-foreground">{selectedVisit.visit_type_code}</span>
-        {caseSheet ? (
-          <span className="ml-2 text-xs">
-            · {is404 ? "New case sheet" : `Version ${caseSheet.version}`}
-          </span>
-        ) : is404 ? (
-          <span className="ml-2 text-xs text-muted-foreground">· No case sheet yet — fill in and save to create one</span>
-        ) : null}
+      {/* Hidden iframe used to load the inline PDF and trigger the browser print dialog. */}
+      <iframe ref={printFrameRef} title="Case sheet report" className="hidden" aria-hidden="true" />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm text-muted-foreground">
+          Visit: <span className="font-medium text-foreground">{formatDate(selectedVisit.visit_date)}</span>
+          {" · "}
+          Type: <span className="font-medium text-foreground">{selectedVisit.visit_type_code}</span>
+          {caseSheet ? (
+            <span className="ml-2 text-xs">
+              · {is404 ? "New case sheet" : `Version ${caseSheet.version}`}
+            </span>
+          ) : is404 ? (
+            <span className="ml-2 text-xs text-muted-foreground">· No case sheet yet — fill in and save to create one</span>
+          ) : null}
+        </div>
+
+        {canExportReport && (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={reportDisabled || isPrintingReport}
+              aria-busy={isPrintingReport}
+              onClick={() => printReport()}
+              title={reportDisabled ? "Save the case sheet before printing" : undefined}
+            >
+              {isPrintingReport ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Printer className="mr-2 h-4 w-4" aria-hidden="true" />
+              )}
+              Print
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={reportDisabled || isDownloadingReport}
+              aria-busy={isDownloadingReport}
+              onClick={() => downloadReport()}
+              title={reportDisabled ? "Save the case sheet before downloading" : undefined}
+            >
+              {isDownloadingReport ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+              )}
+              Download PDF
+            </Button>
+          </div>
+        )}
       </div>
 
       {fetchError && !is404 ? (
@@ -245,6 +354,49 @@ export function CaseSheetTab({ selectedVisit, onSelectVisitTab }: CaseSheetTabPr
                   )}
                 />
               ))}
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="normal_deliveries"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Normal deliveries</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          min={0}
+                          max={99}
+                          inputMode="numeric"
+                          disabled={isPending || !canWrite}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="caesarian_deliveries"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Caesarian deliveries</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          min={0}
+                          max={99}
+                          inputMode="numeric"
+                          disabled={isPending || !canWrite}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </fieldset>
 
             {canWrite && (

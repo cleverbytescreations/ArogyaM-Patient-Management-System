@@ -15,6 +15,12 @@ email-validator>=2.0,<3.0
 redis>=5.0,<6.0
 # S3-compatible object storage client (MinIO/S3 document binaries)
 boto3>=1.34,<2.0
+# server-side PDF report rendering (case sheet export — Jinja2 HTML -> WeasyPrint PDF)
+Jinja2>=3.1,<4.0
+weasyprint>=62.0,<63.0
+# pydyf 0.12 removed Stream.transform that weasyprint 62.x relies on (AttributeError
+# at render time) — pin to the last release compatible with weasyprint 62.x
+pydyf>=0.11,<0.12
 # testing
 pytest>=8.2,<9.0
 pytest-asyncio>=0.23,<1.0

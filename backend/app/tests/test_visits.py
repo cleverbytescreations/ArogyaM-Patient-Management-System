@@ -416,6 +416,53 @@ class TestCaseSheetUpsert:
         )
         assert r.status_code == 404
 
+    def test_upsert_round_trips_intake_fields(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+
+        r = client.put(
+            f"/api/v1/visits/{visit['id']}/case-sheet",
+            json={
+                "present_complaints": "Fatigue",
+                "hereditary_diseases_mother": "Diabetes",
+                "hereditary_diseases_father": "Hypertension",
+                "normal_deliveries": 2,
+                "caesarian_deliveries": 1,
+            },
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 201, r.text
+        cs = r.json()
+        assert cs["hereditary_diseases_mother"] == "Diabetes"
+        assert cs["hereditary_diseases_father"] == "Hypertension"
+        assert cs["normal_deliveries"] == 2
+        assert cs["caesarian_deliveries"] == 1
+
+        r2 = client.get(
+            f"/api/v1/visits/{visit['id']}/case-sheet", headers=_auth(doctor_token)
+        )
+        assert r2.status_code == 200, r2.text
+        cs2 = r2.json()
+        assert cs2["hereditary_diseases_mother"] == "Diabetes"
+        assert cs2["hereditary_diseases_father"] == "Hypertension"
+        assert cs2["normal_deliveries"] == 2
+        assert cs2["caesarian_deliveries"] == 1
+
+    def test_negative_delivery_counts_rejected(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+
+        r = client.put(
+            f"/api/v1/visits/{visit['id']}/case-sheet",
+            json={"present_complaints": "x", "normal_deliveries": -1},
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 422
+
 
 # ── Field-level visibility (BE-T3.x, end-to-end) ──────────────────────────────
 
@@ -659,4 +706,91 @@ class TestVisitRBAC:
             f"/api/v1/visits/{uuid.uuid4()}/consultation-notes",
             json={"presenting_complaints": "test"},
         )
+        assert r.status_code == 401
+
+
+# ── Case sheet PDF report (BE-T6.4) ───────────────────────────────────────────
+
+
+class TestCaseSheetReportPdf:
+    def test_doctor_downloads_report_pdf_and_audits(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+        client.put(
+            f"/api/v1/visits/{visit['id']}/case-sheet",
+            json={"present_complaints": "Fatigue", "appetite": "Poor"},
+            headers=_auth(doctor_token),
+        )
+
+        r = client.get(
+            f"/api/v1/visits/{visit['id']}/case-sheet/report.pdf",
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 200, r.text
+        assert r.headers["content-type"] == "application/pdf"
+        assert r.content.startswith(b"%PDF")
+        assert patient["op_number"] in r.headers["content-disposition"]
+        assert "attachment" in r.headers["content-disposition"]
+
+        count = db.execute(
+            text(
+                "SELECT count(*) FROM audit_log "
+                "WHERE action = 'EXPORT' AND entity_type = 'case_sheet'"
+            )
+        ).scalar_one()
+        assert count >= 1
+
+    def test_report_supports_inline_disposition(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+        client.put(
+            f"/api/v1/visits/{visit['id']}/case-sheet",
+            json={"present_complaints": "Headache"},
+            headers=_auth(doctor_token),
+        )
+
+        r = client.get(
+            f"/api/v1/visits/{visit['id']}/case-sheet/report.pdf",
+            params={"disposition": "inline"},
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 200, r.text
+        assert "inline" in r.headers["content-disposition"]
+
+    def test_report_returns_404_when_no_case_sheet(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+
+        r = client.get(
+            f"/api/v1/visits/{visit['id']}/case-sheet/report.pdf",
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 404
+
+    def test_report_requires_export_and_view_medical_history_permissions(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+        client.put(
+            f"/api/v1/visits/{visit['id']}/case-sheet",
+            json={"present_complaints": "Cough"},
+            headers=_auth(doctor_token),
+        )
+
+        # Receptionist has neither export nor view_medical_history
+        r = client.get(
+            f"/api/v1/visits/{visit['id']}/case-sheet/report.pdf",
+            headers=_auth(reception_token),
+        )
+        assert r.status_code == 403
+
+    def test_unauthenticated_report_download_returns_401(self, client) -> None:
+        r = client.get(f"/api/v1/visits/{uuid.uuid4()}/case-sheet/report.pdf")
         assert r.status_code == 401

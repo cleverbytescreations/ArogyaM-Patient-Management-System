@@ -35,6 +35,14 @@ export const visitsApi = {
       .put<CaseSheet>(`/visits/${visitId}/case-sheet`, data)
       .then((r) => r.data),
 
+  getCaseSheetReportPdf: (visitId: string, disposition: "inline" | "attachment") =>
+    apiClient
+      .get<Blob>(`/visits/${visitId}/case-sheet/report.pdf`, {
+        params: { disposition },
+        responseType: "blob",
+      })
+      .then((r) => r.data),
+
   listConsultationNotes: (visitId: string) =>
     apiClient
       .get<ConsultationNote[]>(`/visits/${visitId}/consultation-notes`)

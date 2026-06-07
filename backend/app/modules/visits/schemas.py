@@ -87,10 +87,14 @@ class CaseSheetUpsertRequest(BaseModel):
     motion: str | None = None
     energy_level: str | None = None
     hereditary_diseases: str | None = None
+    hereditary_diseases_mother: str | None = None
+    hereditary_diseases_father: str | None = None
     past_ailments: str | None = None
     surgeries: str | None = None
     exercise_routine: str | None = None
     deliveries: str | None = None
+    normal_deliveries: int | None = Field(default=None, ge=0)
+    caesarian_deliveries: int | None = Field(default=None, ge=0)
     present_complaints: str | None = None
     other_observations: str | None = None
     remarks: str | None = None
@@ -109,10 +113,14 @@ class CaseSheetOut(BaseModel):
     motion: str | None = None
     energy_level: str | None = None
     hereditary_diseases: str | None = None
+    hereditary_diseases_mother: str | None = None
+    hereditary_diseases_father: str | None = None
     past_ailments: str | None = None
     surgeries: str | None = None
     exercise_routine: str | None = None
     deliveries: str | None = None
+    normal_deliveries: int | None = None
+    caesarian_deliveries: int | None = None
     present_complaints: str | None = None
     other_observations: str | None = None
     remarks: str | None = None
