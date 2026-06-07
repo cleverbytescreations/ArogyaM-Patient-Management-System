@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -31,6 +32,19 @@ const NOTE_FIELDS: { name: keyof ConsultationNoteFormValues; label: string; rows
   { name: "diet_advice", label: "Diet advice", rows: 2 },
   { name: "yoga_advice", label: "Yoga / exercise advice", rows: 2 },
 ];
+
+function defaultNoteValues(visit: Visit | null): ConsultationNoteFormValues {
+  return {
+    presenting_complaints: "",
+    diagnosis: "",
+    observations: "",
+    treatment_advice: "",
+    diet_advice: "",
+    yoga_advice: "",
+    review_date: "",
+    doctor_id: visit?.doctor_id ?? "",
+  };
+}
 
 function NoteCard({ note }: { note: ConsultationNote }) {
   const fields: { label: string; value: string | null }[] = [
@@ -94,17 +108,12 @@ export function ConsultationNotesTab({ selectedVisit, onSelectVisitTab }: Consul
 
   const form = useForm<ConsultationNoteFormValues>({
     resolver: zodResolver(consultationNoteSchema),
-    defaultValues: {
-      presenting_complaints: "",
-      diagnosis: "",
-      observations: "",
-      treatment_advice: "",
-      diet_advice: "",
-      yoga_advice: "",
-      review_date: "",
-      doctor_id: "",
-    },
+    defaultValues: defaultNoteValues(selectedVisit),
   });
+
+  useEffect(() => {
+    form.reset(defaultNoteValues(selectedVisit));
+  }, [selectedVisit, form]);
 
   const { mutate: addNote, isPending } = useMutation({
     mutationFn: (values: ConsultationNoteFormValues) =>
@@ -121,7 +130,7 @@ export function ConsultationNotesTab({ selectedVisit, onSelectVisitTab }: Consul
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["consultation-notes", selectedVisit?.id] });
       toast.success("Consultation note added.");
-      form.reset();
+      form.reset(defaultNoteValues(selectedVisit));
     },
     onError: (error: unknown) => {
       const code = getApiErrorCode(error);

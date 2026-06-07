@@ -17,6 +17,7 @@ import {
   Form,
   FormControl,
   FormField,
+  FormDescription,
   FormItem,
   FormLabel,
   FormMessage,
@@ -144,6 +145,11 @@ export function VisitFormDialog({ patientId, open, onOpenChange, onCreated }: Vi
                         disabled={isPending}
                       />
                     </FormControl>
+                    {isScheduled && (
+                      <FormDescription>
+                        Pick the date this visit is scheduled for — future dates are allowed.
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

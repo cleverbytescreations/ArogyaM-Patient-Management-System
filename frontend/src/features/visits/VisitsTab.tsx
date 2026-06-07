@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/DataTable";
 import { visitsApi } from "@/api/visitsApi";
+import { usersApi } from "@/features/users/usersApi";
 import { usePermissions } from "@/auth/usePermissions";
 import { PERMISSIONS } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
@@ -36,6 +37,13 @@ export function VisitsTab({ patientId, selectedVisitId, onVisitSelect }: VisitsT
     staleTime: 60_000,
   });
 
+  const { data: doctorsPage } = useQuery({
+    queryKey: ["users", { is_doctor: true }],
+    queryFn: () => usersApi.list({ is_doctor: true, page_size: 100 }),
+    staleTime: 5 * 60 * 1000,
+  });
+  const doctorNameById = new Map((doctorsPage?.items ?? []).map((d) => [d.id, d.full_name]));
+
   if (error) {
     return (
       <div
@@ -54,7 +62,16 @@ export function VisitsTab({ patientId, selectedVisitId, onVisitSelect }: VisitsT
     {
       key: "visit_date",
       header: "Date",
-      render: (v) => <span className="whitespace-nowrap">{formatDate(v.visit_date)}</span>,
+      render: (v) => (
+        <span className="flex items-center gap-2 whitespace-nowrap">
+          {formatDate(v.visit_date)}
+          {v.is_scheduled && (
+            <Badge variant="secondary" className="whitespace-nowrap">
+              Scheduled
+            </Badge>
+          )}
+        </span>
+      ),
     },
     {
       key: "visit_type_code",
@@ -65,6 +82,11 @@ export function VisitsTab({ patientId, selectedVisitId, onVisitSelect }: VisitsT
       key: "consultation_category",
       header: "Category",
       render: (v) => v.consultation_category ?? "—",
+    },
+    {
+      key: "doctor_id",
+      header: "Doctor",
+      render: (v) => (v.doctor_id ? doctorNameById.get(v.doctor_id) ?? "—" : "—"),
     },
     {
       key: "status",
