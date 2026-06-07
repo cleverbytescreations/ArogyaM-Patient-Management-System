@@ -9,10 +9,16 @@ import { DataTable } from "@/components/DataTable";
 import type { Column } from "@/components/DataTable";
 import { PageHeader } from "@/components/PageHeader";
 import { patientsApi } from "@/api/patientsApi";
+import { masterDataApi } from "@/api/masterDataApi";
 import { getApiErrorMessage } from "@/api/errors";
 import { DEFAULT_PAGE_SIZE, PERMISSIONS } from "@/lib/constants";
 import { usePermissions } from "@/auth/usePermissions";
 import type { PatientSearchResult, PatientStatus } from "@/types/patients";
+import type { MasterDataItem } from "@/types/masterData";
+
+function categoryLabel(options: MasterDataItem[], code: string): string {
+  return options.find((o) => o.code === code)?.label ?? code;
+}
 
 function StatusBadge({ status }: { status: PatientStatus }) {
   const variant =
@@ -29,7 +35,8 @@ function StatusBadge({ status }: { status: PatientStatus }) {
 }
 
 function buildColumns(
-  onView: (row: PatientSearchResult) => void
+  onView: (row: PatientSearchResult) => void,
+  consultationCategoryOptions: MasterDataItem[]
 ): Column<PatientSearchResult>[] {
   return [
     {
@@ -72,9 +79,11 @@ function buildColumns(
       key: "op_category_code",
       header: "Category",
       render: (row) => (
-        <span className="font-mono text-xs">{row.op_category_code}</span>
+        <span className="text-xs">
+          {categoryLabel(consultationCategoryOptions, row.op_category_code)}
+        </span>
       ),
-      className: "w-24 hidden md:table-cell",
+      className: "w-32 hidden md:table-cell",
     },
     {
       key: "status",
@@ -108,6 +117,12 @@ export function PatientSearchPage() {
   const [query, setQuery] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+
+  const { data: consultationCategoryOptions = [] } = useQuery({
+    queryKey: ["master-data", "consultation_category"],
+    queryFn: () => masterDataApi.list("consultation_category"),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["patients", "search", { q: query, page }],
@@ -147,7 +162,10 @@ export function PatientSearchPage() {
   );
 
   const canCreate = hasPermission(PERMISSIONS.CREATE_PATIENT);
-  const columns = useMemo(() => buildColumns(handleViewProfile), [handleViewProfile]);
+  const columns = useMemo(
+    () => buildColumns(handleViewProfile, consultationCategoryOptions),
+    [handleViewProfile, consultationCategoryOptions]
+  );
 
   return (
     <div className="space-y-6">

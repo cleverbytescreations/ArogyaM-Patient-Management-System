@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, X, Save, Loader2 } from "lucide-react";
+import { Pencil, X, Save, Loader2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,7 +32,7 @@ import { useConflictHandler } from "@/lib/conflict";
 import { patientEditSchema, type PatientEditFormValues } from "@/lib/validation/visits";
 import { AliasesPanel } from "./AliasesPanel";
 import type { Patient, GenderCode } from "@/types/patients";
-import type { MasterDataItem, OpSequence } from "@/types/masterData";
+import type { MasterDataItem } from "@/types/masterData";
 
 interface BasicDetailsTabProps {
   patient: Patient;
@@ -40,7 +40,7 @@ interface BasicDetailsTabProps {
   bloodGroupOptions: MasterDataItem[];
   maritalStatusOptions: MasterDataItem[];
   dietaryOptions: MasterDataItem[];
-  opSequences: OpSequence[];
+  consultationCategoryOptions: MasterDataItem[];
 }
 
 function calcAge(dob: string): number | null {
@@ -56,10 +56,6 @@ function calcAge(dob: string): number | null {
 function codeLabel(items: MasterDataItem[], code: string | null | undefined): string | null {
   if (!code) return null;
   return items.find((i) => i.code === code)?.label ?? code;
-}
-
-function opCategoryLabel(sequences: OpSequence[], code: string): string {
-  return sequences.find((s) => s.category_code === code)?.category_code ?? code;
 }
 
 function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -89,7 +85,7 @@ function ViewMode({
   bloodGroupOptions,
   maritalStatusOptions,
   dietaryOptions,
-  opSequences,
+  consultationCategoryOptions,
   canEdit,
   onEdit,
 }: BasicDetailsTabProps & { canEdit: boolean; onEdit: () => void }) {
@@ -117,8 +113,28 @@ function ViewMode({
 
       <DetailSection title="Patient Identity">
         <DetailRow label="Full name" value={patient.full_name} />
-        <DetailRow label="OP number" value={<span className="font-mono">{patient.op_number}</span>} />
-        <DetailRow label="OP category" value={opCategoryLabel(opSequences, patient.op_category_code)} />
+        <DetailRow
+          label="OP number"
+          value={
+            <span className="inline-flex items-center gap-2">
+              <span className="font-mono">{patient.op_number}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                aria-label="Copy OP number"
+                onClick={() => {
+                  void navigator.clipboard.writeText(patient.op_number);
+                  toast.success("OP number copied to clipboard.");
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              </Button>
+            </span>
+          }
+        />
+        <DetailRow label="OP category" value={codeLabel(consultationCategoryOptions, patient.op_category_code)} />
         <DetailRow label="Gender" value={codeLabel(genderOptions, patient.gender)} />
       </DetailSection>
 
@@ -312,6 +328,27 @@ function EditMode({
         <fieldset className="space-y-4 rounded-md border bg-card p-5">
           <legend className="px-1 text-sm font-semibold">Patient Identity</legend>
           <div className="grid gap-4 sm:grid-cols-2">
+            <FormItem className="sm:col-span-2">
+              <FormLabel>OP number</FormLabel>
+              <div className="flex items-center gap-2">
+                <FormControl>
+                  <Input value={patient.op_number} readOnly disabled className="font-mono" />
+                </FormControl>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Copy OP number"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(patient.op_number);
+                    toast.success("OP number copied to clipboard.");
+                  }}
+                >
+                  <Copy className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">OP number is immutable.</p>
+            </FormItem>
             <FormField
               control={form.control}
               name="full_name"
@@ -325,9 +362,6 @@ function EditMode({
                 </FormItem>
               )}
             />
-            <div className="text-sm text-muted-foreground sm:col-span-2">
-              OP number <span className="font-mono font-medium text-foreground">{patient.op_number}</span> is immutable.
-            </div>
             <SelectField name="gender" label="Gender" options={genderOptions} ariaLabel="Gender" />
           </div>
         </fieldset>

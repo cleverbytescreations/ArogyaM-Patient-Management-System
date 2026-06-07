@@ -65,9 +65,9 @@ export function PatientProfilePage() {
     queryFn: () => masterDataApi.list("dietary_preference"),
     staleTime: STALE,
   });
-  const { data: opSequences = [] } = useQuery({
-    queryKey: ["op-sequences"],
-    queryFn: () => masterDataApi.listOpSequences(),
+  const { data: consultationCategoryOptions = [] } = useQuery({
+    queryKey: ["master-data", "consultation_category"],
+    queryFn: () => masterDataApi.list("consultation_category"),
     staleTime: STALE,
   });
 
@@ -142,7 +142,7 @@ export function PatientProfilePage() {
             bloodGroupOptions={bloodGroupOptions}
             maritalStatusOptions={maritalStatusOptions}
             dietaryOptions={dietaryOptions}
-            opSequences={opSequences}
+            consultationCategoryOptions={consultationCategoryOptions}
           />
         </TabsContent>
 

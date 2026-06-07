@@ -1,0 +1,46 @@
+We are looking to develop a web-based Patient Management System for our medical practice. We have a large number of care seekers, and we need a secure and efficient platform where patient information can be stored, managed, and retrieved whenever required.
+
+The system should allow us to search and access patient records using their OP Number, mobile number, or name. Many care seekers return for consultations after a gap of one or two years, and they often do not remember their OP number. Therefore, it is important that we can quickly locate their records using either their name or contact number and retrieve their complete case history.
+
+We also conduct online consultations. We would like care seekers to be able to register through our website, and we should receive an email notification whenever a new registration is submitted.
+
+Some of the key requirements are:
+
+• Patient registration and profile management
+• Automatic generation of unique OP numbers
+• Search and retrieval of patient records using OP number, mobile number, or name
+• Storage of medical history, consultation notes, discharge summaries, and treatment records
+• Upload and storage of reports, prescriptions, photographs, and other documents
+• Online registration for consultations
+• Email notifications for new registrations
+• Appointment scheduling and follow-up tracking
+• Secure login and data protection
+• User-friendly interface for our staff
+• Complete patient visit history and treatment timeline
+• Simultaneous access from multiple systems/users without data conflicts
+• Role-based access control (e.g., Administrator, Doctor, Receptionist, and other staff) with appropriate permissions for viewing and editing records
+
+OP Number Generation
+The system should automatically generate patient OP numbers based on the consultation category.
+
+Examples:
+
+• Regular consultations: OPN0012, OPN0013, etc.
+• Village consultations: OPV0012, OPV0013, etc.
+• Free consultation camps: FC0012, FC0013, etc. (or another suitable prefix)
+
+Each category should maintain its own running sequence, and patient records should remain searchable using the OP number, mobile number, or patient name.
+
+Additional Requirements
+• Incorporation of all existing patient records and case sheets maintained since 2022
+• Ability to upload scanned copies of old case sheets and link them to patient profiles(we can manually type and do also)
+• Online consultation records and follow-up documentation
+• Automated follow-up reminders for staff and care seekers
+• Ability to identify duplicate records and merge them when necessary
+• Dashboard showing upcoming appointments, pending follow-ups, and recent registrations
+• Data backup and recovery system to prevent loss of patient information
+• Export of patient data and reports when required
+• Audit trail showing who created, modified, or accessed records and when
+
+* role-based access (e.g., receptionist, doctor, administrator), so different staff members can view or edit only the information relevant to their responsibilities. 
+

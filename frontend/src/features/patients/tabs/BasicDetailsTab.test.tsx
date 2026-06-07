@@ -18,7 +18,7 @@ import {
   mockBloodGroupOptions,
   mockMaritalStatusOptions,
   mockDietaryOptions,
-  mockOpSequences,
+  mockConsultationCategoryOptions,
 } from "@/test/mocks/handlers";
 
 const BASE = "/api/v1";
@@ -69,7 +69,7 @@ const defaultTabProps = {
   bloodGroupOptions: mockBloodGroupOptions,
   maritalStatusOptions: mockMaritalStatusOptions,
   dietaryOptions: mockDietaryOptions,
-  opSequences: mockOpSequences,
+  consultationCategoryOptions: mockConsultationCategoryOptions,
 };
 
 describe("BasicDetailsTab — view mode", () => {

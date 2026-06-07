@@ -105,6 +105,12 @@ export const mockDietaryOptions: MasterDataItem[] = [
   { id: 11, type: "dietary_preference", code: "NONVEG", label: "Non-Vegetarian", sort_order: 2, is_active: true },
 ];
 
+export const mockConsultationCategoryOptions: MasterDataItem[] = [
+  { id: 14, type: "consultation_category", code: "REGULAR", label: "Regular Consultation", sort_order: 1, is_active: true },
+  { id: 15, type: "consultation_category", code: "VILLAGE", label: "Village Consultation", sort_order: 2, is_active: true },
+  { id: 16, type: "consultation_category", code: "CAMP", label: "Free Camp Consultation", sort_order: 3, is_active: true },
+];
+
 export const mockOpSequences: OpSequence[] = [
   {
     id: 1,
@@ -397,10 +403,7 @@ export const handlers = [
   }),
 
   http.get(`${BASE}/master-data/consultation_category`, () => {
-    return HttpResponse.json([
-      { id: 14, type: "consultation_category", code: "REGULAR", label: "Regular", sort_order: 1, is_active: true },
-      { id: 15, type: "consultation_category", code: "CAMP", label: "Camp", sort_order: 2, is_active: true },
-    ]);
+    return HttpResponse.json(mockConsultationCategoryOptions);
   }),
 
   http.get(`${BASE}/master-data/:type`, ({ params }) => {
@@ -509,14 +512,9 @@ export const handlers = [
   // Visits — list
   http.get(`${BASE}/patients/:id/visits`, ({ params }) => {
     if (params.id === mockPatient.id) {
-      return HttpResponse.json<{ items: Visit[]; total: number; page: number; page_size: number }>({
-        items: [mockVisit],
-        total: 1,
-        page: 1,
-        page_size: 20,
-      });
+      return HttpResponse.json<Visit[]>([mockVisit]);
     }
-    return HttpResponse.json({ items: [], total: 0, page: 1, page_size: 20 });
+    return HttpResponse.json<Visit[]>([]);
   }),
 
   // Visits — create

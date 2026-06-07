@@ -48,6 +48,11 @@ import type {
   GenderCode,
   DuplicateSuggestion,
 } from "@/types/patients";
+import type { MasterDataItem } from "@/types/masterData";
+
+function categoryLabel(options: MasterDataItem[], code: string): string {
+  return options.find((o) => o.code === code)?.label ?? code;
+}
 
 function calcAgeFromDOB(dob: string): number | null {
   const dobDate = new Date(dob);
@@ -278,6 +283,12 @@ export function RegisterPatientPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: consultationCategoryOptions = [] } = useQuery({
+    queryKey: ["master-data", "consultation_category"],
+    queryFn: () => masterDataApi.list("consultation_category"),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const form = useForm<RegisterPatientFormValues>({
     resolver: zodResolver(registerPatientSchema),
     mode: "onChange",
@@ -471,7 +482,7 @@ export function RegisterPatientPage() {
                             key={seq.category_code}
                             value={seq.category_code}
                           >
-                            {seq.category_code}
+                            {categoryLabel(consultationCategoryOptions, seq.category_code)}
                           </SelectItem>
                         ))}
                       </SelectContent>

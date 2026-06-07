@@ -11,7 +11,7 @@ import { usePermissions } from "@/auth/usePermissions";
 import { PERMISSIONS } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { getApiErrorMessage } from "@/api/errors";
-import type { MasterDataItem, OpSequence } from "@/types/masterData";
+import type { MasterDataItem } from "@/types/masterData";
 import type { Patient, PatientStatus } from "@/types/patients";
 
 function calcAge(dob: string): number | null {
@@ -27,11 +27,6 @@ function calcAge(dob: string): number | null {
 function codeLabel(items: MasterDataItem[], code: string | null | undefined): string | null {
   if (!code) return null;
   return items.find((i) => i.code === code)?.label ?? code;
-}
-
-function opCategoryLabel(sequences: OpSequence[], code: string): string {
-  const seq = sequences.find((s) => s.category_code === code);
-  return seq?.category_code ?? code;
 }
 
 function StatusBadge({ status }: { status: PatientStatus }) {
@@ -79,14 +74,14 @@ function PatientDetailView({
   bloodGroupOptions,
   maritalStatusOptions,
   dietaryOptions,
-  opSequences,
+  consultationCategoryOptions,
 }: {
   patient: Patient;
   genderOptions: MasterDataItem[];
   bloodGroupOptions: MasterDataItem[];
   maritalStatusOptions: MasterDataItem[];
   dietaryOptions: MasterDataItem[];
-  opSequences: OpSequence[];
+  consultationCategoryOptions: MasterDataItem[];
 }) {
   const age = patient.date_of_birth ? calcAge(patient.date_of_birth) : null;
 
@@ -114,7 +109,7 @@ function PatientDetailView({
         />
         <DetailRow
           label="OP category"
-          value={opCategoryLabel(opSequences, patient.op_category_code)}
+          value={codeLabel(consultationCategoryOptions, patient.op_category_code)}
         />
         <DetailRow label="Gender" value={codeLabel(genderOptions, patient.gender)} />
       </DetailSection>
@@ -213,9 +208,9 @@ export function PatientDetailPage() {
     queryFn: () => masterDataApi.list("dietary_preference"),
     staleTime: 5 * 60 * 1000,
   });
-  const { data: opSequences = [] } = useQuery({
-    queryKey: ["op-sequences"],
-    queryFn: () => masterDataApi.listOpSequences(),
+  const { data: consultationCategoryOptions = [] } = useQuery({
+    queryKey: ["master-data", "consultation_category"],
+    queryFn: () => masterDataApi.list("consultation_category"),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -282,7 +277,7 @@ export function PatientDetailPage() {
         bloodGroupOptions={bloodGroupOptions}
         maritalStatusOptions={maritalStatusOptions}
         dietaryOptions={dietaryOptions}
-        opSequences={opSequences}
+        consultationCategoryOptions={consultationCategoryOptions}
       />
     </div>
   );
