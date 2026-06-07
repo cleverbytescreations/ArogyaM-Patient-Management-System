@@ -249,7 +249,7 @@ describe("BasicDetailsTab — edit form validation", () => {
     // The save actually carried the edited value to the API — guards against
     // the component exiting edit mode without applying the user's changes.
     expect(capturedBody).not.toBeNull();
-    expect(capturedBody?.full_name).toBe("Updated Name");
+    expect((capturedBody as { full_name: string } | null)?.full_name).toBe("Updated Name");
   });
 
   it("has no a11y violations in edit mode", async () => {

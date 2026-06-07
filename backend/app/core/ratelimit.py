@@ -115,5 +115,17 @@ def _check_local(identifier: str, limit: int, window: int) -> None:
 
 
 def reset() -> None:
-    """Clear the in-process rate limit store (test helper)."""
+    """Clear all rate limit state (test helper).
+
+    Clears both the in-process fallback store and any Redis keys so the
+    counter starts fresh for the next test regardless of which backend is active.
+    """
     _local_store.clear()
+    client = _redis()
+    if client is not None:
+        try:
+            keys = client.keys("ratelimit:login:*")
+            if keys:
+                client.delete(*keys)
+        except Exception:
+            pass

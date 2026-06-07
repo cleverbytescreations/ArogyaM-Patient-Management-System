@@ -156,7 +156,7 @@
 
 ### Module 7 — Prescriptions (UC-11/12)
 
-- [ ] **UI-T7.1 [M]** — Prescriptions tab (entry + upload) (MVP)
+- [x] **UI-T7.1 [M]** — Prescriptions tab (entry + upload) (MVP)
       **Description:** Prescriptions tab: create with structured items (and/or free-text), list, view; or attach a scanned prescription via Documents (`document_type=PRESCRIPTION`).
       **Files / Components:** `frontend/src/features/clinical/PrescriptionsTab.tsx`, `.../PrescriptionFormDialog.tsx`.
       **Implementation Notes:** Item fields: medicine_name, dosage, timing, duration, usage_instruction, application_route (INTERNAL/EXTERNAL). Write gated by `add_prescription`. Structured PDF generation is R2.
@@ -164,7 +164,7 @@
 
 ### Module 8 — Discharge Summaries (UC-13/14)
 
-- [ ] **UI-T8.1 [M]** — Discharge Summary tab with finalize/amend (MVP)
+- [x] **UI-T8.1 [M]** — Discharge Summary tab with finalize/amend (MVP)
       **Description:** Discharge Summary tab: create draft, edit draft, finalize (immutable), amend (new version), view current-effective + history.
       **Files / Components:** `frontend/src/features/clinical/DischargeSummaryTab.tsx`.
       **Implementation Notes:** Enforce `discharge_date ≥ admission_date` client-side; block editing once finalized (`409 DISCHARGE_ALREADY_FINALIZED` → show finalized state + amend action). Show `is_superseded`/`superseded_by`. History list newest-first.
@@ -172,13 +172,13 @@
 
 ### Module 9 — Documents (UC-12/14/15/30)
 
-- [ ] **UI-T9.1 [M]** — Documents tab (upload + list) (MVP)
+- [x] **UI-T9.1 [M]** — Documents tab (upload + list) (MVP)
       **Description:** Documents tab on the profile: upload (multipart) with type/size pre-check, list with filters (`document_type`, `status`, `visit_id`), metadata edit/soft-delete.
       **Files / Components:** `frontend/src/features/documents/DocumentsTab.tsx`, `.../UploadDialog.tsx`.
       **Implementation Notes:** `POST /patients/{id}/documents`. Client pre-checks pdf/jpeg/png + size; surface 413/415 clearly. `document_type_code` + optional visit link/title/date/historical/remarks.
       **Acceptance Criteria:** Upload succeeds for valid files; bad type/size blocked client + server; list filters work; soft-delete via status.
 
-- [ ] **UI-T9.2 [M]** — Documents Register + secure viewer/download (UC-15) (MVP)
+- [x] **UI-T9.2 [M]** — Documents Register + secure viewer/download (UC-15) (MVP)
       **Description:** Standalone Documents Register screen and a secure viewer/download using `GET /documents/{id}/content` (proxied) or `/download-url` (pre-signed).
       **Files / Components:** `frontend/src/features/documents/DocumentsRegisterPage.tsx`, `.../SecureViewer.tsx`.
       **Implementation Notes:** Never expose object-store URLs; download via permission-checked endpoints (access audited server-side). Document preview is R2.
@@ -192,7 +192,7 @@
 
 ### Module 10 — Patient Timeline (UC-17)
 
-- [ ] **UI-T10.1 [M]** — Patient Timeline view (MVP)
+- [x] **UI-T10.1 [M]** — Patient Timeline view (MVP)
       **Description:** Chronological timeline (most-recent-first) of visits, case sheets, consultation notes, prescriptions, discharge summaries, documents, follow-ups using the shared Timeline component.
       **Files / Components:** `frontend/src/features/patients/tabs/TimelineTab.tsx`.
       **Implementation Notes:** `GET /patients/{id}/timeline`. Event entries link to their detail. Medical summaries respect field-level visibility. Use icon/text + colour (never colour alone) for event types.

@@ -35,6 +35,13 @@ const PatientProfilePage = lazy(
     }))
 );
 
+const DocumentsRegisterPage = lazy(
+  () =>
+    import("@/features/documents/DocumentsRegisterPage").then((m) => ({
+      default: m.DocumentsRegisterPage,
+    }))
+);
+
 function DashboardPlaceholder() {
   return (
     <div className="space-y-2">
@@ -87,6 +94,15 @@ export function AppRoutes() {
                     element={
                       <RequirePermission permission={PERMISSIONS.VIEW_PATIENT}>
                         <PatientProfilePage />
+                      </RequirePermission>
+                    }
+                  />
+
+                  <Route
+                    path="/documents"
+                    element={
+                      <RequirePermission permission={PERMISSIONS.VIEW_MEDICAL_HISTORY}>
+                        <DocumentsRegisterPage />
                       </RequirePermission>
                     }
                   />

@@ -5,6 +5,9 @@ import type { PaginatedResponse } from "@/types/api";
 import type { Patient, PatientSearchResult } from "@/types/patients";
 import type { MasterDataItem, OpSequence } from "@/types/masterData";
 import type { Visit, CaseSheet, ConsultationNote, PatientAlias } from "@/types/visits";
+import type { DischargeSummary, Prescription } from "@/types/clinical";
+import type { PatientDocument } from "@/types/documents";
+import type { PatientTimeline } from "@/types/timeline";
 
 const BASE = "/api/v1";
 
@@ -237,6 +240,86 @@ export const mockAliases: PatientAlias[] = [
     created_at: "2026-05-01T09:00:00Z",
   },
 ];
+
+export const mockPrescriptions: Prescription[] = [
+  {
+    id: "rx-1",
+    visit_id: "visit-1",
+    patient_id: "patient-1",
+    doctor_id: "user-2",
+    prescription_date: "2026-06-05",
+    instructions: "Take after food",
+    review_advice: "Review in one week",
+    medicine_details: null,
+    items: [
+      {
+        line_no: 1,
+        medicine_name: "Paracetamol",
+        dosage: "500 mg",
+        timing: "Twice daily",
+        duration: "3 days",
+        usage_instruction: "After meals",
+        application_route: "INTERNAL",
+      },
+    ],
+    version: 1,
+    created_at: "2026-06-05T10:20:00Z",
+  },
+];
+
+export const mockDischargeSummary: DischargeSummary = {
+  id: "ds-1",
+  visit_id: "visit-1",
+  patient_id: "patient-1",
+  doctor_id: "user-2",
+  admission_date: "2026-06-05",
+  discharge_date: "2026-06-06",
+  diagnosis: "Viral fever",
+  presenting_complaints: "Fever and headache",
+  investigations_admission: "CBC reviewed",
+  treatments: "Hydration and supportive care",
+  condition_at_discharge: "IMPROVED",
+  follow_up_period: "1 week",
+  discharge_advice: "Rest and fluids",
+  medications: "Paracetamol as advised",
+  yoga_guidance: null,
+  is_finalized: false,
+  finalized_at: null,
+  finalized_by: null,
+  amends_id: null,
+  is_superseded: false,
+  superseded_by: null,
+  version: 1,
+  created_at: "2026-06-06T10:00:00Z",
+};
+
+export const mockDocuments: PatientDocument[] = [
+  {
+    id: "doc-1",
+    patient_id: "patient-1",
+    visit_id: "visit-1",
+    document_type_code: "PRESCRIPTION",
+    title: "Scanned prescription",
+    file_name: "prescription.pdf",
+    content_type: "application/pdf",
+    file_size_bytes: 1024,
+    document_date: "2026-06-05",
+    is_historical: false,
+    status: "ACTIVE",
+    remarks: null,
+    uploaded_by: "user-1",
+    uploaded_at: "2026-06-05T11:00:00Z",
+  },
+];
+
+export const mockTimeline: PatientTimeline = {
+  patient_id: "patient-1",
+  events: [
+    { type: "DOCUMENT", occurred_on: "2026-06-05", ref_id: "doc-1", summary: "Scanned prescription uploaded" },
+    { type: "PRESCRIPTION", occurred_on: "2026-06-05", ref_id: "rx-1", summary: "Paracetamol prescribed" },
+    { type: "VISIT", occurred_on: "2026-06-05", ref_id: "visit-1", summary: "New patient visit" },
+  ],
+};
 
 export const mockPatientSearchResults: PatientSearchResult[] = [
   {
@@ -509,6 +592,12 @@ export const handlers = [
     return HttpResponse.json([]);
   }),
 
+  // Patient timeline
+  http.get(`${BASE}/patients/:id/timeline`, ({ params }) => {
+    if (params.id === mockPatient.id) return HttpResponse.json(mockTimeline);
+    return HttpResponse.json({ patient_id: params.id, events: [] });
+  }),
+
   // Visits — list
   http.get(`${BASE}/patients/:id/visits`, ({ params }) => {
     if (params.id === mockPatient.id) {
@@ -605,5 +694,109 @@ export const handlers = [
       created_at: new Date().toISOString(),
     };
     return HttpResponse.json(newNote, { status: 201 });
+  }),
+
+  // Prescriptions
+  http.get(`${BASE}/visits/:id/prescriptions`, ({ params }) => {
+    if (params.id === mockVisit.id) return HttpResponse.json(mockPrescriptions);
+    return HttpResponse.json([]);
+  }),
+
+  http.post(`${BASE}/visits/:id/prescriptions`, async ({ params, request }) => {
+    const body = await request.json() as Partial<Prescription>;
+    const newPrescription: Prescription = {
+      id: "rx-new",
+      visit_id: params.id as string,
+      patient_id: mockPatient.id,
+      doctor_id: body.doctor_id ?? null,
+      prescription_date: body.prescription_date ?? "2026-06-07",
+      instructions: body.instructions ?? null,
+      review_advice: body.review_advice ?? null,
+      medicine_details: body.medicine_details ?? null,
+      items: body.items ?? [],
+      version: 1,
+      created_at: new Date().toISOString(),
+    };
+    return HttpResponse.json(newPrescription, { status: 201 });
+  }),
+
+  http.get(`${BASE}/prescriptions/:id`, ({ params }) => {
+    const item = mockPrescriptions.find((p) => p.id === params.id);
+    if (item) return HttpResponse.json(item);
+    return HttpResponse.json({ error: { code: "RESOURCE_NOT_FOUND", message: "Prescription not found.", details: [], request_id: "r12" } }, { status: 404 });
+  }),
+
+  // Discharge summaries
+  http.get(`${BASE}/visits/:id/discharge-summary`, ({ params }) => {
+    if (params.id === mockVisit.id) return HttpResponse.json(mockDischargeSummary);
+    return HttpResponse.json({ error: { code: "RESOURCE_NOT_FOUND", message: "Discharge summary not found.", details: [], request_id: "r13" } }, { status: 404 });
+  }),
+
+  http.post(`${BASE}/visits/:id/discharge-summary`, async ({ params, request }) => {
+    const body = await request.json() as Partial<DischargeSummary>;
+    return HttpResponse.json({ ...mockDischargeSummary, ...body, id: "ds-new", visit_id: params.id as string }, { status: 201 });
+  }),
+
+  http.get(`${BASE}/visits/:id/discharge-summary/history`, ({ params }) => {
+    if (params.id === mockVisit.id) return HttpResponse.json([mockDischargeSummary]);
+    return HttpResponse.json([]);
+  }),
+
+  http.put(`${BASE}/discharge-summaries/:id`, async ({ request }) => {
+    const body = await request.json() as Partial<DischargeSummary>;
+    return HttpResponse.json({ ...mockDischargeSummary, ...body, version: mockDischargeSummary.version + 1 });
+  }),
+
+  http.put(`${BASE}/discharge-summaries/:id/finalize`, () => {
+    return HttpResponse.json({ ...mockDischargeSummary, is_finalized: true, finalized_at: new Date().toISOString(), finalized_by: "user-1" });
+  }),
+
+  http.post(`${BASE}/discharge-summaries/:id/amend`, async ({ request }) => {
+    const body = await request.json() as Partial<DischargeSummary>;
+    return HttpResponse.json({ ...mockDischargeSummary, ...body, id: "ds-amend", amends_id: "ds-1", version: 1 }, { status: 201 });
+  }),
+
+  // Documents
+  http.get(`${BASE}/patients/:id/documents`, ({ params, request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get("status");
+    const documentType = url.searchParams.get("document_type");
+    const visitId = url.searchParams.get("visit_id");
+    const items = params.id === mockPatient.id
+      ? mockDocuments.filter((doc) =>
+        (!status || doc.status === status) &&
+        (!documentType || doc.document_type_code === documentType) &&
+        (!visitId || doc.visit_id === visitId))
+      : [];
+    return HttpResponse.json({ items, total: items.length, page: 1, page_size: 10 });
+  }),
+
+  http.post(`${BASE}/patients/:id/documents`, async ({ params }) => {
+    const newDocument: PatientDocument = {
+      ...mockDocuments[0],
+      id: "doc-new",
+      patient_id: params.id as string,
+      file_name: "upload.pdf",
+      title: "Uploaded document",
+      uploaded_at: new Date().toISOString(),
+    };
+    return HttpResponse.json(newDocument, { status: 201 });
+  }),
+
+  http.get(`${BASE}/documents/:id`, ({ params }) => {
+    const item = mockDocuments.find((doc) => doc.id === params.id) ?? (params.id === "doc-new" ? { ...mockDocuments[0], id: "doc-new" } : null);
+    if (item) return HttpResponse.json(item);
+    return HttpResponse.json({ error: { code: "RESOURCE_NOT_FOUND", message: "Document not found.", details: [], request_id: "r14" } }, { status: 404 });
+  }),
+
+  http.put(`${BASE}/documents/:id`, async ({ params, request }) => {
+    const body = await request.json() as Partial<PatientDocument>;
+    return HttpResponse.json({ ...mockDocuments[0], ...body, id: params.id as string });
+  }),
+
+  http.get(`${BASE}/documents/:id/content`, () => {
+    return new HttpResponse(new Blob(["mock document"], { type: "application/pdf" }), {
+      headers: { "Content-Type": "application/pdf" },
+    });
   }),
 ];

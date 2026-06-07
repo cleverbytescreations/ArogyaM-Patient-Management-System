@@ -7,6 +7,7 @@ import type {
   PatientSearchResult,
   PatientSearchParams,
 } from "@/types/patients";
+import type { PatientTimeline } from "@/types/timeline";
 
 export const patientsApi = {
   register: (data: PatientCreateRequest, confirmCreate = false) =>
@@ -26,4 +27,7 @@ export const patientsApi = {
 
   update: (id: string, data: PatientUpdateRequest) =>
     apiClient.put<Patient>(`/patients/${id}`, data).then((r) => r.data),
+
+  timeline: (id: string) =>
+    apiClient.get<PatientTimeline>(`/patients/${id}/timeline`).then((r) => r.data),
 };

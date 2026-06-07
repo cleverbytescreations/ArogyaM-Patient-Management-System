@@ -12,6 +12,10 @@ import { BasicDetailsTab } from "./tabs/BasicDetailsTab";
 import { VisitsTab } from "@/features/visits/VisitsTab";
 import { CaseSheetTab } from "@/features/visits/CaseSheetTab";
 import { ConsultationNotesTab } from "@/features/visits/ConsultationNotesTab";
+import { PrescriptionsTab } from "@/features/clinical/PrescriptionsTab";
+import { DischargeSummaryTab } from "@/features/clinical/DischargeSummaryTab";
+import { DocumentsTab } from "@/features/documents/DocumentsTab";
+import { TimelineTab } from "./tabs/TimelineTab";
 import { visitsApi } from "@/api/visitsApi";
 import type { Visit } from "@/types/visits";
 
@@ -31,6 +35,7 @@ export function PatientProfilePage() {
 
   const [activeTab, setActiveTab] = useState("basic");
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
+  const [documentUploadType, setDocumentUploadType] = useState<string | undefined>();
 
   const { data: patient, isLoading, error } = useQuery({
     queryKey: ["patients", id],
@@ -128,9 +133,10 @@ export function PatientProfilePage() {
               <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
             )}
           </TabsTrigger>
-          <TabsTrigger value="prescriptions" disabled>Prescriptions</TabsTrigger>
-          <TabsTrigger value="discharge" disabled>Discharge Summaries</TabsTrigger>
-          <TabsTrigger value="documents" disabled>Documents</TabsTrigger>
+          <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
+          <TabsTrigger value="discharge">Discharge Summaries</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="followups" disabled>Follow-Ups</TabsTrigger>
           <TabsTrigger value="audit" disabled>Audit History</TabsTrigger>
         </TabsList>
@@ -169,15 +175,33 @@ export function PatientProfilePage() {
         </TabsContent>
 
         <TabsContent value="prescriptions" className="pt-0">
-          <ComingSoonTab name="Prescriptions" />
+          <PrescriptionsTab
+            selectedVisit={selectedVisit ?? null}
+            onSelectVisitTab={() => setActiveTab("visits")}
+            onUploadScanned={() => {
+              setDocumentUploadType("PRESCRIPTION");
+              setActiveTab("documents");
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="discharge" className="pt-0">
-          <ComingSoonTab name="Discharge Summaries" />
+          <DischargeSummaryTab
+            selectedVisit={selectedVisit ?? null}
+            onSelectVisitTab={() => setActiveTab("visits")}
+          />
         </TabsContent>
 
         <TabsContent value="documents" className="pt-0">
-          <ComingSoonTab name="Documents" />
+          <DocumentsTab
+            patientId={patient.id}
+            defaultDocumentType={documentUploadType}
+            onDefaultDocumentTypeConsumed={() => setDocumentUploadType(undefined)}
+          />
+        </TabsContent>
+
+        <TabsContent value="timeline" className="pt-0">
+          <TimelineTab patientId={patient.id} onOpenSection={setActiveTab} />
         </TabsContent>
 
         <TabsContent value="followups" className="pt-0">

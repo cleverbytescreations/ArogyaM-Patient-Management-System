@@ -6,6 +6,7 @@ import {
   HardDrive,
   Activity,
   Search,
+  Files,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/auth/usePermissions";
@@ -30,6 +31,12 @@ const navItems: NavItem[] = [
     label: "User Management",
     icon: Users,
     permission: PERMISSIONS.MANAGE_USERS,
+  },
+  {
+    to: "/documents",
+    label: "Documents",
+    icon: Files,
+    permission: PERMISSIONS.VIEW_MEDICAL_HISTORY,
   },
   {
     to: "/audit-logs",
