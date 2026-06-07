@@ -192,7 +192,7 @@
 
 ### Module 7 — Prescriptions
 
-- [ ] **BE-T7.1 [M]** — Prescription model, schemas, service (MVP)
+- [x] **BE-T7.1 [M]** — Prescription model, schemas, service (MVP)
       **Description:** Models `prescriptions`, `prescription_items`; schemas `Prescription`, `PrescriptionItem`, `PrescriptionCreateRequest`; service for create (structured items + free-text), list-by-visit, get-with-items.
       **Files / Components:** `backend/app/modules/clinical/prescriptions/`.
       **Implementation Notes:** `PrescriptionItem`: `line_no?, medicine_name, dosage?, timing?, duration?, usage_instruction?, application_route ∈ {INTERNAL, EXTERNAL}`. Write `add_prescription`; read `view_medical_history`. Scanned prescriptions may instead be attached via Documents.
@@ -200,7 +200,7 @@
 
 ### Module 8 — Discharge Summaries
 
-- [ ] **BE-T8.1 [L]** — Discharge summary service with finalize/amend (MVP)
+- [x] **BE-T8.1 [L]** — Discharge summary service with finalize/amend (MVP)
       **Description:** Model `discharge_summaries`; implement create draft, update draft (blocked if finalized), finalize (`is_finalized`, `finalized_at/by`), amend (new row via `amends_id`), get current-effective, get history.
       **Files / Components:** `backend/app/modules/clinical/discharge/`.
       **Implementation Notes:** `discharge_date ≥ admission_date` (UC-13 BR2) → 422. Edit finalized → `409 DISCHARGE_ALREADY_FINALIZED`. Current-effective = latest non-superseded row in `amends_id` chain; expose `is_superseded`, `superseded_by`. `404` only when visit has none.
@@ -361,12 +361,12 @@
       **Implementation Notes:** Case sheet uses idempotent `PUT` upsert (documented deviation).
       **Acceptance Criteria:** Matches API spec §7.6; clinical RBAC enforced; future non-scheduled date → 422.
 
-- [ ] **API-T7.1 [S]** — Prescription routes (MVP)
+- [x] **API-T7.1 [S]** — Prescription routes (MVP)
       **Description:** `POST/GET /visits/{id}/prescriptions`, `GET /prescriptions/{id}`.
       **Files / Components:** `backend/app/modules/clinical/prescriptions/router.py`.
       **Acceptance Criteria:** Matches API spec §7.7; items returned; `add_prescription`/`view_medical_history` enforced.
 
-- [ ] **API-T8.1 [M]** — Discharge summary routes (MVP)
+- [x] **API-T8.1 [M]** — Discharge summary routes (MVP)
       **Description:** `POST/GET /visits/{id}/discharge-summary`, `GET /visits/{id}/discharge-summary/history`, `PUT /discharge-summaries/{id}`, `PUT /discharge-summaries/{id}/finalize`, `POST /discharge-summaries/{id}/amend`.
       **Files / Components:** `backend/app/modules/clinical/discharge/router.py`.
       **Acceptance Criteria:** Matches API spec §7.8; finalize blocks edits (409); current-effective vs history correct.
