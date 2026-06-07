@@ -9,33 +9,35 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { documentUploadSchema, type DocumentUploadFormValues } from "@/lib/validation/documents";
+import { DOCUMENT_TYPES } from "@/types/documents";
 import type { Visit } from "@/types/visits";
-
-const DOCUMENT_TYPES = [
-  "LAB_REPORT",
-  "PHOTOGRAPH",
-  "INVESTIGATION",
-  "CASE_SHEET",
-  "PRESCRIPTION",
-  "DISCHARGE_SUMMARY",
-  "OTHER",
-];
 
 interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   visits: Visit[];
   defaultDocumentType?: string;
+  defaultVisitId?: string;
   isPending: boolean;
+  serverFieldErrors?: Partial<Record<keyof DocumentUploadFormValues, string>>;
   onSubmit: (values: DocumentUploadFormValues) => void;
 }
 
-export function UploadDialog({ open, onOpenChange, visits, defaultDocumentType = "", isPending, onSubmit }: UploadDialogProps) {
+export function UploadDialog({
+  open,
+  onOpenChange,
+  visits,
+  defaultDocumentType = "",
+  defaultVisitId = "",
+  isPending,
+  serverFieldErrors,
+  onSubmit,
+}: UploadDialogProps) {
   const form = useForm<DocumentUploadFormValues>({
     resolver: zodResolver(documentUploadSchema),
     defaultValues: {
       document_type_code: defaultDocumentType,
-      visit_id: "",
+      visit_id: defaultVisitId,
       title: "",
       document_date: "",
       is_historical: false,
@@ -45,14 +47,24 @@ export function UploadDialog({ open, onOpenChange, visits, defaultDocumentType =
 
   const close = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
-    if (!nextOpen) form.reset({ document_type_code: defaultDocumentType, visit_id: "", title: "", document_date: "", is_historical: false, remarks: "" });
+    if (!nextOpen) form.reset({ document_type_code: defaultDocumentType, visit_id: defaultVisitId, title: "", document_date: "", is_historical: false, remarks: "" });
   };
 
   useEffect(() => {
     if (open) {
       form.setValue("document_type_code", defaultDocumentType);
+      form.setValue("visit_id", defaultVisitId);
     }
-  }, [defaultDocumentType, form, open]);
+  }, [defaultDocumentType, defaultVisitId, form, open]);
+
+  useEffect(() => {
+    if (!serverFieldErrors) return;
+    for (const [field, message] of Object.entries(serverFieldErrors)) {
+      if (message) {
+        form.setError(field as keyof DocumentUploadFormValues, { message });
+      }
+    }
+  }, [form, serverFieldErrors]);
 
   return (
     <Dialog open={open} onOpenChange={close}>

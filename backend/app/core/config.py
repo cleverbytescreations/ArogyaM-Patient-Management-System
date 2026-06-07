@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     s3_secret_key: str = Field(default="minioadmin_dev_pw")
     s3_bucket: str = Field(default="arogyam-documents")
     s3_use_ssl: bool = Field(default=False)
+    # TODO set True in production (AWS SSE-S3) to ensure data is encrypted at rest (BE-TF.2, SAD §10). Note that
+    s3_sse: bool = Field(default=False)  # set True in production (AWS SSE-S3)
 
     # --- Cache / limiter (optional) ------------------------------------------
     redis_url: str = Field(default="")

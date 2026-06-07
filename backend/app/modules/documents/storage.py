@@ -50,6 +50,8 @@ class DocumentStorage:
     def ensure_bucket(self) -> None:
         try:
             self.client.head_bucket(Bucket=self.bucket)
+        except ServiceUnavailableError:
+            raise
         except Exception:
             try:
                 self.client.create_bucket(Bucket=self.bucket)
@@ -58,14 +60,16 @@ class DocumentStorage:
 
     def upload_bytes(self, key: str, data: bytes, content_type: str) -> StoredObject:
         self.ensure_bucket()
+        kwargs: dict = {
+            "Bucket": self.bucket,
+            "Key": key,
+            "Body": data,
+            "ContentType": content_type,
+        }
+        if settings.s3_sse:
+            kwargs["ServerSideEncryption"] = "AES256"
         try:
-            self.client.put_object(
-                Bucket=self.bucket,
-                Key=key,
-                Body=data,
-                ContentType=content_type,
-                ServerSideEncryption="AES256",
-            )
+            self.client.put_object(**kwargs)
         except Exception as exc:
             raise ServiceUnavailableError("Unable to store document") from exc
         return StoredObject(key=key, bucket=self.bucket)

@@ -410,8 +410,22 @@ export const handlers = [
   }),
 
   // Users
-  http.get(`${BASE}/users`, () => {
-    return HttpResponse.json(mockPaginatedUsers);
+  http.get(`${BASE}/users`, ({ request }) => {
+    const url = new URL(request.url);
+    const query = url.searchParams.get("q")?.toLowerCase().trim();
+    const isDoctor = url.searchParams.get("is_doctor");
+    const items = mockUserList.filter((user) => {
+      const matchesDoctor = isDoctor === null || String(user.is_doctor) === isDoctor;
+      const matchesQuery = !query || user.full_name.toLowerCase().includes(query) || user.username.toLowerCase().includes(query);
+      return matchesDoctor && matchesQuery;
+    });
+    return HttpResponse.json({ ...mockPaginatedUsers, items, total: items.length });
+  }),
+
+  http.get(`${BASE}/users/:id`, ({ params }) => {
+    const user = mockUserList.find((item) => item.id === params.id);
+    if (!user) return HttpResponse.json({ detail: "User not found" }, { status: 404 });
+    return HttpResponse.json(user);
   }),
 
   http.post(`${BASE}/users`, async ({ request }) => {

@@ -7,9 +7,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 let isRefreshing = false;
@@ -37,6 +34,9 @@ apiClient.interceptors.request.use(
     }
     const requestId = crypto.randomUUID();
     config.headers["X-Request-ID"] = requestId;
+    if (config.data instanceof FormData) {
+      config.headers.delete("Content-Type");
+    }
     return config;
   },
   (error: unknown) => Promise.reject(error)

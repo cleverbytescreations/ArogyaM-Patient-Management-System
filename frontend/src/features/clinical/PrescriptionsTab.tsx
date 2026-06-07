@@ -131,7 +131,13 @@ export function PrescriptionsTab({ selectedVisit, onSelectVisitTab, onUploadScan
         </div>
       )}
 
-      <PrescriptionFormDialog open={open} onOpenChange={setOpen} isPending={mutation.isPending} onSubmit={(values) => mutation.mutate(values)} />
+      <PrescriptionFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        isPending={mutation.isPending}
+        onSubmit={(values) => mutation.mutate(values)}
+        selectedVisit={selectedVisit}
+      />
     </div>
   );
 }

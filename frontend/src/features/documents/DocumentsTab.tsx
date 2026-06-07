@@ -17,11 +17,11 @@ import { visitsApi } from "@/api/visitsApi";
 import { usePermissions } from "@/auth/usePermissions";
 import { PERMISSIONS } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { getApiErrorCode, getApiErrorMessage, getFieldErrors } from "@/api/errors";
+import { getApiError, getApiErrorCode, getApiErrorMessage, getFieldErrors } from "@/api/errors";
 import { documentUpdateSchema, type DocumentUpdateFormValues, type DocumentUploadFormValues } from "@/lib/validation/documents";
 import { UploadDialog } from "./UploadDialog";
 import { SecureViewer } from "./SecureViewer";
-import type { DocumentStatus, PatientDocument } from "@/types/documents";
+import { DOCUMENT_TYPES, type DocumentStatus, type PatientDocument } from "@/types/documents";
 
 const STATUS_VARIANT: Record<DocumentStatus, "success" | "warning" | "secondary"> = {
   ACTIVE: "success",
@@ -32,15 +32,48 @@ const STATUS_VARIANT: Record<DocumentStatus, "success" | "warning" | "secondary"
 interface DocumentsTabProps {
   patientId: string;
   defaultDocumentType?: string;
+  defaultVisitId?: string;
   onDefaultDocumentTypeConsumed?: () => void;
 }
 
-export function DocumentsTab({ patientId, defaultDocumentType, onDefaultDocumentTypeConsumed }: DocumentsTabProps) {
+type UploadFieldErrors = Partial<Record<keyof DocumentUploadFormValues, string>>;
+
+const UPLOAD_FIELD_LABELS: Record<string, string> = {
+  file: "File",
+  document_type_code: "Document type",
+  visit_id: "Visit",
+  title: "Title",
+  document_date: "Document date",
+  is_historical: "Historical document",
+  remarks: "Remarks",
+};
+
+function normalizeUploadFieldErrors(error: unknown): UploadFieldErrors {
+  const fieldErrors = getFieldErrors(error);
+  return Object.entries(fieldErrors).reduce<UploadFieldErrors>((acc, [field, message]) => {
+    const normalizedField = field.replace(/^body\./, "") as keyof DocumentUploadFormValues;
+    acc[normalizedField] = message;
+    return acc;
+  }, {});
+}
+
+function getUploadValidationMessage(error: unknown): string {
+  const apiError = getApiError(error);
+  const fieldErrors = normalizeUploadFieldErrors(error);
+  const details = Object.entries(fieldErrors)
+    .map(([field, message]) => `${UPLOAD_FIELD_LABELS[field] ?? field}: ${message}`)
+    .join(" ");
+  const requestId = apiError?.request_id ? ` Request ID: ${apiError.request_id}` : "";
+  return details ? `${details}${requestId}` : getApiErrorMessage(error, "Could not upload document.");
+}
+
+export function DocumentsTab({ patientId, defaultDocumentType, defaultVisitId, onDefaultDocumentTypeConsumed }: DocumentsTabProps) {
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState(defaultDocumentType ?? "");
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | "">("ACTIVE");
   const [visitFilter, setVisitFilter] = useState("");
   const [uploadOpen, setUploadOpen] = useState(Boolean(defaultDocumentType));
+  const [uploadFieldErrors, setUploadFieldErrors] = useState<UploadFieldErrors>({});
   const [editing, setEditing] = useState<PatientDocument | null>(null);
   const [deleting, setDeleting] = useState<PatientDocument | null>(null);
   const [viewing, setViewing] = useState<PatientDocument | null>(null);
@@ -93,10 +126,18 @@ export function DocumentsTab({ patientId, defaultDocumentType, onDefaultDocument
     onSuccess: () => {
       invalidate();
       setUploadOpen(false);
+      setUploadFieldErrors({});
       onDefaultDocumentTypeConsumed?.();
       toast.success("Document uploaded.");
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Could not upload document.")),
+    onError: (err) => {
+      if (getApiErrorCode(err) === "VALIDATION_ERROR") {
+        setUploadFieldErrors(normalizeUploadFieldErrors(err));
+        toast.error(getUploadValidationMessage(err));
+        return;
+      }
+      toast.error(getApiErrorMessage(err, "Could not upload document."));
+    },
   });
 
   const updateMutation = useMutation({
@@ -150,8 +191,9 @@ export function DocumentsTab({ patientId, defaultDocumentType, onDefaultDocument
   useEffect(() => {
     if (!defaultDocumentType) return;
     setTypeFilter(defaultDocumentType);
+    setVisitFilter(defaultVisitId ?? "");
     setUploadOpen(true);
-  }, [defaultDocumentType]);
+  }, [defaultDocumentType, defaultVisitId]);
 
   const downloadMutation = useMutation({
     mutationFn: (doc: PatientDocument) =>
@@ -203,9 +245,12 @@ export function DocumentsTab({ patientId, defaultDocumentType, onDefaultDocument
     <div className="space-y-4 pt-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="grid gap-3 sm:grid-cols-3">
-          <label className="space-y-1 text-sm" htmlFor="document-type-filter">
+          <label className="space-y-1 text-sm">
             <span className="font-medium">Type</span>
-            <Input id="document-type-filter" value={typeFilter} onChange={(event) => { setTypeFilter(event.target.value); setPage(1); }} placeholder="PRESCRIPTION" />
+            <select value={typeFilter} onChange={(event) => { setTypeFilter(event.target.value); setPage(1); }} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+              <option value="">All types</option>
+              {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
+            </select>
           </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium">Status</span>
@@ -225,7 +270,7 @@ export function DocumentsTab({ patientId, defaultDocumentType, onDefaultDocument
           </label>
         </div>
         {canUpload && (
-          <Button size="sm" onClick={() => setUploadOpen(true)}>
+          <Button size="sm" onClick={() => { setUploadFieldErrors({}); setUploadOpen(true); }}>
             <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
             Upload document
           </Button>
@@ -254,7 +299,25 @@ export function DocumentsTab({ patientId, defaultDocumentType, onDefaultDocument
         </div>
       )}
 
-      <UploadDialog open={uploadOpen} onOpenChange={(open) => { setUploadOpen(open); if (!open) onDefaultDocumentTypeConsumed?.(); }} visits={visits} defaultDocumentType={defaultDocumentType} isPending={uploadMutation.isPending} onSubmit={(values) => uploadMutation.mutate(values)} />
+      <UploadDialog
+        open={uploadOpen}
+        onOpenChange={(open) => {
+          setUploadOpen(open);
+          if (!open) {
+            setUploadFieldErrors({});
+            onDefaultDocumentTypeConsumed?.();
+          }
+        }}
+        visits={visits}
+        defaultDocumentType={defaultDocumentType}
+        defaultVisitId={defaultVisitId}
+        isPending={uploadMutation.isPending}
+        serverFieldErrors={uploadFieldErrors}
+        onSubmit={(values) => {
+          setUploadFieldErrors({});
+          uploadMutation.mutate(values);
+        }}
+      />
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>

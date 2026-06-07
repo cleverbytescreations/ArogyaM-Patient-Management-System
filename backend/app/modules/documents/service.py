@@ -210,11 +210,28 @@ def upload_document(
     return DocumentOut.model_validate(document)
 
 
-def list_patient_documents(db: Session, patient_id: uuid.UUID) -> list[DocumentOut]:
+def list_patient_documents(
+    db: Session,
+    patient_id: uuid.UUID,
+    *,
+    status: str | None = None,
+    document_type: str | None = None,
+    visit_id: uuid.UUID | None = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> tuple[list[DocumentOut], int]:
     if patient_repo.get_patient_by_id(db, patient_id) is None:
         raise NotFoundError(f"Patient {patient_id} not found")
-    documents = repo.list_documents_for_patient(db, patient_id)
-    return [DocumentOut.model_validate(doc) for doc in documents]
+    documents, total = repo.list_documents_for_patient(
+        db,
+        patient_id,
+        status=status,
+        document_type=document_type,
+        visit_id=visit_id,
+        limit=page_size,
+        offset=(page - 1) * page_size,
+    )
+    return [DocumentOut.model_validate(doc) for doc in documents], total
 
 
 def get_document(db: Session, document_id: uuid.UUID) -> DocumentOut:

@@ -1,4 +1,5 @@
 import { apiClient } from "@/api/client";
+import { useTokenStore } from "@/auth/tokenStore";
 import type { PaginatedResponse } from "@/types/api";
 import type {
   DocumentListParams,
@@ -7,6 +8,35 @@ import type {
   PatientDocument,
   PresignedUrlResponse,
 } from "@/types/documents";
+
+const API_BASE_URL = apiClient.defaults.baseURL ?? "/api/v1";
+
+async function uploadMultipart<T>(url: string, formData: FormData): Promise<T> {
+  const requestId = crypto.randomUUID();
+  const headers = new Headers({ "X-Request-ID": requestId });
+  const { accessToken } = useTokenStore.getState();
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({
+      error: {
+        code: "UPLOAD_ERROR",
+        message: "Could not upload document.",
+        details: [],
+        request_id: requestId,
+      },
+    }));
+    throw { response: { data, status: response.status } };
+  }
+
+  return response.json() as Promise<T>;
+}
 
 export const documentsApi = {
   list: (patientId: string, params: DocumentListParams = {}) =>
@@ -24,9 +54,7 @@ export const documentsApi = {
     formData.append("is_historical", String(data.is_historical ?? false));
     if (data.remarks) formData.append("remarks", data.remarks);
 
-    return apiClient
-      .post<PatientDocument>(`/patients/${patientId}/documents`, formData)
-      .then((r) => r.data);
+    return uploadMultipart<PatientDocument>(`/patients/${patientId}/documents`, formData);
   },
 
   get: (documentId: string) =>

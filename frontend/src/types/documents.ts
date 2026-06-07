@@ -8,6 +8,16 @@ export type DocumentTypeCode =
   | "DISCHARGE_SUMMARY"
   | "OTHER";
 
+export const DOCUMENT_TYPES: DocumentTypeCode[] = [
+  "LAB_REPORT",
+  "PHOTOGRAPH",
+  "INVESTIGATION",
+  "CASE_SHEET",
+  "PRESCRIPTION",
+  "DISCHARGE_SUMMARY",
+  "OTHER",
+];
+
 export interface PatientDocument {
   id: string;
   patient_id: string;

@@ -6,11 +6,12 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db, require_permission
+from app.core.pagination import PagedResponse, PaginationParams
 from app.core.permissions import (
     PERM_ADD_CONSULTATION,
     PERM_EDIT_PATIENT,
@@ -67,15 +68,30 @@ def upload_document(
 
 @patients_router.get(
     "/{patient_id}/documents",
-    response_model=list[DocumentOut],
+    response_model=PagedResponse[DocumentOut],
     summary="List patient document metadata",
 )
 def list_patient_documents(
     patient_id: uuid.UUID,
     _: ViewDocumentMetadata,
     db: Annotated[Session, Depends(get_db)],
-) -> list[DocumentOut]:
-    return svc.list_patient_documents(db, patient_id)
+    pagination: Annotated[PaginationParams, Depends()],
+    status: Annotated[str | None, Query()] = None,
+    document_type: Annotated[str | None, Query()] = None,
+    visit_id: Annotated[uuid.UUID | None, Query()] = None,
+) -> PagedResponse[DocumentOut]:
+    items, total = svc.list_patient_documents(
+        db,
+        patient_id,
+        status=status,
+        document_type=document_type,
+        visit_id=visit_id,
+        page=pagination.page,
+        page_size=pagination.page_size,
+    )
+    return PagedResponse[DocumentOut](
+        items=items, total=total, page=pagination.page, page_size=pagination.page_size
+    )
 
 
 @router.get("/{document_id}", response_model=DocumentOut, summary="Get document metadata")

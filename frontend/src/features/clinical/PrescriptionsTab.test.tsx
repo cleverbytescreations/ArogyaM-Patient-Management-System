@@ -28,6 +28,28 @@ describe("PrescriptionsTab", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
+  it("defaults the prescription doctor from the selected visit and allows searchable override", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<PrescriptionsTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} onUploadScanned={vi.fn()} />);
+
+    await screen.findByText(/paracetamol/i);
+
+    await user.click(screen.getByRole("button", { name: /new prescription/i }));
+
+    const lockedDoctor = await screen.findByLabelText(/^doctor$/i);
+    expect(lockedDoctor).toBeDisabled();
+    expect(lockedDoctor).toHaveValue("user-2");
+
+    await user.click(screen.getByRole("button", { name: /change doctor/i }));
+    const doctorSearch = screen.getByRole("textbox", { name: /^doctor$/i });
+
+    await user.clear(doctorSearch);
+    await user.type(doctorSearch, "Smi");
+    await user.click(await screen.findByRole("option", { name: /dr\. john smith/i }));
+
+    expect(doctorSearch).toHaveValue("Dr. John Smith");
+  });
+
   it("hides write actions without prescription permission", async () => {
     permissions = ["view_medical_history"];
     renderWithQuery(<PrescriptionsTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} onUploadScanned={vi.fn()} />);

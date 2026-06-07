@@ -36,6 +36,7 @@ export function PatientProfilePage() {
   const [activeTab, setActiveTab] = useState("basic");
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
   const [documentUploadType, setDocumentUploadType] = useState<string | undefined>();
+  const [documentUploadVisitId, setDocumentUploadVisitId] = useState<string | undefined>();
 
   const { data: patient, isLoading, error } = useQuery({
     queryKey: ["patients", id],
@@ -180,6 +181,7 @@ export function PatientProfilePage() {
             onSelectVisitTab={() => setActiveTab("visits")}
             onUploadScanned={() => {
               setDocumentUploadType("PRESCRIPTION");
+              setDocumentUploadVisitId(selectedVisit?.id);
               setActiveTab("documents");
             }}
           />
@@ -196,7 +198,11 @@ export function PatientProfilePage() {
           <DocumentsTab
             patientId={patient.id}
             defaultDocumentType={documentUploadType}
-            onDefaultDocumentTypeConsumed={() => setDocumentUploadType(undefined)}
+            defaultVisitId={documentUploadVisitId}
+            onDefaultDocumentTypeConsumed={() => {
+              setDocumentUploadType(undefined);
+              setDocumentUploadVisitId(undefined);
+            }}
           />
         </TabsContent>
 
