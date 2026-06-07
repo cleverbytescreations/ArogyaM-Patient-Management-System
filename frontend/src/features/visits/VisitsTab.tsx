@@ -28,12 +28,11 @@ export function VisitsTab({ patientId, selectedVisitId, onVisitSelect }: VisitsT
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission(PERMISSIONS.EDIT_PATIENT);
 
-  const [page, setPage] = useState(1);
   const [showCreate, setShowCreate] = useState(false);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["visits", patientId, page],
-    queryFn: () => visitsApi.list(patientId, { page, page_size: 20 }),
+    queryKey: ["visits", patientId],
+    queryFn: () => visitsApi.list(patientId),
     staleTime: 60_000,
   });
 
@@ -48,8 +47,8 @@ export function VisitsTab({ patientId, selectedVisitId, onVisitSelect }: VisitsT
     );
   }
 
-  const visits = data?.items ?? [];
-  const total = data?.total ?? 0;
+  const visits = data ?? [];
+  const total = visits.length;
 
   const columns: Column<Visit>[] = [
     {
@@ -124,9 +123,9 @@ export function VisitsTab({ patientId, selectedVisitId, onVisitSelect }: VisitsT
         data={visits}
         isLoading={isLoading}
         total={total}
-        page={page}
-        pageSize={20}
-        onPageChange={setPage}
+        page={1}
+        pageSize={Math.max(total, 1)}
+        onPageChange={() => {}}
         getRowKey={(v) => v.id}
         emptyMessage="No visits recorded for this patient."
       />

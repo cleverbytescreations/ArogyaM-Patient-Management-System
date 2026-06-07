@@ -1,5 +1,4 @@
 import { apiClient } from "@/api/client";
-import type { PaginatedResponse } from "@/types/api";
 import type {
   Visit,
   VisitCreateRequest,
@@ -12,10 +11,8 @@ import type {
 } from "@/types/visits";
 
 export const visitsApi = {
-  list: (patientId: string, params?: { page?: number; page_size?: number }) =>
-    apiClient
-      .get<PaginatedResponse<Visit>>(`/patients/${patientId}/visits`, { params })
-      .then((r) => r.data),
+  list: (patientId: string) =>
+    apiClient.get<Visit[]>(`/patients/${patientId}/visits`).then((r) => r.data),
 
   create: (patientId: string, data: VisitCreateRequest) =>
     apiClient
