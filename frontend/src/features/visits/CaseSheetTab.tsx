@@ -26,18 +26,18 @@ import type { Visit } from "@/types/visits";
 import type { GenderCode } from "@/types/patients";
 
 const CASE_SHEET_FIELDS: { name: keyof CaseSheetFormValues; label: string; rows?: number }[] = [
-  { name: "present_complaints", label: "Present complaints", rows: 4 },
-  { name: "appetite", label: "Appetite" },
-  { name: "sleep", label: "Sleep" },
-  { name: "motion", label: "Motion / bowel habits" },
-  { name: "energy_level", label: "Energy level" },
-  { name: "hereditary_diseases_mother", label: "Hereditary diseases (mother)", rows: 3 },
-  { name: "hereditary_diseases_father", label: "Hereditary diseases (father)", rows: 3 },
-  { name: "past_ailments", label: "Past ailments", rows: 3 },
-  { name: "surgeries", label: "Previous surgeries", rows: 3 },
-  { name: "exercise_routine", label: "Exercise routine" },
-  { name: "other_observations", label: "Other observations", rows: 3 },
-  { name: "remarks", label: "Remarks", rows: 3 },
+  { name: "present_complaints", label: "Present complaints", rows: 2 },
+  { name: "appetite", label: "Appetite", rows: 2 },
+  { name: "sleep", label: "Sleep", rows: 2 },
+  { name: "motion", label: "Motion / bowel habits", rows: 2 },
+  { name: "energy_level", label: "Energy level", rows: 2 },
+  { name: "hereditary_diseases_mother", label: "Hereditary diseases (mother)", rows: 2 },
+  { name: "hereditary_diseases_father", label: "Hereditary diseases (father)", rows: 2 },
+  { name: "past_ailments", label: "Past ailments", rows: 2 },
+  { name: "surgeries", label: "Previous surgeries", rows: 2 },
+  { name: "exercise_routine", label: "Exercise routine", rows: 2 },
+  { name: "other_observations", label: "Other observations", rows: 2 },
+  { name: "remarks", label: "Remarks", rows: 2 },
 ];
 
 const EMPTY_DEFAULTS: CaseSheetFormValues = {
@@ -334,74 +334,76 @@ export function CaseSheetTab({ selectedVisit, patientGender, onSelectVisitTab }:
             aria-label="Case sheet form"
             className="space-y-4"
           >
-            <fieldset className="space-y-4 rounded-md border bg-card p-5">
+            <fieldset className="space-y-3 rounded-md border bg-card p-4">
               <legend className="px-1 text-sm font-semibold">Case Sheet</legend>
-              {CASE_SHEET_FIELDS.map(({ name, label, rows }) => (
-                <FormField
-                  key={name}
-                  control={form.control}
-                  name={name}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{label}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          rows={rows ?? 2}
-                          disabled={isPending || !canWrite}
-                          placeholder={canWrite ? `Enter ${label.toLowerCase()}` : undefined}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+                {CASE_SHEET_FIELDS.map(({ name, label, rows }) => (
+                  <FormField
+                    key={name}
+                    control={form.control}
+                    name={name}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{label}</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            rows={rows ?? 2}
+                            disabled={isPending || !canWrite}
+                            placeholder={canWrite ? `Enter ${label.toLowerCase()}` : undefined}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
 
-              {showDeliveryFields && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="normal_deliveries"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Normal deliveries</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            min={0}
-                            max={99}
-                            inputMode="numeric"
-                            disabled={isPending || !canWrite}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="caesarian_deliveries"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Caesarian deliveries</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="number"
-                            min={0}
-                            max={99}
-                            inputMode="numeric"
-                            disabled={isPending || !canWrite}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
+                {showDeliveryFields && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="normal_deliveries"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Normal deliveries</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              min={0}
+                              max={99}
+                              inputMode="numeric"
+                              disabled={isPending || !canWrite}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="caesarian_deliveries"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Caesarian deliveries</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              min={0}
+                              max={99}
+                              inputMode="numeric"
+                              disabled={isPending || !canWrite}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+              </div>
             </fieldset>
 
             {canWrite && (

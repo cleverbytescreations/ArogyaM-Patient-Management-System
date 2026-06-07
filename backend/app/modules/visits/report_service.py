@@ -23,7 +23,7 @@ from app.modules.visits import repository as repo
 from app.modules.visits.models import CaseSheet, Visit
 from app.modules.visits.report_pdf import render_case_sheet_pdf
 
-REPORT_TITLE = "ONLINE CONSULTATIONS – CASE SHEET"
+REPORT_TITLE = "CONSULTATIONS – CASE SHEET"
 
 
 def _format_date(value: date | None) -> str:

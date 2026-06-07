@@ -63,6 +63,12 @@
     color: #5a6b1a;
     font-weight: 600;
   }
+  .op-number .op-number-label {
+    font-style: normal;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-right: 1.5mm;
+  }
   .report-title {
     flex: 1;
     text-align: center;
@@ -163,7 +169,7 @@
   </header>
 
   <div class="title-row">
-    <div class="op-number">{{ op_number }}</div>
+    <div class="op-number"><span class="op-number-label">OP ID:</span>{{ op_number }}</div>
     <div class="report-title">{{ report_title }}</div>
     <div class="spacer"></div>
   </div>
