@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { clinicalApi } from "@/api/clinicalApi";
+import { masterDataApi } from "@/api/masterDataApi";
 import { usersApi } from "@/features/users/usersApi";
 import { usePermissions } from "@/auth/usePermissions";
 import { PERMISSIONS } from "@/lib/constants";
@@ -22,12 +23,16 @@ import type { DischargeSummary } from "@/types/clinical";
 import type { User } from "@/types/users";
 import type { Visit } from "@/types/visits";
 
-const TEXT_FIELDS: { name: keyof DischargeSummaryFormValues; label: string; rows?: number }[] = [
+const SELECT_CLASS = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70";
+
+const TEXT_FIELDS_BEFORE_CONDITION: { name: keyof DischargeSummaryFormValues; label: string; rows?: number }[] = [
   { name: "diagnosis", label: "Diagnosis", rows: 3 },
   { name: "presenting_complaints", label: "Presenting complaints", rows: 3 },
   { name: "investigations_admission", label: "Investigations on admission", rows: 3 },
   { name: "treatments", label: "Treatments", rows: 3 },
-  { name: "condition_at_discharge", label: "Condition at discharge" },
+];
+
+const TEXT_FIELDS_AFTER_CONDITION: { name: keyof DischargeSummaryFormValues; label: string; rows?: number }[] = [
   { name: "follow_up_period", label: "Follow-up period" },
   { name: "discharge_advice", label: "Discharge advice", rows: 3 },
   { name: "medications", label: "Medications", rows: 3 },
@@ -109,15 +114,79 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
   const isMissing = (currentQuery.error as { response?: { status?: number } } | null)?.response?.status === 404;
   const locked = Boolean(current?.is_finalized) && !amendMode;
 
+  const visitDoctorId = selectedVisit?.doctor_id ?? "";
+  const currentDoctorId = current?.doctor_id ?? "";
+  const doctorFieldLocked = Boolean(current) && !amendMode;
+  const [doctorOverrideEnabled, setDoctorOverrideEnabled] = useState(!visitDoctorId);
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const [doctorDropdownOpen, setDoctorDropdownOpen] = useState(false);
+
+  const { data: conditions = [] } = useQuery({
+    queryKey: ["master-data", "condition_at_discharge"],
+    queryFn: () => masterDataApi.list("condition_at_discharge"),
+    staleTime: 10 * 60 * 1000,
+    enabled: canWrite,
+  });
+
+  const { data: doctorsPage } = useQuery({
+    queryKey: ["users", { is_doctor: true }],
+    queryFn: () => usersApi.list({ is_doctor: true, page_size: 100 }),
+    staleTime: 5 * 60 * 1000,
+    enabled: canWrite,
+  });
+
+  const { data: visitDoctor } = useQuery({
+    queryKey: ["users", visitDoctorId],
+    queryFn: () => usersApi.get(visitDoctorId),
+    staleTime: 5 * 60 * 1000,
+    enabled: canWrite && Boolean(visitDoctorId),
+  });
+
+  const { data: currentDoctor } = useQuery({
+    queryKey: ["users", currentDoctorId],
+    queryFn: () => usersApi.get(currentDoctorId),
+    staleTime: 5 * 60 * 1000,
+    enabled: canWrite && Boolean(currentDoctorId) && currentDoctorId !== visitDoctorId,
+  });
+
+  const { data: doctorSearchPage, isFetching: isSearchingDoctors } = useQuery({
+    queryKey: ["users", { is_doctor: true, q: doctorSearch }],
+    queryFn: () => usersApi.list({ is_doctor: true, q: doctorSearch, page_size: 10 }),
+    staleTime: 60 * 1000,
+    enabled: canWrite && doctorOverrideEnabled && doctorSearch.trim().length >= 3,
+  });
+
+  const doctors = useMemo(() => {
+    const byId = new Map<string, User>();
+    for (const doctor of doctorsPage?.items ?? []) byId.set(doctor.id, doctor);
+    if (visitDoctor?.is_doctor) byId.set(visitDoctor.id, visitDoctor);
+    if (currentDoctor?.is_doctor) byId.set(currentDoctor.id, currentDoctor);
+    for (const doctor of doctorSearchPage?.items ?? []) byId.set(doctor.id, doctor);
+    return [...byId.values()];
+  }, [currentDoctor, doctorSearchPage?.items, doctorsPage?.items, visitDoctor]);
+
   const form = useForm<DischargeSummaryFormValues>({
     resolver: zodResolver(dischargeSummarySchema),
     defaultValues: EMPTY_VALUES,
   });
 
+  const selectedDoctorId = form.watch("doctor_id") ?? "";
+  const selectedDoctor = doctors.find((doctor) => doctor.id === selectedDoctorId);
+  const searchResults = doctorSearchPage?.items ?? [];
+
+  const selectDoctor = (doctor: User, onChange: (value: string) => void) => {
+    onChange(doctor.id);
+    setDoctorSearch(doctor.full_name);
+    setDoctorDropdownOpen(false);
+  };
+
   useEffect(() => {
     form.reset(toForm(current));
     setAmendMode(false);
-  }, [current, form]);
+    setDoctorOverrideEnabled(current ? false : !visitDoctorId);
+    setDoctorSearch("");
+    setDoctorDropdownOpen(false);
+  }, [current, form, visitDoctorId]);
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["discharge-summary", selectedVisit?.id] });
@@ -213,12 +282,116 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
             )} />
             <FormField control={form.control} name="doctor_id" render={({ field }) => (
               <FormItem className="sm:col-span-2">
-                <FormLabel>Doctor ID</FormLabel>
-                <FormControl><Input {...field} placeholder="Optional" disabled={Boolean(current) && !amendMode} /></FormControl>
+                <FormLabel>Doctor</FormLabel>
+                <div className="flex items-start gap-2">
+                  <FormControl>
+                    {doctorOverrideEnabled ? (
+                      <div className="relative w-full">
+                        <Input
+                          value={doctorSearch || selectedDoctor?.full_name || ""}
+                          onChange={(event) => {
+                            const nextSearch = event.target.value;
+                            setDoctorSearch(nextSearch);
+                            setDoctorDropdownOpen(true);
+                            if (!nextSearch.trim()) field.onChange("");
+                          }}
+                          disabled={doctorFieldLocked || saveMutation.isPending}
+                          placeholder="Type at least 3 letters"
+                          aria-label="Doctor"
+                          aria-autocomplete="list"
+                          aria-controls="discharge-doctor-options"
+                        />
+                        {!doctorFieldLocked && doctorDropdownOpen && doctorSearch.trim().length >= 3 && (
+                          <div
+                            id="discharge-doctor-options"
+                            role="listbox"
+                            className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+                          >
+                            {isSearchingDoctors ? (
+                              <div className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                                Searching doctors...
+                              </div>
+                            ) : searchResults.length > 0 ? (
+                              searchResults.map((doctor) => (
+                                <button
+                                  key={doctor.id}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={field.value === doctor.id}
+                                  className={cn(
+                                    "w-full rounded-sm px-2 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:outline-none",
+                                    field.value === doctor.id && "bg-accent text-accent-foreground"
+                                  )}
+                                  onClick={() => selectDoctor(doctor, field.onChange)}
+                                >
+                                  {doctor.full_name}
+                                </button>
+                              ))
+                            ) : (
+                              <p className="px-2 py-2 text-sm text-muted-foreground">No matching doctors found.</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <select
+                        {...field}
+                        disabled
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                        aria-label="Doctor"
+                      >
+                        <option value="">{visitDoctorId ? "Loading doctor..." : "No doctor mapped"}</option>
+                        {doctors.map((doctor) => (
+                          <option key={doctor.id} value={doctor.id}>{doctor.full_name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </FormControl>
+                  {visitDoctorId && !doctorOverrideEnabled && !doctorFieldLocked && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setDoctorOverrideEnabled(true);
+                        setDoctorSearch(selectedDoctor?.full_name ?? "");
+                      }}
+                      disabled={saveMutation.isPending}
+                      aria-label="Change doctor"
+                      title="Change doctor"
+                    >
+                      <Edit2 className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  )}
+                </div>
                 <FormMessage />
               </FormItem>
             )} />
-            {TEXT_FIELDS.map(({ name, label, rows }) => (
+            {TEXT_FIELDS_BEFORE_CONDITION.map(({ name, label, rows }) => (
+              <FormField key={name} control={form.control} name={name} render={({ field }) => (
+                <FormItem className={rows ? "sm:col-span-2" : undefined}>
+                  <FormLabel>{label}</FormLabel>
+                  <FormControl><Textarea {...field} rows={rows ?? 2} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            ))}
+            <FormField control={form.control} name="condition_at_discharge" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Condition at discharge</FormLabel>
+                <FormControl>
+                  <select {...field} className={SELECT_CLASS}>
+                    <option value="">—</option>
+                    {conditions.map((c) => (
+                      <option key={c.code} value={c.code}>{c.label}</option>
+                    ))}
+                  </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            {TEXT_FIELDS_AFTER_CONDITION.map(({ name, label, rows }) => (
               <FormField key={name} control={form.control} name={name} render={({ field }) => (
                 <FormItem className={rows ? "sm:col-span-2" : undefined}>
                   <FormLabel>{label}</FormLabel>
@@ -232,7 +405,15 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
           {canWrite && (
             <div className="flex flex-wrap justify-end gap-2">
               {current?.is_finalized && !amendMode && (
-                <Button type="button" variant="outline" onClick={() => setAmendMode(true)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setAmendMode(true);
+                    setDoctorOverrideEnabled(true);
+                    setDoctorSearch(selectedDoctor?.full_name ?? "");
+                  }}
+                >
                   <FilePlus2 className="mr-2 h-4 w-4" aria-hidden="true" />
                   Amend
                 </Button>

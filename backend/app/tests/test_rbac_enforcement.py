@@ -324,9 +324,13 @@ class TestRoleBasedAccess:
         assert resp.status_code == 403
 
     def test_reception_cannot_get_user_by_id(self, client: TestClient, reception_token: str):
+        # 404 (not 403): GET /users/{id} now also serves the doctor picker
+        # (any authenticated user may resolve a doctor's name by id), so a
+        # non-existent / non-doctor id is reported as not-found rather than
+        # forbidden — this also avoids leaking which arbitrary ids are staff.
         fake_id = str(uuid.uuid4())
         resp = client.get(f"/api/v1/users/{fake_id}", headers=_auth(reception_token))
-        assert resp.status_code == 403
+        assert resp.status_code == 404
 
     def test_reception_cannot_reset_password(self, client: TestClient, reception_token: str):
         fake_id = str(uuid.uuid4())

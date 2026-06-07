@@ -91,6 +91,41 @@ class TestUserCRUD:
         assert doctor_user.username in usernames
         assert all(u["is_doctor"] for u in data["items"])
 
+    def test_list_users_doctor_filter_open_to_non_admin(
+        self, client: TestClient, reception_token: str, doctor_user: User
+    ):
+        """Doctor picker (?is_doctor=true) must work for non-admin staff (UI doctor search)."""
+        resp = client.get(f"{BASE}?is_doctor=true", headers=_auth(reception_token))
+        assert resp.status_code == 200
+        usernames = [u["username"] for u in resp.json()["items"]]
+        assert doctor_user.username in usernames
+
+    def test_list_users_unfiltered_still_blocked_for_non_admin(
+        self, client: TestClient, reception_token: str
+    ):
+        """Full staff directory (no is_doctor=true filter) stays manage_users-gated."""
+        resp = client.get(BASE, headers=_auth(reception_token))
+        assert resp.status_code == 403
+
+    def test_get_doctor_by_id_open_to_non_admin(
+        self, client: TestClient, reception_token: str, doctor_user: User
+    ):
+        """Resolving a doctor's name by id (UI doctor search) must work for non-admin staff."""
+        resp = client.get(f"{BASE}/{doctor_user.id}", headers=_auth(reception_token))
+        assert resp.status_code == 200
+        assert resp.json()["username"] == doctor_user.username
+
+    def test_get_non_doctor_by_id_blocked_for_non_admin(
+        self, client: TestClient, reception_token: str, admin_user: User
+    ):
+        """Looking up non-doctor staff by id stays manage_users-gated.
+
+        404 (not 403) so a non-privileged caller can't enumerate which
+        arbitrary IDs belong to staff accounts.
+        """
+        resp = client.get(f"{BASE}/{admin_user.id}", headers=_auth(reception_token))
+        assert resp.status_code == 404
+
     def test_list_users_sorted_by_username_desc(
         self, client: TestClient, admin_token: str, admin_user: User
     ):

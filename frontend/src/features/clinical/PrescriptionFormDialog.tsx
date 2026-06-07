@@ -45,6 +45,7 @@ export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit
   const visitDoctorId = selectedVisit.doctor_id ?? "";
   const [doctorOverrideEnabled, setDoctorOverrideEnabled] = useState(!visitDoctorId);
   const [doctorSearch, setDoctorSearch] = useState("");
+  const [doctorDropdownOpen, setDoctorDropdownOpen] = useState(false);
 
   const { data: doctorsPage } = useQuery({
     queryKey: ["users", { is_doctor: true }],
@@ -141,6 +142,7 @@ export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit
     form.reset(defaultValues);
     setDoctorOverrideEnabled(mode === "edit" ? true : !visitDoctorId);
     setDoctorSearch("");
+    setDoctorDropdownOpen(false);
   }, [form, open, defaultValues, mode, visitDoctorId]);
 
   const close = (nextOpen: boolean) => {
@@ -151,6 +153,7 @@ export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit
   const selectDoctor = (doctor: User, onChange: (value: string) => void) => {
     onChange(doctor.id);
     setDoctorSearch(doctor.full_name);
+    setDoctorDropdownOpen(false);
   };
 
   return (
@@ -196,6 +199,7 @@ export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit
                             onChange={(event) => {
                               const nextSearch = event.target.value;
                               setDoctorSearch(nextSearch);
+                              setDoctorDropdownOpen(true);
                               if (!nextSearch.trim()) field.onChange("");
                             }}
                             disabled={isPending}
@@ -204,7 +208,7 @@ export function PrescriptionFormDialog({ open, onOpenChange, isPending, onSubmit
                             aria-autocomplete="list"
                             aria-controls="prescription-doctor-options"
                           />
-                          {doctorSearch.trim().length >= 3 && (
+                          {doctorDropdownOpen && doctorSearch.trim().length >= 3 && (
                             <div
                               id="prescription-doctor-options"
                               role="listbox"
