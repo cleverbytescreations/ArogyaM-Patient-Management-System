@@ -208,13 +208,13 @@
 
 ### Module 9 — Documents
 
-- [ ] **BE-T9.1 [L]** — Document upload service (MVP)
+- [x] **BE-T9.1 [L]** — Document upload service (MVP)
       **Description:** Implement `POST /patients/{id}/documents` (multipart): validate type/size + content sniff, store binary in MinIO/S3, persist `documents` metadata (no binary in DB).
       **Files / Components:** `backend/app/modules/documents/service.py`, `.../repository.py`, `.../storage.py`.
       **Implementation Notes:** Allow-list pdf/jpeg/png; max size (≈10 MB). Parts: `file, document_type_code, visit_id?, title?, document_date?, is_historical?, remarks?`. `415 INVALID_FILE_TYPE`, `413 FILE_TOO_LARGE`. Store object key in `storage_ref` (never exposed to non-admin). Upload audited (metadata only).
       **Acceptance Criteria:** Valid upload → 201 metadata; bad type → 415; oversized → 413; binary lands in object store; log captures metadata only, never filename/content in plaintext.
 
-- [ ] **BE-T9.2 [L]** — Secure document download service (MVP)
+- [x] **BE-T9.2 [L]** — Secure document download service (MVP)
       **Description:** Implement `GET /documents/{id}` (metadata), `GET /documents/{id}/content` (permission-checked proxied stream, access audited), `GET /documents/{id}/download-url` (short-lived pre-signed URL), `PUT /documents/{id}` (metadata update / soft-delete via status).
       **Files / Components:** `backend/app/modules/documents/service.py`, `.../storage.py`.
       **Implementation Notes:** Permission check before streaming (UC-30); never expose object-store URL; pre-signed URL short TTL. Soft-delete only (`status ∈ {ACTIVE, ARCHIVED, DELETED}`). Each content access writes audit. **Scope split:** this task is the service/endpoint implementation; the security verification (authz-before-stream, audit, URL expiry) is tracked in **SEC-T9.2** — implement once here, verify there.
@@ -222,7 +222,7 @@
 
 ### Module 10 — Patient Timeline
 
-- [ ] **BE-T10.1 [L]** — Timeline aggregation service (MVP)
+- [x] **BE-T10.1 [L]** — Timeline aggregation service (MVP)
       **Description:** Implement `GET /patients/{id}/timeline` aggregating visits, case sheets, consultation notes, prescriptions, discharge summaries, documents, follow-ups into one chronological, most-recent-first event list (UC-17).
       **Files / Components:** `backend/app/modules/patients/timeline_service.py`, `.../timeline_repository.py`.
       **Implementation Notes:** Event shape `{type, occurred_on, ref_id, summary, ...}`. Medical content respects field-level visibility. Use indexed reads (DB-T10.1). Permission `view_patient`.
@@ -345,7 +345,7 @@
       **Implementation Notes:** Permissions `create_patient/view_patient/edit_patient`; min-identity & duplicate behaviors surfaced as documented codes.
       **Acceptance Criteria:** Matches API spec §7.4; advisory duplicate flow works; immutable `op_number`.
 
-- [ ] **API-T3.2 [S]** — Patient timeline route (MVP)
+- [x] **API-T3.2 [S]** — Patient timeline route (MVP)
       **Description:** `GET /patients/{id}/timeline` (UC-17).
       **Files / Components:** `backend/app/modules/patients/router.py`.
       **Acceptance Criteria:** Returns ordered `PatientTimeline`; `view_patient` enforced; field visibility respected.
@@ -371,7 +371,7 @@
       **Files / Components:** `backend/app/modules/clinical/discharge/router.py`.
       **Acceptance Criteria:** Matches API spec §7.8; finalize blocks edits (409); current-effective vs history correct.
 
-- [ ] **API-T9.1 [M]** — Document routes (MVP)
+- [x] **API-T9.1 [M]** — Document routes (MVP)
       **Description:** `POST/GET /patients/{id}/documents`, `GET /documents/{id}`, `GET /documents/{id}/content`, `GET /documents/{id}/download-url`, `PUT /documents/{id}`.
       **Files / Components:** `backend/app/modules/documents/router.py`.
       **Implementation Notes:** Multipart upload; proxied/pre-signed download; metadata/binary split (documented deviation).
@@ -475,7 +475,7 @@
 
 > Phase 1 has **no external system integrations** (ABDM/ABHA, lab, pharmacy deferred — SAD §15). Integration work is internal infrastructure.
 
-- [ ] **INT-T9.1 [M]** — Object storage (MinIO/S3) client & bucket provisioning (MVP)
+- [x] **INT-T9.1 [M]** — Object storage (MinIO/S3) client & bucket provisioning (MVP)
       **Description:** Implement an S3-compatible storage client (upload, stream/proxy, pre-signed URL, soft-delete), provision the documents bucket, configure lifecycle/versioning.
       **Files / Components:** `backend/app/modules/documents/storage.py`, infra/compose config.
       **Implementation Notes:** Swappable MinIO↔S3 with no code change. Credentials server-side only; URLs never exposed.
@@ -497,7 +497,7 @@
       **Files / Components:** `ops/backup/RESTORE_RUNBOOK.md`.
       **Acceptance Criteria:** A documented restore from backup succeeds on a clean target in a drill; runbook reviewed.
 
-- [ ] **INT-T9.2 [S]** — Optional AV scan hook (MVP)
+- [x] **INT-T9.2 [S]** — Optional AV scan hook (MVP)
       **Description:** Provide an optional malware-scan hook in the upload pipeline (enabled by config).
       **Files / Components:** `backend/app/modules/documents/service.py`.
       **Acceptance Criteria:** When enabled, infected file rejected; when disabled, pipeline unaffected.
@@ -523,7 +523,7 @@
       **Files / Components:** `backend/app/core/ratelimit.py`, `auth/router.py`.
       **Acceptance Criteria:** Excess login attempts throttled with 429 when Redis on; disabled cleanly when off.
 
-- [ ] **SEC-T9.1 [M]** — File upload hardening (MVP)
+- [x] **SEC-T9.1 [M]** — File upload hardening (MVP)
       **Description:** Enforce content-type sniffing + extension allow-list + max size; store outside web root in object storage; never expose object URLs.
       **Files / Components:** `documents/service.py`, `documents/storage.py`.
       **Acceptance Criteria:** Disguised file type rejected (sniff mismatch); oversized → 413; stored object not publicly reachable.
@@ -543,7 +543,7 @@
       **Files / Components:** `.env.example`, compose, CI secret scanning.
       **Acceptance Criteria:** Secret scan passes; DB user has least privilege; no secret in repo.
 
-- [ ] **SEC-T9.2 [M]** — Document access authorization & audited download (MVP)
+- [x] **SEC-T9.2 [M]** — Document access authorization & audited download (MVP)
       **Description:** Security verification of the download path implemented in **BE-T9.2**: permission check before any document stream/pre-sign; every access audited; pre-signed URLs short-lived. (Verification/hardening only — no duplicate implementation.)
       **Files / Components:** `documents/service.py`, `tests/security/`.
       **Acceptance Criteria:** Unauthorized access → 403; each access logged to `audit_log`; URL expiry enforced.
@@ -612,7 +612,7 @@
       **Files / Components:** `tests/clinical/`.
       **Acceptance Criteria:** Lifecycle correct; `DISCHARGE_ALREADY_FINALIZED` on finalized edit; date validation enforced.
 
-- [ ] **TST-T9.1 [M]** — Document upload/secure-download tests (MVP)
+- [x] **TST-T9.1 [M]** — Document upload/secure-download tests (MVP)
       **Description:** upload validation (type/size) → secure proxied download → access denial → audit.
       **Files / Components:** `tests/documents/`.
       **Acceptance Criteria:** 413/415 enforced; unauthorized download → 403; access audited.

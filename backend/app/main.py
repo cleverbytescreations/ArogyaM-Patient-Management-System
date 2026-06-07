@@ -36,6 +36,8 @@ from app.modules.clinical.discharge.router import router as discharge_router
 from app.modules.clinical.discharge.router import visits_router as discharge_visits_router
 from app.modules.clinical.prescriptions.router import router as prescriptions_router
 from app.modules.clinical.prescriptions.router import visits_router as prescriptions_visits_router
+from app.modules.documents.router import patients_router as document_patients_router
+from app.modules.documents.router import router as documents_router
 from app.modules.masterdata.router import op_seq_router
 from app.modules.masterdata.router import router as masterdata_router
 from app.modules.patients.router import router as patients_router
@@ -88,12 +90,14 @@ app.include_router(roles_router, prefix=API_PREFIX)
 app.include_router(masterdata_router, prefix=API_PREFIX)
 app.include_router(op_seq_router, prefix=API_PREFIX)
 app.include_router(patients_router, prefix=API_PREFIX)
+app.include_router(document_patients_router, prefix=API_PREFIX)
 app.include_router(visit_patients_router, prefix=API_PREFIX)
 app.include_router(visits_router, prefix=API_PREFIX)
 app.include_router(prescriptions_visits_router, prefix=API_PREFIX)
 app.include_router(prescriptions_router, prefix=API_PREFIX)
 app.include_router(discharge_visits_router, prefix=API_PREFIX)
 app.include_router(discharge_router, prefix=API_PREFIX)
+app.include_router(documents_router, prefix=API_PREFIX)
 
 
 @app.get("/", include_in_schema=False)

@@ -34,6 +34,7 @@ ms-python.vscode-python-envs-1.30.0-darwin-arm64
 
 --test
 docker compose -f docker-compose.dev.yml exec api python -m pytest app/tests/test_patients.py app/tests/test_op_number.py app/tests/test_masterdata.py -q -p no:cacheprovider
+docker compose -f docker-compose.dev.yml exec api python -m pytest 
 
 --dummy credentails seeder
 docker compose -f docker-compose.dev.yml --env-file .env.dev exec api python scripts/seed_dummy_users.py

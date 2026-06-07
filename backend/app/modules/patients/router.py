@@ -12,6 +12,7 @@ from app.core.dependencies import get_db, require_permission
 from app.core.pagination import PagedResponse, PaginationParams
 from app.core.permissions import PERM_CREATE_PATIENT, PERM_EDIT_PATIENT, PERM_VIEW_PATIENT
 from app.modules.patients import service as svc
+from app.modules.patients import timeline_service
 from app.modules.patients.schemas import (
     PatientAliasOut,
     PatientCreateRequest,
@@ -19,6 +20,7 @@ from app.modules.patients.schemas import (
     PatientSearchResult,
     PatientUpdateRequest,
 )
+from app.modules.patients.timeline_service import TimelineEvent
 from app.modules.search import service as search_svc
 
 router = APIRouter(prefix="/patients", tags=["patients"])
@@ -108,3 +110,16 @@ def list_aliases(
     db: Annotated[Session, Depends(get_db)],
 ) -> list[PatientAliasOut]:
     return svc.list_patient_aliases(db, patient_id)
+
+
+@router.get(
+    "/{patient_id}/timeline",
+    response_model=list[TimelineEvent],
+    summary="Get unified patient timeline",
+)
+def get_patient_timeline(
+    patient_id: uuid.UUID,
+    payload: ViewPatient,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[TimelineEvent]:
+    return timeline_service.get_patient_timeline(db, patient_id, payload)

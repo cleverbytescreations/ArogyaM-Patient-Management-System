@@ -1115,9 +1115,8 @@ Task to review:
 ---------------
 
 Backend (Stage 4 part 2 + Stage 5)
-
-BE-T7.1, API-T7.1 — prescriptions (+items).
-BE-T8.1, API-T8.1 — discharge summaries with finalize/amend chain.
+BE-T9.1, BE-T9.2, API-T9.1, INT-T9.1, INT-T9.2 — document upload (type/size/sniff), secure proxied/pre-signed download, MinIO client + bucket, optional AV hook.
+BE-T10.1, API-T3.2 — timeline aggregation.
 
 
 Objective:

@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     # --- API ------------------------------------------------------------------
     cors_allow_origins: str = Field(default="http://localhost:8080")
     upload_max_mb: int = Field(default=10)
+    av_scan_enabled: bool = Field(default=False)
+    av_scan_command: str = Field(default="")
 
     # --- Auth ----------------------------------------------------------------
     jwt_secret_key: str = Field(default="dev-only-change-me")
@@ -60,7 +62,7 @@ class Settings(BaseSettings):
     # When Redis is configured (REDIS_URL), uses Redis for multi-worker safety;
     # otherwise falls back to an in-process dict (single-process dev deployment).
     rate_limit_enabled: bool = Field(default=True)
-    rate_limit_login_max: int = Field(default=10)   # max attempts per window
+    rate_limit_login_max: int = Field(default=10)  # max attempts per window
     rate_limit_login_window_sec: int = Field(default=60)  # window size in seconds
 
     # --- Bootstrap admin (auto-created on startup by migration 0003) ----------
