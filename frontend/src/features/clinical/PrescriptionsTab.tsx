@@ -1,11 +1,13 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileUp, Loader2, Pencil, Plus, Printer } from "lucide-react";
+import { CheckCircle2, Download, FileUp, Loader2, Pencil, Plus, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { clinicalApi } from "@/api/clinicalApi";
 import { masterDataApi } from "@/api/masterDataApi";
+import { visitsApi } from "@/api/visitsApi";
 import { usePermissions } from "@/auth/usePermissions";
 import { PERMISSIONS } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -35,6 +37,7 @@ interface PrescriptionsTabProps {
 export function PrescriptionsTab({ selectedVisit, onSelectVisitTab, onUploadScanned }: PrescriptionsTabProps) {
   const [open, setOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Prescription | null>(null);
+  const [completeVisitOpen, setCompleteVisitOpen] = useState(false);
   const { hasPermission } = usePermissions();
   const canWrite = hasPermission(PERMISSIONS.ADD_PRESCRIPTION);
   const canRead = hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY) || canWrite;
@@ -169,6 +172,27 @@ export function PrescriptionsTab({ selectedVisit, onSelectVisitTab, onUploadScan
     },
     onError: (err) => {
       toast.error(getApiErrorMessage(err, "Could not generate the prescription report."));
+    },
+  });
+
+  const { mutate: completeVisit, isPending: isCompletingVisit } = useMutation({
+    mutationFn: () =>
+      visitsApi.update(selectedVisit!.id, { version: selectedVisit!.version, status: "COMPLETED" }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["visits", "single", selectedVisit?.id] });
+      void queryClient.invalidateQueries({ queryKey: ["visits", selectedVisit?.patient_id] });
+      setCompleteVisitOpen(false);
+      toast.success("Visit marked as completed.");
+    },
+    onError: (err) => {
+      setCompleteVisitOpen(false);
+      const code = getApiErrorCode(err);
+      if (code === "VERSION_CONFLICT") {
+        toast.error("Visit was updated by someone else. Please reload and try again.");
+        void queryClient.invalidateQueries({ queryKey: ["visits", "single", selectedVisit?.id] });
+        return;
+      }
+      toast.error(getApiErrorMessage(err, "Could not complete visit. Please try again."));
     },
   });
 
@@ -356,6 +380,38 @@ export function PrescriptionsTab({ selectedVisit, onSelectVisitTab, onUploadScan
           prescriptionCreatedAt={editTarget.created_at}
         />
       )}
+
+      {canWrite && data.length > 0 && selectedVisit.status === "OPEN" && (
+        <div className="flex flex-col gap-1.5 rounded-md border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm">
+            <p className="font-medium">Mark visit as completed</p>
+            <p className="text-muted-foreground">Close this visit once all prescriptions have been issued.</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCompleteVisitOpen(true)}
+            disabled={isCompletingVisit}
+            aria-busy={isCompletingVisit}
+          >
+            {isCompletingVisit ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden="true" />
+            )}
+            Mark as completed
+          </Button>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={completeVisitOpen}
+        onOpenChange={setCompleteVisitOpen}
+        title="Mark visit as completed?"
+        description="This will close the visit. The visit status will change to Completed and can no longer be updated."
+        confirmLabel="Mark as completed"
+        onConfirm={() => completeVisit()}
+      />
     </div>
   );
 }

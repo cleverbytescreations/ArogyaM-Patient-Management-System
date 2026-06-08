@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus } from "lucide-react";
+import { CheckCircle2, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { visitsApi } from "@/api/visitsApi";
 import { usersApi } from "@/features/users/usersApi";
 import { usePermissions } from "@/auth/usePermissions";
@@ -24,7 +25,7 @@ import { getApiErrorCode, getApiErrorMessage, getFieldErrors } from "@/api/error
 import { consultationNoteSchema, type ConsultationNoteFormValues } from "@/lib/validation/visits";
 import type { Visit, ConsultationNote } from "@/types/visits";
 
-const NOTE_FIELDS: { name: keyof ConsultationNoteFormValues; label: string; rows?: number }[] = [
+const NOTE_FIELDS: { name: keyof ConsultationNoteFormValues; label: string; rows?: number; fullWidth?: boolean }[] = [
   { name: "presenting_complaints", label: "Presenting complaints", rows: 3 },
   { name: "diagnosis", label: "Diagnosis", rows: 3 },
   { name: "observations", label: "Observations", rows: 3 },
@@ -46,7 +47,12 @@ function defaultNoteValues(visit: Visit | null): ConsultationNoteFormValues {
   };
 }
 
-function NoteCard({ note }: { note: ConsultationNote }) {
+interface NoteCardProps {
+  note: ConsultationNote;
+  doctorName?: string | null;
+}
+
+function NoteCard({ note, doctorName }: NoteCardProps) {
   const fields: { label: string; value: string | null }[] = [
     { label: "Presenting complaints", value: note.presenting_complaints },
     { label: "Diagnosis", value: note.diagnosis },
@@ -62,9 +68,12 @@ function NoteCard({ note }: { note: ConsultationNote }) {
       className="rounded-md border bg-card p-4 space-y-3"
       aria-label={`Consultation note from ${formatDateTime(note.created_at)}`}
     >
-      <p className="text-xs text-muted-foreground">
-        Added {formatDateTime(note.created_at)}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">Added {formatDateTime(note.created_at)}</p>
+        {doctorName && (
+          <p className="text-xs font-medium text-foreground">{doctorName}</p>
+        )}
+      </div>
       <dl className="grid gap-2">
         {fields
           .filter((f) => f.value)
@@ -85,6 +94,7 @@ interface ConsultationNotesTabProps {
 }
 
 export function ConsultationNotesTab({ selectedVisit, onSelectVisitTab }: ConsultationNotesTabProps) {
+  const [completeVisitOpen, setCompleteVisitOpen] = useState(false);
   const { hasPermission } = usePermissions();
   const canWrite = hasPermission(PERMISSIONS.ADD_CONSULTATION);
   const canRead = hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY) || canWrite;
@@ -102,9 +112,10 @@ export function ConsultationNotesTab({ selectedVisit, onSelectVisitTab }: Consul
     queryKey: ["users", { is_doctor: true }],
     queryFn: () => usersApi.list({ is_doctor: true, page_size: 100 }),
     staleTime: 5 * 60 * 1000,
-    enabled: canWrite,
+    enabled: canRead,
   });
   const doctors = doctorsPage?.items ?? [];
+  const doctorNameMap = new Map(doctors.map((d) => [d.id, d.full_name]));
 
   const form = useForm<ConsultationNoteFormValues>({
     resolver: zodResolver(consultationNoteSchema),
@@ -142,6 +153,27 @@ export function ConsultationNotesTab({ selectedVisit, onSelectVisitTab }: Consul
         return;
       }
       toast.error(getApiErrorMessage(error, "Could not add note. Please try again."));
+    },
+  });
+
+  const { mutate: completeVisit, isPending: isCompletingVisit } = useMutation({
+    mutationFn: () =>
+      visitsApi.update(selectedVisit!.id, { version: selectedVisit!.version, status: "COMPLETED" }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["visits", "single", selectedVisit?.id] });
+      void queryClient.invalidateQueries({ queryKey: ["visits", selectedVisit?.patient_id] });
+      setCompleteVisitOpen(false);
+      toast.success("Visit marked as completed.");
+    },
+    onError: (error: unknown) => {
+      setCompleteVisitOpen(false);
+      const code = getApiErrorCode(error);
+      if (code === "VERSION_CONFLICT") {
+        toast.error("Visit was updated by someone else. Please reload and try again.");
+        void queryClient.invalidateQueries({ queryKey: ["visits", "single", selectedVisit?.id] });
+        return;
+      }
+      toast.error(getApiErrorMessage(error, "Could not complete visit. Please try again."));
     },
   });
 
@@ -189,7 +221,11 @@ export function ConsultationNotesTab({ selectedVisit, onSelectVisitTab }: Consul
           <h3 className="mb-3 text-sm font-semibold">Notes ({notes.length})</h3>
           <div className="space-y-3">
             {[...notes].reverse().map((note) => (
-              <NoteCard key={note.id} note={note} />
+              <NoteCard
+                key={note.id}
+                note={note}
+                doctorName={note.doctor_id ? (doctorNameMap.get(note.doctor_id) ?? null) : null}
+              />
             ))}
           </div>
         </section>
@@ -203,62 +239,64 @@ export function ConsultationNotesTab({ selectedVisit, onSelectVisitTab }: Consul
               onSubmit={form.handleSubmit((v) => addNote(v))}
               noValidate
               aria-label="Consultation note form"
-              className="space-y-4 rounded-md border bg-card p-5"
+              className="rounded-md border bg-card p-5 space-y-4"
             >
-              <FormField
-                control={form.control}
-                name="doctor_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Doctor</FormLabel>
-                    <FormControl>
-                      <select
-                        {...field}
-                        disabled={isPending}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-                        aria-label="Doctor"
-                      >
-                        <option value="">Select doctor</option>
-                        {doctors.map((d) => (
-                          <option key={d.id} value={d.id}>{d.full_name}</option>
-                        ))}
-                      </select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {NOTE_FIELDS.map(({ name, label, rows }) => (
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
                 <FormField
-                  key={name}
                   control={form.control}
-                  name={name}
+                  name="doctor_id"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{label}</FormLabel>
+                    <FormItem className="sm:col-span-2">
+                      <FormLabel>Doctor</FormLabel>
                       <FormControl>
-                        <Textarea {...field} rows={rows ?? 2} disabled={isPending} />
+                        <select
+                          {...field}
+                          disabled={isPending}
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+                          aria-label="Doctor"
+                        >
+                          <option value="">Select doctor</option>
+                          {doctors.map((d) => (
+                            <option key={d.id} value={d.id}>{d.full_name}</option>
+                          ))}
+                        </select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              ))}
 
-              <FormField
-                control={form.control}
-                name="review_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Review date</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="date" disabled={isPending} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                {NOTE_FIELDS.map(({ name, label, rows }) => (
+                  <FormField
+                    key={name}
+                    control={form.control}
+                    name={name}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{label}</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} rows={rows ?? 2} disabled={isPending} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+
+                <FormField
+                  control={form.control}
+                  name="review_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Review date</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" disabled={isPending} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={isPending} aria-busy={isPending}>
@@ -271,6 +309,38 @@ export function ConsultationNotesTab({ selectedVisit, onSelectVisitTab }: Consul
           </Form>
         </section>
       )}
+
+      {canWrite && notes.length > 0 && selectedVisit.status === "OPEN" && (
+        <div className="flex flex-col gap-1.5 rounded-md border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm">
+            <p className="font-medium">Mark visit as completed</p>
+            <p className="text-muted-foreground">Close this visit once the doctor's consultation is done.</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCompleteVisitOpen(true)}
+            disabled={isCompletingVisit}
+            aria-busy={isCompletingVisit}
+          >
+            {isCompletingVisit ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden="true" />
+            )}
+            Mark as completed
+          </Button>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={completeVisitOpen}
+        onOpenChange={setCompleteVisitOpen}
+        title="Mark visit as completed?"
+        description="This will close the visit. The visit status will change to Completed and can no longer be updated."
+        confirmLabel="Mark as completed"
+        onConfirm={() => completeVisit()}
+      />
     </div>
   );
 }

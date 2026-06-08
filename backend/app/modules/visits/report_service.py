@@ -26,8 +26,16 @@ from app.modules.visits.report_pdf import render_case_sheet_pdf
 REPORT_TITLE = "CONSULTATIONS – CASE SHEET"
 
 
+def _ordinal(n: int) -> str:
+    if 11 <= (n % 100) <= 13:
+        return f"{n}th"
+    return f"{n}{('st', 'nd', 'rd')[n % 10 - 1] if n % 10 in (1, 2, 3) else 'th'}"
+
+
 def _format_date(value: date | None) -> str:
-    return value.strftime("%d/%m/%Y") if value else ""
+    if not value:
+        return ""
+    return f"{_ordinal(value.day)} {value.strftime('%B %Y')}"
 
 
 def _signature_line(doctor: User | None) -> str:
