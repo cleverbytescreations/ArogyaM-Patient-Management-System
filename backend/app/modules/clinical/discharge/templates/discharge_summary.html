@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>{{ report_title }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 14mm 16mm;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "Liberation Sans", "DejaVu Sans", Arial, sans-serif;
+    color: #1a1a1a;
+    font-size: 10.5pt;
+    line-height: 1.35;
+  }
+
+  /* ── Header band ─────────────────────────────────────────────── */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 4mm;
+    border-bottom: 2px solid #1a1a1a;
+    padding-bottom: 3mm;
+  }
+  .header .logo-left img,
+  .header .logo-right img {
+    width: 26mm;
+    height: auto;
+  }
+  .header .center {
+    flex: 1;
+    text-align: center;
+  }
+  .header .center .wordmark img {
+    height: 14mm;
+    width: auto;
+  }
+  .header .center .org-address {
+    margin-top: 1mm;
+    font-size: 9pt;
+    line-height: 1.3;
+  }
+  .header .center .org-contact {
+    margin-top: 1.5mm;
+    font-size: 9pt;
+  }
+
+  /* ── Title row ───────────────────────────────────────────────── */
+  .title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 4mm;
+    margin-bottom: 4mm;
+  }
+  .op-number {
+    font-style: italic;
+    color: #5a6b1a;
+    font-weight: 600;
+  }
+  .op-number .op-number-label {
+    font-style: normal;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-right: 1.5mm;
+  }
+  .report-title {
+    flex: 1;
+    text-align: center;
+    font-weight: 700;
+    text-decoration: underline;
+    font-size: 13pt;
+  }
+  .title-row .spacer {
+    width: 22mm;
+  }
+
+  /* ── Identity field grid ─────────────────────────────────────── */
+  .field-row {
+    display: flex;
+    gap: 10mm;
+    margin-bottom: 1.6mm;
+  }
+  .field {
+    display: flex;
+    flex: 1;
+    align-items: baseline;
+  }
+  .field.full { flex: 1 1 100%; }
+  .field .attr {
+    display: inline-flex;
+    align-items: baseline;
+  }
+  .field .attr + .attr {
+    margin-left: 12mm;
+  }
+  .field-label {
+    font-weight: 700;
+    white-space: nowrap;
+    margin-right: 3mm;
+  }
+  .field-value {
+    font-style: italic;
+    color: #5a6b1a;
+    word-break: break-word;
+  }
+
+  /* ── Narrative blocks (label on its own line, value below) ───── */
+  .block {
+    margin-top: 3.5mm;
+    break-inside: avoid;
+  }
+  .block .block-label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 0.8mm;
+  }
+  .block .block-value {
+    display: block;
+    white-space: pre-wrap;
+  }
+  .block .sub-label {
+    font-weight: 700;
+  }
+
+  /* ── Numbered lists (investigations / treatments / medications) ── */
+  .numbered-list {
+    margin: 0;
+    padding-left: 6mm;
+  }
+  .numbered-list li {
+    margin-bottom: 0.6mm;
+  }
+
+  /* ── Signature footer ────────────────────────────────────────── */
+  .footer {
+    margin-top: 16mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .footer .care-seeker-signature,
+  .footer .doctor-signature {
+    text-align: center;
+  }
+  .footer .signature-name {
+    font-style: italic;
+    color: #5a6b1a;
+    margin-bottom: 1mm;
+  }
+  .footer .signature-label {
+    font-weight: 700;
+    border-top: 1px solid #1a1a1a;
+    display: inline-block;
+    padding-top: 1mm;
+    min-width: 44mm;
+    text-align: center;
+  }
+
+  .mantra {
+    margin-top: 8mm;
+    text-align: center;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 9pt;
+  }
+  .footer-url {
+    margin-top: 1.5mm;
+    text-align: center;
+    font-size: 9pt;
+  }
+</style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo-left">
+      <img src="{{ logo_seal_left }}" alt="Samvo Manamsi Janatam seal" />
+    </div>
+    <div class="center">
+      <div class="wordmark">
+        <img src="{{ logo_wordmark_center }}" alt="ArogyaM" />
+      </div>
+      <div class="org-address">
+        The Satsang Foundation – The Sacred Grove,<br />
+        Pedda Kondamari Village and Post,<br />
+        Chowdepalle Mandal, Chittoor District,<br />
+        Andhra Pradesh, India – 517257
+      </div>
+      <div class="org-contact">
+        +91 8340932384, +91 8333981305 | wellnesscenter@satsang-foundation.org
+      </div>
+    </div>
+    <div class="logo-right">
+      <img src="{{ logo_sacred_grove_right }}" alt="The Sacred Grove" />
+    </div>
+  </header>
+
+  <div class="title-row">
+    <div class="op-number"><span class="op-number-label">CareSeeker ID:</span>{{ op_number }}</div>
+    <div class="report-title">{{ report_title }}</div>
+    <div class="spacer"></div>
+  </div>
+
+  <section>
+    <div class="field-row">
+      <div class="field full"><span class="field-label">Name:</span><span class="field-value">{{ full_name }}</span></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <span class="attr"><span class="field-label">Age:</span><span class="field-value">{{ age_years if age_years is not none else "" }}</span></span>
+        <span class="attr"><span class="field-label">Sex:</span><span class="field-value">{{ gender or "" }}</span></span>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <span class="attr"><span class="field-label">D.O.A:</span><span class="field-value">{{ admission_date }}</span></span>
+        <span class="attr"><span class="field-label">D.O.D:</span><span class="field-value">{{ discharge_date }}</span></span>
+      </div>
+      <div class="field"><span class="field-label">Consulting Doctor:</span><span class="field-value">{{ doctor_name }}</span></div>
+    </div>
+
+    {% if diagnosis %}
+    <div class="block">
+      <span class="block-label">Diagnosis/Programme:</span>
+      <span class="block-value">{{ diagnosis }}</span>
+    </div>
+    {% endif %}
+
+    {% if presenting_complaints %}
+    <div class="block">
+      <span class="block-label">Presenting Complaints:</span>
+      <span class="block-value">{{ presenting_complaints }}</span>
+    </div>
+    {% endif %}
+
+    {% if investigations_admission %}
+    <div class="block">
+      <span class="block-label">Investigations at Admission:</span>
+      <ol class="numbered-list">
+        {% for line in investigations_admission %}
+        <li>{{ line }}</li>
+        {% endfor %}
+      </ol>
+    </div>
+    {% endif %}
+
+    {% if treatments %}
+    <div class="block">
+      <span class="block-label">Treatments Undertaken:</span>
+      <span class="block-value">{{ treatments | join("\n") }}</span>
+    </div>
+    {% endif %}
+
+    {% if condition_narrative %}
+    <div class="block">
+      <span class="block-label">Condition of care seeker at Discharge:</span>
+      <span class="block-value">{{ condition_narrative }}</span>
+    </div>
+    {% endif %}
+
+    {% if follow_up_period %}
+    <div class="block">
+      <span class="block-label">Follow up period:</span>
+      <span class="block-value">{{ follow_up_period }}</span>
+    </div>
+    {% endif %}
+
+    {% if discharge_advice %}
+    <div class="block">
+      <span class="block-label">Advices on Discharge: Do's and Dont's</span>
+      <span class="block-value">{{ discharge_advice }}</span>
+    </div>
+    {% endif %}
+
+    {% if medications %}
+    <div class="block">
+      <span class="block-label">Medications Prescribed:</span>
+      <ol class="numbered-list">
+        {% for line in medications %}
+        <li>{{ line }}</li>
+        {% endfor %}
+      </ol>
+    </div>
+    {% endif %}
+
+    {% if yoga_guidance %}
+    <div class="block">
+      <span class="block-label">Yoga Asanas:</span>
+      <span class="block-value">{{ yoga_guidance }}</span>
+    </div>
+    {% endif %}
+  </section>
+
+  <footer class="footer">
+    <div class="care-seeker-signature">
+      <div class="signature-label">Sign of Care Seeker</div>
+    </div>
+    <div class="doctor-signature">
+      {% for line in signature_lines %}
+      <div class="signature-name">{{ line }}</div>
+      {% endfor %}
+      <div class="signature-label">Sign of the Doctor</div>
+    </div>
+  </footer>
+
+  <div class="mantra">
+    {% for line in mantra_lines %}
+    <div>{{ line }}</div>
+    {% endfor %}
+  </div>
+  <div class="footer-url">{{ footer_url }}</div>
+
+</body>
+</html>

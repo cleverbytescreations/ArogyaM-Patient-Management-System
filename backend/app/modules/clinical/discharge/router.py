@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Request, status
+from fastapi.responses import Response as RawResponse
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_db, require_permission
-from app.core.permissions import PERM_ADD_CONSULTATION, PERM_VIEW_MEDICAL_HISTORY
+from app.core.dependencies import get_current_user, get_db, require_permission
+from app.core.errors import ForbiddenError
+from app.core.permissions import (
+    PERM_ADD_CONSULTATION,
+    PERM_EXPORT,
+    PERM_VIEW_MEDICAL_HISTORY,
+)
+from app.modules.clinical.discharge import report_service
 from app.modules.clinical.discharge import service as svc
 from app.modules.clinical.discharge.schemas import (
     DischargeSummaryAmendRequest,
@@ -21,6 +28,19 @@ from app.modules.clinical.discharge.schemas import (
 
 AddConsultation = Annotated[dict, Depends(require_permission(PERM_ADD_CONSULTATION))]
 ViewMedicalHistory = Annotated[dict, Depends(require_permission(PERM_VIEW_MEDICAL_HISTORY))]
+
+
+def _require_discharge_export(payload: Annotated[dict, Depends(get_current_user)]) -> dict:
+    """Exporting the discharge summary PDF needs export rights AND clinical-data
+    visibility — neither permission alone is sufficient (avoids leaking PHI to
+    a role that has one but not the other)."""
+    perms: list[str] = payload.get("permissions", [])
+    if PERM_EXPORT not in perms or PERM_VIEW_MEDICAL_HISTORY not in perms:
+        raise ForbiddenError(f"Permission required: {PERM_EXPORT} and {PERM_VIEW_MEDICAL_HISTORY}")
+    return payload
+
+
+ExportDischargeSummary = Annotated[dict, Depends(_require_discharge_export)]
 
 visits_router = APIRouter(prefix="/visits", tags=["discharge summaries"])
 router = APIRouter(prefix="/discharge-summaries", tags=["discharge summaries"])
@@ -108,3 +128,27 @@ def amend_discharge_summary(
     request: Request,
 ) -> DischargeSummaryOut:
     return svc.amend_summary(db, summary_id, body, payload, request)
+
+
+@router.get(
+    "/{summary_id}/report.pdf",
+    summary="Download or print the discharge summary as a PDF",
+)
+def get_discharge_summary_report_pdf(
+    summary_id: uuid.UUID,
+    payload: ExportDischargeSummary,
+    db: Annotated[Session, Depends(get_db)],
+    request: Request,
+    disposition: Literal["inline", "attachment"] = "attachment",
+) -> RawResponse:
+    pdf_bytes, filename = report_service.generate_discharge_summary_report_pdf(
+        db, summary_id, payload, request
+    )
+    return RawResponse(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )

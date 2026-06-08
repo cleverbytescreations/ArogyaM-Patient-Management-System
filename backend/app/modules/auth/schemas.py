@@ -86,6 +86,8 @@ class UserCreateRequest(BaseModel):
     email: EmailStr | None = None
     mobile: str | None = Field(default=None, max_length=20)
     is_doctor: bool = False
+    qualification: str | None = Field(default=None, max_length=120)
+    registration_number: str | None = Field(default=None, max_length=60)
     role_codes: list[str] = Field(default_factory=list)
 
     _check_pw = field_validator("password")(_validate_password_bytes)
@@ -97,6 +99,8 @@ class UserUpdateRequest(BaseModel):
     email: EmailStr | None = None
     mobile: str | None = Field(default=None, max_length=20)
     is_doctor: bool | None = None
+    qualification: str | None = Field(default=None, max_length=120)
+    registration_number: str | None = Field(default=None, max_length=60)
     role_codes: list[str] | None = None
     version: int
 
@@ -123,6 +127,8 @@ class UserOut(BaseModel):
     full_name: str
     status: str
     is_doctor: bool
+    qualification: str | None = None
+    registration_number: str | None = None
     is_superuser: bool = False
     roles: list[str] = Field(default_factory=list)
     version: int

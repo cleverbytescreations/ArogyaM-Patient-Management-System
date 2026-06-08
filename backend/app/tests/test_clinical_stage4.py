@@ -581,3 +581,100 @@ class TestDischargeSummaries:
             .all()
         )
         assert actions == ["AMEND", "CREATE", "FINALIZE"]
+
+
+class TestDischargeSummaryReportPdf:
+    def _create_finalized_summary(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> tuple[dict, dict]:
+        patient = _make_patient(client, db, reception_token)
+        visit = _make_visit(client, db, patient["id"], reception_token)
+        created = client.post(
+            f"/api/v1/visits/{visit['id']}/discharge-summary",
+            json={
+                "admission_date": str(date.today() - timedelta(days=4)),
+                "discharge_date": str(date.today()),
+                "diagnosis": "LanghanaM - 15 DAYS\nKushtam, Langanam",
+                "presenting_complaints": "Headache and back stiffness",
+                "investigations_admission": "Complete Blood Count\nFasting Blood Sugar",
+                "treatments": "Udvarthanam - 3 days (Kola kulatha, Triphala kashayam)",
+                "condition_at_discharge": _condition_code(db),
+                "condition_notes": "Skin patches reduced. Quality of sleep improved.",
+                "follow_up_period": "Internal medicine for 15 days. 15 days Nallarika.",
+                "discharge_advice": "Avoid fermented food, wheat, dairy.",
+                "medications": "Patoladi Kashayam-15ml mix with warm water",
+                "yoga_guidance": "Practice Sukshma vyayamas followed by Surya Namaskar.",
+            },
+            headers=_auth(doctor_token),
+        )
+        assert created.status_code == 201, created.text
+        draft = created.json()
+        finalized = client.put(
+            f"/api/v1/discharge-summaries/{draft['id']}/finalize",
+            json={"version": draft["version"]},
+            headers=_auth(doctor_token),
+        )
+        assert finalized.status_code == 200, finalized.text
+        return patient, finalized.json()
+
+    def test_doctor_downloads_report_pdf_and_audits(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        patient, summary = self._create_finalized_summary(client, db, doctor_token, reception_token)
+
+        r = client.get(
+            f"/api/v1/discharge-summaries/{summary['id']}/report.pdf",
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 200, r.text
+        assert r.headers["content-type"] == "application/pdf"
+        assert r.content.startswith(b"%PDF")
+        assert patient["op_number"] in r.headers["content-disposition"]
+        assert "attachment" in r.headers["content-disposition"]
+
+        count = db.execute(
+            text(
+                "SELECT count(*) FROM audit_log "
+                "WHERE action = 'EXPORT' AND entity_type = 'discharge_summary' AND entity_id = :sid"
+            ),
+            {"sid": summary["id"]},
+        ).scalar_one()
+        assert count >= 1
+
+    def test_report_supports_inline_disposition(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        _, summary = self._create_finalized_summary(client, db, doctor_token, reception_token)
+
+        r = client.get(
+            f"/api/v1/discharge-summaries/{summary['id']}/report.pdf",
+            params={"disposition": "inline"},
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 200, r.text
+        assert "inline" in r.headers["content-disposition"]
+
+    def test_report_returns_404_for_missing_summary(
+        self, client, db: Session, doctor_token: str
+    ) -> None:
+        r = client.get(
+            f"/api/v1/discharge-summaries/{uuid.uuid4()}/report.pdf",
+            headers=_auth(doctor_token),
+        )
+        assert r.status_code == 404
+
+    def test_report_requires_export_and_view_medical_history_permissions(
+        self, client, db: Session, doctor_token: str, reception_token: str
+    ) -> None:
+        _, summary = self._create_finalized_summary(client, db, doctor_token, reception_token)
+
+        # Receptionist has neither export nor view_medical_history
+        r = client.get(
+            f"/api/v1/discharge-summaries/{summary['id']}/report.pdf",
+            headers=_auth(reception_token),
+        )
+        assert r.status_code == 403
+
+    def test_unauthenticated_report_download_returns_401(self, client) -> None:
+        r = client.get(f"/api/v1/discharge-summaries/{uuid.uuid4()}/report.pdf")
+        assert r.status_code == 401

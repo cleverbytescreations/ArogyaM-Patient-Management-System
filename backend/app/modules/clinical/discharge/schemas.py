@@ -17,7 +17,8 @@ class DischargeSummaryFields(BaseModel):
     investigations_admission: str | None = None
     treatments: str | None = None
     condition_at_discharge: str | None = Field(default=None, max_length=40)
-    follow_up_period: str | None = Field(default=None, max_length=100)
+    condition_notes: str | None = None
+    follow_up_period: str | None = Field(default=None, max_length=2000)
     discharge_advice: str | None = None
     medications: str | None = None
     yoga_guidance: str | None = None
@@ -63,6 +64,7 @@ class DischargeSummaryOut(BaseModel):
     investigations_admission: str | None = None
     treatments: str | None = None
     condition_at_discharge: str | None = None
+    condition_notes: str | None = None
     follow_up_period: str | None = None
     discharge_advice: str | None = None
     medications: str | None = None

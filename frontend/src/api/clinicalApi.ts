@@ -64,4 +64,12 @@ export const clinicalApi = {
     apiClient
       .post<DischargeSummary>(`/discharge-summaries/${id}/amend`, data)
       .then((r) => r.data),
+
+  getDischargeSummaryReportPdf: (summaryId: string, disposition: "inline" | "attachment") =>
+    apiClient
+      .get<Blob>(`/discharge-summaries/${summaryId}/report.pdf`, {
+        params: { disposition },
+        responseType: "blob",
+      })
+      .then((r) => r.data),
 };

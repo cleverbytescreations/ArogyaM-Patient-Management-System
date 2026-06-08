@@ -49,6 +49,7 @@ export interface DischargeSummary {
   investigations_admission: string | null;
   treatments: string | null;
   condition_at_discharge: string | null;
+  condition_notes: string | null;
   follow_up_period: string | null;
   discharge_advice: string | null;
   medications: string | null;

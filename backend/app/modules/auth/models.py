@@ -52,6 +52,8 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="ACTIVE")
     is_doctor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    qualification: Mapped[str | None] = mapped_column(String(120))
+    registration_number: Mapped[str | None] = mapped_column(String(60))
     is_superuser: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     failed_login_attempts: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

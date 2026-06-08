@@ -39,6 +39,7 @@ _FIELD_NAMES = {
     "investigations_admission",
     "treatments",
     "condition_at_discharge",
+    "condition_notes",
     "follow_up_period",
     "discharge_advice",
     "medications",
@@ -205,6 +206,7 @@ def create_summary(
         investigations_admission=body.investigations_admission,
         treatments=body.treatments,
         condition_at_discharge=body.condition_at_discharge,
+        condition_notes=body.condition_notes,
         follow_up_period=body.follow_up_period,
         discharge_advice=body.discharge_advice,
         medications=body.medications,
@@ -408,6 +410,9 @@ def amend_summary(
         condition_at_discharge=body.condition_at_discharge
         if "condition_at_discharge" in body.model_fields_set
         else original.condition_at_discharge,
+        condition_notes=body.condition_notes
+        if "condition_notes" in body.model_fields_set
+        else original.condition_notes,
         follow_up_period=body.follow_up_period
         if "follow_up_period" in body.model_fields_set
         else original.follow_up_period,

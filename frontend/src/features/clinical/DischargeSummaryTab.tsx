@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, Edit2, FilePlus2, Loader2, Save } from "lucide-react";
+import { CheckCircle, Download, Edit2, FilePlus2, Loader2, Printer, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,16 +28,29 @@ const SELECT_CLASS = "flex h-10 w-full rounded-md border border-input bg-backgro
 const TEXT_FIELDS_BEFORE_CONDITION: { name: keyof DischargeSummaryFormValues; label: string; rows?: number }[] = [
   { name: "diagnosis", label: "Diagnosis", rows: 3 },
   { name: "presenting_complaints", label: "Presenting complaints", rows: 3 },
-  { name: "investigations_admission", label: "Investigations on admission", rows: 3 },
-  { name: "treatments", label: "Treatments", rows: 3 },
+  { name: "investigations_admission", label: "Investigations on admission", rows: 6 },
+  { name: "treatments", label: "Treatments", rows: 6 },
 ];
 
-const TEXT_FIELDS_AFTER_CONDITION: { name: keyof DischargeSummaryFormValues; label: string; rows?: number }[] = [
-  { name: "follow_up_period", label: "Follow-up period" },
-  { name: "discharge_advice", label: "Discharge advice", rows: 3 },
+const TEXT_FIELDS_AFTER_CONDITION: { name: keyof DischargeSummaryFormValues; label: string; rows?: number; hint?: string }[] = [
+  { name: "condition_notes", label: "Condition at discharge — details", rows: 2 },
+  { name: "follow_up_period", label: "Follow-up period", rows: 3 },
+  { name: "discharge_advice", label: "Discharge advice", rows: 3, hint: "(Do's and Don'ts)" },
   { name: "medications", label: "Medications", rows: 3 },
   { name: "yoga_guidance", label: "Yoga guidance", rows: 3 },
 ];
+
+const STANDARD_INVESTIGATIONS_CHECKLIST = [
+  "Complete Blood Count",
+  "Fasting Blood Sugar",
+  "HbA1c",
+  "Kidney Function Test",
+  "Lipid profile",
+  "Blood group",
+  "Urine routine analysis",
+  "Blood Pressure levels",
+  "ECG (if above 40 years of age)",
+].join("\n");
 
 const EMPTY_VALUES: DischargeSummaryFormValues = {
   doctor_id: "",
@@ -48,6 +61,7 @@ const EMPTY_VALUES: DischargeSummaryFormValues = {
   investigations_admission: "",
   treatments: "",
   condition_at_discharge: "",
+  condition_notes: "",
   follow_up_period: "",
   discharge_advice: "",
   medications: "",
@@ -65,6 +79,7 @@ function toForm(summary: DischargeSummary | null | undefined): DischargeSummaryF
     investigations_admission: summary.investigations_admission ?? "",
     treatments: summary.treatments ?? "",
     condition_at_discharge: summary.condition_at_discharge ?? "",
+    condition_notes: summary.condition_notes ?? "",
     follow_up_period: summary.follow_up_period ?? "",
     discharge_advice: summary.discharge_advice ?? "",
     medications: summary.medications ?? "",
@@ -93,7 +108,9 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
   const { hasPermission } = usePermissions();
   const canWrite = hasPermission(PERMISSIONS.ADD_CONSULTATION);
   const canRead = hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY) || canWrite;
+  const canExportReport = hasPermission(PERMISSIONS.EXPORT) && hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY);
   const queryClient = useQueryClient();
+  const printFrameRef = useRef<HTMLIFrameElement | null>(null);
 
   const currentQuery = useQuery({
     queryKey: ["discharge-summary", selectedVisit?.id],
@@ -226,6 +243,34 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
     onError: (err) => toast.error(getApiErrorMessage(err, "Could not finalize discharge summary.")),
   });
 
+  const downloadReportMutation = useMutation({
+    mutationFn: (summaryId: string) => clinicalApi.getDischargeSummaryReportPdf(summaryId, "attachment"),
+    onSuccess: (blob, summaryId) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `discharge-summary-${summaryId}.pdf`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, "Could not generate the discharge summary report.")),
+  });
+
+  const printReportMutation = useMutation({
+    mutationFn: (summaryId: string) => clinicalApi.getDischargeSummaryReportPdf(summaryId, "inline"),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const frame = printFrameRef.current;
+      if (!frame) return;
+      frame.onload = () => {
+        frame.contentWindow?.print();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      };
+      frame.src = url;
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, "Could not generate the discharge summary report.")),
+  });
+
   if (!selectedVisit) {
     return (
       <div className="flex flex-col items-center gap-3 py-16 text-center text-muted-foreground">
@@ -239,11 +284,50 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
 
   return (
     <div className="space-y-5 pt-4">
+      {/* Hidden iframe used to load the inline PDF and trigger the browser print dialog. */}
+      <iframe ref={printFrameRef} title="Discharge summary report" className="hidden" aria-hidden="true" />
+
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
         <span>Visit: <span className="font-medium text-foreground">{formatDate(selectedVisit.visit_date)}</span></span>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {current?.is_superseded && <Badge variant="warning">Superseded</Badge>}
           {current?.is_finalized ? <Badge variant="success">Finalized</Badge> : <Badge variant="secondary">{isMissing ? "No summary" : "Draft"}</Badge>}
+          {canExportReport && current?.is_finalized && (
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                disabled={printReportMutation.isPending}
+                aria-busy={printReportMutation.isPending}
+                onClick={() => printReportMutation.mutate(current.id)}
+              >
+                {printReportMutation.isPending ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Printer className="mr-1 h-3 w-3" aria-hidden="true" />
+                )}
+                Print
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                disabled={downloadReportMutation.isPending}
+                aria-busy={downloadReportMutation.isPending}
+                onClick={() => downloadReportMutation.mutate(current.id)}
+              >
+                {downloadReportMutation.isPending ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Download className="mr-1 h-3 w-3" aria-hidden="true" />
+                )}
+                Download
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -370,7 +454,20 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
             {TEXT_FIELDS_BEFORE_CONDITION.map(({ name, label, rows }) => (
               <FormField key={name} control={form.control} name={name} render={({ field }) => (
                 <FormItem className={rows ? "sm:col-span-2" : undefined}>
-                  <FormLabel>{label}</FormLabel>
+                  <div className="flex items-center justify-between gap-2">
+                    <FormLabel>{label}</FormLabel>
+                    {name === "investigations_admission" && canWrite && !locked && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto px-2 py-1 text-xs"
+                        onClick={() => field.onChange(STANDARD_INVESTIGATIONS_CHECKLIST)}
+                      >
+                        Use standard checklist
+                      </Button>
+                    )}
+                  </div>
                   <FormControl><Textarea {...field} rows={rows ?? 2} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -390,10 +487,11 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
                 <FormMessage />
               </FormItem>
             )} />
-            {TEXT_FIELDS_AFTER_CONDITION.map(({ name, label, rows }) => (
+            {TEXT_FIELDS_AFTER_CONDITION.map(({ name, label, rows, hint }) => (
               <FormField key={name} control={form.control} name={name} render={({ field }) => (
                 <FormItem className={rows ? "sm:col-span-2" : undefined}>
                   <FormLabel>{label}</FormLabel>
+                  {hint && <p className="-mt-1 text-xs text-muted-foreground">{hint}</p>}
                   <FormControl><Textarea {...field} rows={rows ?? 2} /></FormControl>
                   <FormMessage />
                 </FormItem>

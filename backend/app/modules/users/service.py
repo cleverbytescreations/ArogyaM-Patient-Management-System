@@ -42,6 +42,8 @@ def _to_out(user: User) -> UserOut:
         full_name=user.full_name,
         status=user.status,
         is_doctor=user.is_doctor,
+        qualification=user.qualification,
+        registration_number=user.registration_number,
         is_superuser=user.is_superuser,
         roles=_user_role_codes(user),
         version=user.version,
@@ -79,6 +81,8 @@ def create_user(
         mobile=body.mobile,
         password_hash=hash_password(body.password),
         is_doctor=body.is_doctor,
+        qualification=body.qualification,
+        registration_number=body.registration_number,
         status="ACTIVE",
         password_changed_at=datetime.now(UTC),
         created_by=actor_id,
@@ -179,6 +183,10 @@ def update_user(
         user.mobile = body.mobile
     if body.is_doctor is not None:
         user.is_doctor = body.is_doctor
+    if body.qualification is not None:
+        user.qualification = body.qualification
+    if body.registration_number is not None:
+        user.registration_number = body.registration_number
     user.version += 1
     user.updated_by = actor_id
 

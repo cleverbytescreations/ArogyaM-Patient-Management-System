@@ -464,6 +464,7 @@ Endpoints are grouped by module exactly per SAD §9.2 / Plan §3. Each endpoint 
 | 4 | `PUT /discharge-summaries/{id}` | Update a **draft** (blocked once finalized) |
 | 5 | `PUT /discharge-summaries/{id}/finalize` | Finalize → `is_finalized=true`, stamp `finalized_at/by`; becomes immutable |
 | 6 | `POST /discharge-summaries/{id}/amend` | Create an audited amendment (new row, `amends_id` → superseded summary) |
+| 7 | `GET /discharge-summaries/{id}/report.pdf` | Download or print the discharge summary as a PDF — `export` **and** `view_medical_history` |
 
 - **Validation:** `discharge_date ≥ admission_date` (UC-13 BR2) → `422`.
 - **State:** editing/`PUT` on a finalized summary → `409 DISCHARGE_ALREADY_FINALIZED`. Amendments are the only post-finalization change path.
@@ -472,6 +473,7 @@ Endpoints are grouped by module exactly per SAD §9.2 / Plan §3. Each endpoint 
   - The response includes `is_superseded` (boolean) and `superseded_by` (UUID, nullable) so a client can detect and walk the chain.
   - `GET …/discharge-summary/history` returns the full ordered list for audit/clinical review.
   - **`404`** is returned only when the visit has **no** discharge summary at all.
+- **Discharge summary PDF report** (`GET /discharge-summaries/{id}/report.pdf`) renders the summary (patient identity, admission/discharge dates, diagnosis, presenting complaints, investigations, treatments, condition at discharge with narrative, follow-up, advice, medications, yoga guidance, doctor signature) as a print-faithful PDF — same server-side Jinja2 + WeasyPrint approach and shared letterhead as the prescription/case sheet reports (see §7.6/§7.7). Query param `disposition=inline|attachment` (default `attachment`); `inline` is used by the frontend's Print button (hidden iframe), `attachment` by Download. Requires **both** `export` and `view_medical_history` (neither alone is sufficient). Every render writes an `EXPORT` audit row (`entity_type=discharge_summary`).
 
 ---
 
@@ -1551,6 +1553,38 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DischargeSummary' }
 
+  /discharge-summaries/{id}/report.pdf:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Clinical]
+      summary: Download or print the discharge summary as a PDF
+      description: >
+        Renders the discharge summary as a print-faithful PDF (server-side
+        Jinja2 + WeasyPrint), reusing the shared letterhead from the
+        prescription/case-sheet reports. Requires both `export` and
+        `view_medical_history` permissions. Writes an `EXPORT` audit row
+        on every render.
+      parameters:
+        - name: disposition
+          in: query
+          schema: { type: string, enum: [inline, attachment], default: attachment }
+          description: >
+            Controls the `Content-Disposition` header. `inline` is used by the
+            frontend's Print action (loaded into a hidden iframe and printed);
+            `attachment` triggers a file download.
+      responses:
+        '200':
+          description: Discharge summary report PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /patients/{patient_id}/documents:
     parameters:
       - { $ref: '#/components/parameters/PatientId' }
@@ -2201,6 +2235,8 @@ components:
         mobile: { type: string, nullable: true }
         status: { $ref: '#/components/schemas/UserStatus' }
         is_doctor: { type: boolean }
+        qualification: { type: string, nullable: true, description: "Doctor's qualification, shown on report signatures (e.g. 'BAMS, MD')." }
+        registration_number: { type: string, nullable: true, description: "Doctor's medical registration number, shown on report signatures." }
         roles:
           type: array
           items: { type: string }
@@ -2217,6 +2253,8 @@ components:
         mobile: { type: string, nullable: true }
         password: { type: string, format: password }
         is_doctor: { type: boolean, default: false }
+        qualification: { type: string, nullable: true }
+        registration_number: { type: string, nullable: true }
         role_codes:
           type: array
           items: { type: string }
@@ -2228,6 +2266,8 @@ components:
         email: { type: string, nullable: true }
         mobile: { type: string, nullable: true }
         is_doctor: { type: boolean }
+        qualification: { type: string, nullable: true }
+        registration_number: { type: string, nullable: true }
         role_codes:
           type: array
           items: { type: string }
@@ -2600,6 +2640,7 @@ components:
         investigations_admission: { type: string, nullable: true }
         treatments: { type: string, nullable: true }
         condition_at_discharge: { type: string, nullable: true }
+        condition_notes: { type: string, nullable: true }
         follow_up_period: { type: string, nullable: true }
         discharge_advice: { type: string, nullable: true }
         medications: { type: string, nullable: true }
@@ -2623,6 +2664,7 @@ components:
         investigations_admission: { type: string, nullable: true }
         treatments: { type: string, nullable: true }
         condition_at_discharge: { type: string, nullable: true }
+        condition_notes: { type: string, nullable: true }
         follow_up_period: { type: string, nullable: true }
         discharge_advice: { type: string, nullable: true }
         medications: { type: string, nullable: true }
@@ -2638,6 +2680,7 @@ components:
         investigations_admission: { type: string, nullable: true }
         treatments: { type: string, nullable: true }
         condition_at_discharge: { type: string, nullable: true }
+        condition_notes: { type: string, nullable: true }
         follow_up_period: { type: string, nullable: true }
         discharge_advice: { type: string, nullable: true }
         medications: { type: string, nullable: true }

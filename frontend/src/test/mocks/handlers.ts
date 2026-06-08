@@ -282,6 +282,7 @@ export const mockDischargeSummary: DischargeSummary = {
   investigations_admission: "CBC reviewed",
   treatments: "Hydration and supportive care",
   condition_at_discharge: "IMPROVED",
+  condition_notes: "Fever resolved; appetite improved.",
   follow_up_period: "1 week",
   discharge_advice: "Rest and fluids",
   medications: "Paracetamol as advised",
@@ -699,6 +700,13 @@ export const handlers = [
 
   // Prescription — report PDF (download/print)
   http.get(`${BASE}/prescriptions/:id/report.pdf`, () => {
+    return new HttpResponse(new Blob(["%PDF-1.4 mock"], { type: "application/pdf" }), {
+      headers: { "Content-Type": "application/pdf" },
+    });
+  }),
+
+  // Discharge summary — report PDF (download/print)
+  http.get(`${BASE}/discharge-summaries/:id/report.pdf`, () => {
     return new HttpResponse(new Blob(["%PDF-1.4 mock"], { type: "application/pdf" }), {
       headers: { "Content-Type": "application/pdf" },
     });
