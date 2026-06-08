@@ -21,6 +21,8 @@ weasyprint>=62.0,<63.0
 # pydyf 0.12 removed Stream.transform that weasyprint 62.x relies on (AttributeError
 # at render time) — pin to the last release compatible with weasyprint 62.x
 pydyf>=0.11,<0.12
+# Markdown-to-HTML for investigations/treatments fields in the discharge summary report
+markdown>=3.5,<4.0
 # testing
 pytest>=8.2,<9.0
 pytest-asyncio>=0.23,<1.0

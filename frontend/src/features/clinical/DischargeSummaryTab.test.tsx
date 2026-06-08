@@ -17,6 +17,8 @@ describe("DischargeSummaryTab", () => {
     renderWithQuery(<DischargeSummaryTab selectedVisit={mockVisit} onSelectVisitTab={vi.fn()} />);
 
     expect(await screen.findByDisplayValue(/viral fever/i)).toBeInTheDocument();
+    expect(await screen.findByText(/cbc reviewed/i)).toBeInTheDocument();
+    expect(await screen.findByText(/hydration and supportive care/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^finalize$/i }));
     await user.click(screen.getByRole("button", { name: /^finalize$/i }));
 

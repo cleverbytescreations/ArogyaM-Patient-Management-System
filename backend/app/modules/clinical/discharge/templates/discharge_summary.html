@@ -128,12 +128,28 @@
     font-weight: 700;
   }
 
-  /* ── Numbered lists (investigations / treatments / medications) ── */
+  /* ── Numbered lists (medications) ─────────────────────────────── */
   .numbered-list {
     margin: 0;
     padding-left: 6mm;
   }
   .numbered-list li {
+    margin-bottom: 0.6mm;
+  }
+
+  /* ── Rich text blocks (investigations / treatments — staff-formatted HTML) ── */
+  .rich-content {
+    display: block;
+  }
+  .rich-content p {
+    margin: 0 0 1mm;
+  }
+  .rich-content ul,
+  .rich-content ol {
+    margin: 0 0 1mm;
+    padding-left: 6mm;
+  }
+  .rich-content li {
     margin-bottom: 0.6mm;
   }
 
@@ -242,18 +258,14 @@
     {% if investigations_admission %}
     <div class="block">
       <span class="block-label">Investigations at Admission:</span>
-      <ol class="numbered-list">
-        {% for line in investigations_admission %}
-        <li>{{ line }}</li>
-        {% endfor %}
-      </ol>
+      <div class="rich-content">{{ investigations_admission | safe }}</div>
     </div>
     {% endif %}
 
     {% if treatments %}
     <div class="block">
       <span class="block-label">Treatments Undertaken:</span>
-      <span class="block-value">{{ treatments | join("\n") }}</span>
+      <div class="rich-content">{{ treatments | safe }}</div>
     </div>
     {% endif %}
 

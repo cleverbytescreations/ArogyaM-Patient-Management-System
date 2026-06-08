@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { MarkdownEditor } from "@/components/ui/markdown-editor";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -25,11 +26,11 @@ import type { Visit } from "@/types/visits";
 
 const SELECT_CLASS = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70";
 
-const TEXT_FIELDS_BEFORE_CONDITION: { name: keyof DischargeSummaryFormValues; label: string; rows?: number }[] = [
+const TEXT_FIELDS_BEFORE_CONDITION: { name: keyof DischargeSummaryFormValues; label: string; rows?: number; markdownEditor?: boolean }[] = [
   { name: "diagnosis", label: "Diagnosis", rows: 3 },
   { name: "presenting_complaints", label: "Presenting complaints", rows: 3 },
-  { name: "investigations_admission", label: "Investigations on admission", rows: 6 },
-  { name: "treatments", label: "Treatments", rows: 6 },
+  { name: "investigations_admission", label: "Investigations on admission", rows: 6, markdownEditor: true },
+  { name: "treatments", label: "Treatments", rows: 6, markdownEditor: true },
 ];
 
 const TEXT_FIELDS_AFTER_CONDITION: { name: keyof DischargeSummaryFormValues; label: string; rows?: number; hint?: string }[] = [
@@ -40,16 +41,16 @@ const TEXT_FIELDS_AFTER_CONDITION: { name: keyof DischargeSummaryFormValues; lab
   { name: "yoga_guidance", label: "Yoga guidance", rows: 3 },
 ];
 
-const STANDARD_INVESTIGATIONS_CHECKLIST = [
-  "Complete Blood Count",
-  "Fasting Blood Sugar",
-  "HbA1c",
-  "Kidney Function Test",
-  "Lipid profile",
-  "Blood group",
-  "Urine routine analysis",
-  "Blood Pressure levels",
-  "ECG (if above 40 years of age)",
+const STANDARD_INVESTIGATIONS_CHECKLIST_MD = [
+  "- Complete Blood Count",
+  "- Fasting Blood Sugar",
+  "- HbA1c",
+  "- Kidney Function Test",
+  "- Lipid profile",
+  "- Blood group",
+  "- Urine routine analysis",
+  "- Blood Pressure levels",
+  "- ECG (if above 40 years of age)",
 ].join("\n");
 
 const EMPTY_VALUES: DischargeSummaryFormValues = {
@@ -451,7 +452,7 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
                 <FormMessage />
               </FormItem>
             )} />
-            {TEXT_FIELDS_BEFORE_CONDITION.map(({ name, label, rows }) => (
+            {TEXT_FIELDS_BEFORE_CONDITION.map(({ name, label, rows, markdownEditor }) => (
               <FormField key={name} control={form.control} name={name} render={({ field }) => (
                 <FormItem className={rows ? "sm:col-span-2" : undefined}>
                   <div className="flex items-center justify-between gap-2">
@@ -462,13 +463,25 @@ export function DischargeSummaryTab({ selectedVisit, onSelectVisitTab }: Dischar
                         variant="ghost"
                         size="sm"
                         className="h-auto px-2 py-1 text-xs"
-                        onClick={() => field.onChange(STANDARD_INVESTIGATIONS_CHECKLIST)}
+                        onClick={() => field.onChange(STANDARD_INVESTIGATIONS_CHECKLIST_MD)}
                       >
                         Use standard checklist
                       </Button>
                     )}
                   </div>
-                  <FormControl><Textarea {...field} rows={rows ?? 2} /></FormControl>
+                  <FormControl>
+                    {markdownEditor ? (
+                      <MarkdownEditor
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        disabled={!canWrite || locked || saveMutation.isPending}
+                        rows={rows ?? 6}
+                      />
+                    ) : (
+                      <Textarea {...field} rows={rows ?? 2} />
+                    )}
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

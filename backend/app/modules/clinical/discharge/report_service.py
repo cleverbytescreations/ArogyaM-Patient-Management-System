@@ -11,6 +11,8 @@ import uuid
 from datetime import date
 from typing import Any
 
+import markdown as _md
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -31,6 +33,12 @@ FOOTER_URL = "https://arogyam.life/"
 
 def _format_date(value: date | None) -> str:
     return value.strftime("%d/%m/%Y") if value else ""
+
+
+def _md_to_html(value: str | None) -> str:
+    if not value or not value.strip():
+        return ""
+    return _md.markdown(value, extensions=["nl2br"])
 
 
 def _split_lines(value: str | None) -> list[str]:
@@ -77,8 +85,8 @@ def _build_context(
         "doctor_name": doctor.full_name if doctor is not None else "",
         "diagnosis": summary.diagnosis,
         "presenting_complaints": summary.presenting_complaints,
-        "investigations_admission": _split_lines(summary.investigations_admission),
-        "treatments": _split_lines(summary.treatments),
+        "investigations_admission": _md_to_html(summary.investigations_admission),
+        "treatments": _md_to_html(summary.treatments),
         "condition_narrative": _condition_narrative(db, summary),
         "follow_up_period": summary.follow_up_period,
         "discharge_advice": summary.discharge_advice,

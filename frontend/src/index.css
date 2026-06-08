@@ -112,6 +112,24 @@
     color: hsl(var(--foreground) / 0.04);
   }
 
+  /* TipTap rich-text editor content (RichTextEditor) — minimal prose styling so
+     bold/italic/lists/alignment look the same in the editor as in the PDF report. */
+  .rte-content {
+    @apply text-sm leading-snug text-foreground;
+  }
+  .rte-content p {
+    @apply m-0 mb-1;
+  }
+  .rte-content ul {
+    @apply m-0 mb-1 list-disc pl-5;
+  }
+  .rte-content ol {
+    @apply m-0 mb-1 list-decimal pl-5;
+  }
+  .rte-content li {
+    @apply mb-0.5;
+  }
+
   /* Coral sawtooth band used as a brand divider */
   .sawtooth {
     height: 22px;
