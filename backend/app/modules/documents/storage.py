@@ -86,6 +86,15 @@ class DocumentStorage:
             content_length=response.get("ContentLength"),
         )
 
+    def ping(self) -> None:
+        """Lightweight connectivity probe for the readiness endpoint."""
+        try:
+            self.client.list_buckets()
+        except ServiceUnavailableError:
+            raise
+        except Exception as exc:
+            raise ServiceUnavailableError("Object storage is unreachable") from exc
+
     def presigned_url(self, key: str, expires_in_seconds: int) -> str:
         try:
             return self.client.generate_presigned_url(

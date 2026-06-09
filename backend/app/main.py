@@ -43,6 +43,10 @@ from app.modules.masterdata.router import router as masterdata_router
 from app.modules.patients.router import router as patients_router
 from app.modules.users.router import roles_router
 from app.modules.users.router import router as users_router
+from app.modules.audit.router import router as audit_router
+from app.modules.backup.router import router as backup_router
+from app.modules.followups.router import followups_router
+from app.modules.followups.router import patients_router as followup_patients_router
 from app.modules.visits.router import patients_router as visit_patients_router
 from app.modules.visits.router import visits_router
 
@@ -98,6 +102,10 @@ app.include_router(prescriptions_router, prefix=API_PREFIX)
 app.include_router(discharge_visits_router, prefix=API_PREFIX)
 app.include_router(discharge_router, prefix=API_PREFIX)
 app.include_router(documents_router, prefix=API_PREFIX)
+app.include_router(followup_patients_router, prefix=API_PREFIX)
+app.include_router(followups_router, prefix=API_PREFIX)
+app.include_router(audit_router, prefix=API_PREFIX)
+app.include_router(backup_router, prefix=API_PREFIX)
 
 
 @app.get("/", include_in_schema=False)

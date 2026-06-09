@@ -1,0 +1,18 @@
+# ArogyaM nightly backup cron jobs (INT-T13.1)
+# Install on the server by copying into /etc/cron.d/arogyam-backup
+# or adding to the root/backup-service user's crontab via `crontab -e`.
+#
+# Required: set env vars in /etc/environment or source a secrets file.
+# Log output is appended to /var/log/arogyam-backup.log.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# Database backup — 01:00 AM daily
+0 1 * * * root /opt/arogyam/ops/backup/pg_backup.sh >> /var/log/arogyam-backup.log 2>&1
+
+# Documents (MinIO) backup — 01:30 AM daily
+30 1 * * * root /opt/arogyam/ops/backup/docs_backup.sh >> /var/log/arogyam-backup.log 2>&1
+
+# Keep only last 30 days of local backups (if using local path)
+# 0 2 * * * root find /backups/arogyam -mtime +30 -name "*.sql.gz" -delete >> /var/log/arogyam-backup.log 2>&1

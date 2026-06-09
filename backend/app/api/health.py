@@ -13,6 +13,7 @@ from fastapi import APIRouter, Response, status
 from app import __version__
 from app.core.config import settings
 from app.core.db import check_database
+from app.modules.documents.storage import storage
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,14 @@ def ready(response: Response) -> dict[str, object]:
     except Exception:  # noqa: BLE001 — report unreachable without leaking details
         logger.warning("readiness: database check failed")
         checks["database"] = "unavailable"
+        ok = False
+
+    try:
+        storage.ping()
+        checks["storage"] = "ok"
+    except Exception:  # noqa: BLE001
+        logger.warning("readiness: storage check failed")
+        checks["storage"] = "unavailable"
         ok = False
 
     if not ok:

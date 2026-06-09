@@ -230,7 +230,7 @@
 
 ### Module 11 — Follow-Up Tracking
 
-- [ ] **BE-T11.1 [M]** — Follow-up service with status lifecycle (MVP)
+- [x] **BE-T11.1 [M]** — Follow-up service with status lifecycle (MVP)
       **Description:** Model `follow_ups`; implement create, list-by-patient, queue list (`?status=`, `?from=&to=`, `?assigned_to=`), update (version-checked, audited) with enforced status lifecycle.
       **Files / Components:** `backend/app/modules/followups/`.
       **Implementation Notes:** Lifecycle `PENDING → CONTACTED | NOT_REACHABLE → COMPLETED | RESCHEDULED`; `RESCHEDULED` may chain via `next_followup_id`. Invalid transition → `409 INVALID_STATE_TRANSITION`. Not deletable by normal users. `manage_followups`.
@@ -238,7 +238,7 @@
 
 ### Module 12 — Audit Trail
 
-- [ ] **BE-T12.1 [M]** — Audit read service (MVP)
+- [x] **BE-T12.1 [M]** — Audit read service (MVP)
       **Description:** Implement `GET /audit-logs` (filterable: `user_id, patient_id, action, entity_type, entity_id, from, to`; paginated) and `GET /audit-logs/{id}` (single, with old/new JSON). Admin read-only.
       **Files / Components:** `backend/app/modules/audit/service.py`, `.../repository.py`, `.../router.py`.
       **Implementation Notes:** No create/update/delete endpoints — append-only table written only via `core/audit.py`. `view_audit` permission.
@@ -246,7 +246,7 @@
 
 ### Module 13 — Backup & Recovery
 
-- [ ] **BE-T13.1 [M]** — Backup status read service (MVP)
+- [x] **BE-T13.1 [M]** — Backup status read service (MVP)
       **Description:** Model `backup_log`; implement `GET /backup/status` returning latest + last-N runs with outcomes. No restore/trigger API (out-of-band ops).
       **Files / Components:** `backend/app/modules/backup/service.py`, `.../router.py`.
       **Implementation Notes:** `backup_type ∈ {DATABASE, DOCUMENTS, FULL}`, `status ∈ {STARTED, SUCCESS, FAILED}`. `backup_control` (Admin). Cron scripts (INT-T13.1) write rows.
@@ -310,7 +310,7 @@
 
 ### Module 18 — System / Health
 
-- [ ] **BE-T18.1 [S]** — Health & readiness endpoints (MVP)
+- [x] **BE-T18.1 [S]** — Health & readiness endpoints (MVP)
       **Description:** Implement `GET /health` (liveness) and `GET /ready` (DB + object-storage connectivity → `503 SERVICE_UNAVAILABLE` if a dependency is down). Public, no auth.
       **Files / Components:** `backend/app/modules/system/router.py`.
       **Acceptance Criteria:** `/health` returns 200 when process up; `/ready` returns 503 when DB or storage unreachable, 200 otherwise.
@@ -377,17 +377,17 @@
       **Implementation Notes:** Multipart upload; proxied/pre-signed download; metadata/binary split (documented deviation).
       **Acceptance Criteria:** Matches API spec §7.9; 413/415 enforced; download permission-checked + audited.
 
-- [ ] **API-T11.1 [S]** — Follow-up routes (MVP)
+- [x] **API-T11.1 [S]** — Follow-up routes (MVP)
       **Description:** `POST/GET /patients/{id}/follow-ups`, `PUT /follow-ups/{id}`, `GET /follow-ups`.
       **Files / Components:** `backend/app/modules/followups/router.py`.
       **Acceptance Criteria:** Matches API spec §7.10; lifecycle transitions enforced; queue filters work.
 
-- [ ] **API-T12.1 [S]** — Audit routes (MVP)
+- [x] **API-T12.1 [S]** — Audit routes (MVP)
       **Description:** `GET /audit-logs`, `GET /audit-logs/{id}` (admin read-only).
       **Files / Components:** `backend/app/modules/audit/router.py`.
       **Acceptance Criteria:** Matches API spec §7.14; GET-only; `view_audit` enforced.
 
-- [ ] **API-T13.1 [S]** — Backup status route (MVP)
+- [x] **API-T13.1 [S]** — Backup status route (MVP)
       **Description:** `GET /backup/status` (admin).
       **Files / Components:** `backend/app/modules/backup/router.py`.
       **Acceptance Criteria:** Matches API spec §7.15; admin-only; no restore endpoint.
@@ -449,7 +449,7 @@
       **Files / Components:** baseline migration.
       **Acceptance Criteria:** Locking query runs; concurrent test (TST-T4.1) passes.
 
-- [ ] **DB-T10.1 [M]** — Hot-path indexes for timeline & follow-ups (MVP)
+- [x] **DB-T10.1 [M]** — Hot-path indexes for timeline & follow-ups (MVP)
       **Description:** Confirm indexes backing timeline reads and the pending-follow-up composite `idx_follow_ups_status_date`, plus audit lookup indexes.
       **Files / Components:** baseline migration.
       **Acceptance Criteria:** Timeline and follow-up queries index-backed (EXPLAIN); pending-follow-up query fast.
@@ -459,7 +459,7 @@
       **Files / Components:** migration revision, `backend/app/modules/reports/`.
       **Acceptance Criteria:** Views return correct aggregates; dashboard/report services consume them; materialize only on measured need.
 
-- [ ] **DB-T14.1 [S]** — Soft-delete & no-physical-delete guards (MVP)
+- [x] **DB-T14.1 [S]** — Soft-delete & no-physical-delete guards (MVP)
       **Description:** Ensure patients/clinical/documents use `status`/`is_active` flags; no destructive deletes in schema or repositories.
       **Files / Components:** repositories across modules.
       **Acceptance Criteria:** No `DELETE` on patient/clinical/document tables in code; status transitions used instead.
@@ -481,18 +481,18 @@
       **Implementation Notes:** Swappable MinIO↔S3 with no code change. Credentials server-side only; URLs never exposed.
       **Acceptance Criteria:** Upload/download/pre-sign work against MinIO in dev; bucket auto-provisioned; creds not leaked.
 
-- [ ] **INT-T13.1 [M]** — Backup cron scripts + `backup_log` writes (MVP)
+- [x] **INT-T13.1 [M]** — Backup cron scripts + `backup_log` writes (MVP)
       **Description:** Implement nightly `pg_dump` + MinIO/document backup to off-server/offsite target via cron; record each run (`STARTED/SUCCESS/FAILED`) in `backup_log`.
       **Files / Components:** `ops/backup/pg_backup.sh`, `ops/backup/docs_backup.sh`, cron config.
       **Acceptance Criteria:** Scheduled run produces backup artifacts and a `backup_log` row; surfaced by `GET /backup/status`.
 
-- [ ] **INT-T13.2 [S]** — SMTP backup-alert hook (optional) (MVP)
+- [x] **INT-T13.2 [S]** — SMTP backup-alert hook (optional) (MVP)
       **Description:** Send backup success/failure alert email to Administrator via SMTP.
       **Files / Components:** `backend/app/core/notify.py` or `ops/backup/notify.sh`.
       **Implementation Notes:** Optional; SMTP details are an open question (SAD §27 #8). This task = *sending* the alert; the *recording* of notification outcomes is tracked in **LOG-T13.1** (`backup_log` send-log). Keep the two concerns split.
       **Acceptance Criteria:** Failure triggers an alert email when SMTP configured; no-op when disabled.
 
-- [ ] **INT-T13.3 [M]** — Restore runbook & restore test (MVP)
+- [x] **INT-T13.3 [M]** — Restore runbook & restore test (MVP)
       **Description:** Document and test the out-of-band restore procedure (no API). Schedule a restore drill before R1 go-live.
       **Files / Components:** `ops/backup/RESTORE_RUNBOOK.md`.
       **Acceptance Criteria:** A documented restore from backup succeeds on a clean target in a drill; runbook reviewed.
@@ -573,7 +573,7 @@
       **Files / Components:** `ops/proxy/nginx.conf` (or Caddy/Traefik).
       **Acceptance Criteria:** Proxy logs for `/patients/search` contain no query params; path logged without query string.
 
-- [ ] **LOG-T13.1 [S]** — Backup notification send-log (MVP)
+- [x] **LOG-T13.1 [S]** — Backup notification send-log (MVP)
       **Description:** Record backup notification outcomes in `backup_log`; basic send log for alerts. (Pairs with the send path in **INT-T13.2** — recording only.)
       **Files / Components:** `backup/service.py`, `ops/backup/`.
       **Acceptance Criteria:** Each alert send recorded; status visible via backup status API.
@@ -617,7 +617,7 @@
       **Files / Components:** `tests/documents/`.
       **Acceptance Criteria:** 413/415 enforced; unauthorized download → 403; access audited.
 
-- [ ] **TST-T11.1 [S]** — Follow-up lifecycle tests (MVP)
+- [x] **TST-T11.1 [S]** — Follow-up lifecycle tests (MVP)
       **Description:** Status transitions valid/invalid; queue filters; no hard delete.
       **Files / Components:** `tests/followups/`.
       **Acceptance Criteria:** Invalid transition → 409; queue filters correct.
