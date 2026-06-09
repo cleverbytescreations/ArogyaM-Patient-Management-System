@@ -27,6 +27,8 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 # ── PII seed values ────────────────────────────────────────────────────────────
 # These are the exact strings used when creating the test patient below.
@@ -178,16 +180,21 @@ class TestClinicalLogPrivacy:
     def test_consultation_note_no_clinical_content_in_logs(
         self,
         client: TestClient,
+        db: Session,
         admin_token: str,
         log_capture: _CapturingHandler,
     ) -> None:
+        category = db.execute(
+            text("SELECT category_code FROM op_sequence WHERE is_active = TRUE ORDER BY id LIMIT 1")
+        ).scalar_one()
+
         # First create a patient to get a valid patient ID
         reg = client.post(
             "/api/v1/patients",
             json={
                 "full_name": f"TestClinical {uuid.uuid4().hex[:6]}",
                 "gender": "MALE",
-                "op_category_code": "REGULAR",
+                "op_category_code": category,
             },
             headers=_auth(admin_token),
         )

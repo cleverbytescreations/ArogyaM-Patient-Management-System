@@ -1,0 +1,35 @@
+# =============================================================================
+# ArogyaM PMS — Uptime Kuma sidecar (DEV-TF.9)
+# Deploy alongside docker-compose.prod.yml for optional uptime alerting.
+#
+# Usage:
+#   docker compose -f ops/observability/docker-compose.uptime-kuma.yml up -d
+#   # Open http://<host>:3001 and create monitors per ops/observability/README.md
+#
+# To restrict access, put Uptime Kuma behind the Nginx proxy or an SSH tunnel.
+# =============================================================================
+
+name: arogyam-uptime
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    volumes:
+      - uptime_kuma_data:/app/data
+    ports:
+      # Expose only on localhost; access via SSH tunnel: ssh -L 3001:localhost:3001 <host>
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001', r => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  uptime_kuma_data:

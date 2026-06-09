@@ -14,11 +14,13 @@ class AuditLogOut(BaseModel):
 
     id: int
     user_id: uuid.UUID | None = None
+    user_name: str | None = None
     user_role: str | None = None
     action: str
     entity_type: str | None = None
     entity_id: str | None = None
     patient_id: uuid.UUID | None = None
+    patient_name: str | None = None
     old_value: Any | None = None
     new_value: Any | None = None
     description: str | None = None

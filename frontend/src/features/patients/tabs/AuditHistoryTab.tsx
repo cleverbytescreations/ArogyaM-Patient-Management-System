@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/DataTable";
 import { auditApi } from "@/api/auditApi";
@@ -11,45 +10,54 @@ import { DEFAULT_PAGE_SIZE, PERMISSIONS } from "@/lib/constants";
 import { usePermissions } from "@/auth/usePermissions";
 import type { AuditLogEntry } from "@/types/audit";
 
-function AuditEntryDetailPanel({
-  entry,
-  onClose,
-}: {
-  entry: AuditLogEntry;
-  onClose: () => void;
-}) {
+function AuditEntryDetailPanel({ entry }: { entry: AuditLogEntry }) {
+  const actor = entry.user_name ?? entry.user_id?.slice(0, 8) ?? "System";
+  const target = entry.patient_name ?? entry.patient_id?.slice(0, 8) ?? "—";
+
   return (
     <div
       role="region"
       aria-label="Audit entry details"
-      className="rounded-md border bg-muted/40 p-4 space-y-3 text-sm"
+      className="bg-muted/60 border-t px-4 py-3 space-y-3 text-sm"
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          Entry #{entry.id} · {formatDateTime(entry.created_at)}
-        </p>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={onClose}
-          aria-label="Close details"
-          className="h-6 w-6 p-0"
-        >
-          <X className="h-3 w-3" aria-hidden="true" />
-        </Button>
-      </div>
+      <p className="font-medium text-foreground">
+        <span className="text-primary">{actor}</span>
+        {entry.user_role && (
+          <span className="ml-1 text-xs text-muted-foreground">
+            ({entry.user_role})
+          </span>
+        )}
+        {entry.description ? ` — ${entry.description}` : ""}
+        {entry.patient_name && (
+          <>
+            {" · patient "}
+            <span className="text-primary">{target}</span>
+          </>
+        )}
+      </p>
 
-      <div className="grid gap-2 sm:grid-cols-2">
-        {entry.description && (
-          <div className="sm:col-span-2">
-            <p className="text-xs font-medium text-muted-foreground">Description</p>
-            <p>{entry.description}</p>
+      <div className="grid gap-2 sm:grid-cols-2 text-xs text-muted-foreground">
+        <div>
+          <span className="font-medium">Entry #</span> {entry.id}
+        </div>
+        <div>
+          <span className="font-medium">Time</span>{" "}
+          {formatDateTime(entry.created_at)}
+        </div>
+        {entry.ip_address && (
+          <div>
+            <span className="font-medium">IP</span> {entry.ip_address}
           </div>
         )}
-        {entry.user_role && (
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">Role</p>
-            <p>{entry.user_role}</p>
+        {entry.request_id && (
+          <div className="truncate">
+            <span className="font-medium">Request</span>{" "}
+            <span className="font-mono">{entry.request_id}</span>
+          </div>
+        )}
+        {entry.user_agent && (
+          <div className="sm:col-span-2 truncate">
+            <span className="font-medium">User-Agent</span> {entry.user_agent}
           </div>
         )}
       </div>
@@ -84,7 +92,7 @@ export function AuditHistoryTab({ patientId }: AuditHistoryTabProps) {
   const canViewAudit = hasPermission(PERMISSIONS.VIEW_AUDIT);
 
   const [page, setPage] = useState(1);
-  const [selectedEntry, setSelectedEntry] = useState<AuditLogEntry | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const params = { patient_id: patientId, page, page_size: DEFAULT_PAGE_SIZE };
 
@@ -133,9 +141,18 @@ export function AuditHistoryTab({ patientId }: AuditHistoryTabProps) {
         ),
     },
     {
-      key: "user_role",
-      header: "Role",
-      render: (e) => e.user_role ?? "—",
+      key: "performed_by",
+      header: "Performed By",
+      render: (e) => (
+        <span className="text-sm">
+          {e.user_name ?? (e.user_id ? e.user_id.slice(0, 8) : "System")}
+          {e.user_role && (
+            <span className="ml-1 text-xs text-muted-foreground">
+              ({e.user_role})
+            </span>
+          )}
+        </span>
+      ),
     },
     {
       key: "description",
@@ -148,20 +165,12 @@ export function AuditHistoryTab({ patientId }: AuditHistoryTabProps) {
     },
     {
       key: "detail",
-      header: "Details",
+      header: "",
       render: (e) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setSelectedEntry(selectedEntry?.id === e.id ? null : e)}
-          aria-expanded={selectedEntry?.id === e.id}
-          aria-label="View entry details"
-        >
-          <ChevronRight
-            className={`h-4 w-4 transition-transform ${selectedEntry?.id === e.id ? "rotate-90" : ""}`}
-            aria-hidden="true"
-          />
-        </Button>
+        <ChevronRight
+          className={`h-4 w-4 transition-transform text-muted-foreground ${expandedId === String(e.id) ? "rotate-90" : ""}`}
+          aria-hidden="true"
+        />
       ),
       className: "w-10",
     },
@@ -202,17 +211,13 @@ export function AuditHistoryTab({ patientId }: AuditHistoryTabProps) {
         total={total}
         page={page}
         pageSize={DEFAULT_PAGE_SIZE}
-        onPageChange={setPage}
+        onPageChange={(p) => { setPage(p); setExpandedId(null); }}
         getRowKey={(e) => String(e.id)}
+        expandedRowKey={expandedId}
+        renderExpandedRow={(e) => <AuditEntryDetailPanel entry={e} />}
+        onRowClick={(key) => setExpandedId(expandedId === key ? null : key)}
         emptyMessage="No audit history for this patient."
       />
-
-      {selectedEntry && (
-        <AuditEntryDetailPanel
-          entry={selectedEntry}
-          onClose={() => setSelectedEntry(null)}
-        />
-      )}
     </div>
   );
 }

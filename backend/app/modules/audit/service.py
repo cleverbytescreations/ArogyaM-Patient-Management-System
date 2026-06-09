@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import NotFoundError
 from app.modules.audit import repository as repo
+from app.modules.audit.models import AuditLog
 from app.modules.audit.schemas import AuditLogOut
 
 
@@ -25,7 +26,7 @@ def list_audit_logs(
     page: int,
     page_size: int,
 ) -> dict:
-    items, total = repo.list_audit_logs(
+    rows, total = repo.list_audit_logs(
         db,
         user_id=user_id,
         patient_id=patient_id,
@@ -38,7 +39,7 @@ def list_audit_logs(
         page_size=page_size,
     )
     return {
-        "items": [_serialize(item) for item in items],
+        "items": [_serialize(r.log, r.user_name, r.patient_name) for r in rows],
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -46,15 +47,20 @@ def list_audit_logs(
 
 
 def get_audit_log(db: Session, log_id: int) -> AuditLogOut:
-    log = repo.get_audit_log_by_id(db, log_id)
-    if not log:
+    row = repo.get_audit_log_by_id(db, log_id)
+    if not row:
         raise NotFoundError(f"Audit log {log_id} not found")
-    return _serialize(log)
+    return _serialize(row.log, row.user_name, row.patient_name)
 
 
-def _serialize(log) -> AuditLogOut:
-    # ip_address is stored as PostgreSQL INET type — convert to str for Pydantic
+def _serialize(
+    log: AuditLog,
+    user_name: str | None = None,
+    patient_name: str | None = None,
+) -> AuditLogOut:
     data = AuditLogOut.model_validate(log, from_attributes=True)
     if log.ip_address is not None:
         data.ip_address = str(log.ip_address)
+    data.user_name = user_name
+    data.patient_name = patient_name
     return data

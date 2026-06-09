@@ -90,6 +90,11 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BROWSER: ${MINIO_BROWSER:-off}   # disable web console in prod by default
+      # SSE-S3 encryption at rest (DEV-TF.8, SAD §10). Set in .env.prod:
+      #   MINIO_KMS_SECRET_KEY=my-key-name:<32-byte-hex>
+      # Generate key: openssl rand -hex 32
+      # When set, all new objects are encrypted server-side automatically.
+      MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:-}
     volumes:
       - minio_data:/data
     healthcheck:
@@ -127,7 +132,8 @@ services:
       mc mb --ignore-existing local/$$MINIO_BUCKET;
       mc anonymous set none local/$$MINIO_BUCKET;
       mc version enable local/$$MINIO_BUCKET || true;
-      echo 'bucket ready (private, versioned):' $$MINIO_BUCKET;
+      mc encrypt set sse-s3 local/$$MINIO_BUCKET 2>/dev/null || true;
+      echo 'bucket ready (private, versioned, sse-s3):' $$MINIO_BUCKET;
       "
     restart: "no"
     networks: [backend]

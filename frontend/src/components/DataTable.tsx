@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Table,
@@ -27,6 +27,9 @@ interface DataTableProps<T> {
   onPageChange: (page: number) => void;
   emptyMessage?: string;
   getRowKey: (row: T) => string;
+  expandedRowKey?: string | null;
+  renderExpandedRow?: (row: T) => ReactNode;
+  onRowClick?: (key: string) => void;
 }
 
 export function DataTable<T>({
@@ -39,6 +42,9 @@ export function DataTable<T>({
   onPageChange,
   emptyMessage = "No results found.",
   getRowKey,
+  expandedRowKey = null,
+  renderExpandedRow,
+  onRowClick,
 }: DataTableProps<T>) {
   const totalPages = Math.ceil(total / pageSize);
   const start = (page - 1) * pageSize + 1;
@@ -80,15 +86,46 @@ export function DataTable<T>({
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((row) => (
-                <TableRow key={getRowKey(row)}>
-                  {columns.map((col) => (
-                    <TableCell key={col.key} className={col.className}>
-                      {col.render(row)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              data.map((row) => {
+                const key = getRowKey(row);
+                const isExpanded = expandedRowKey === key;
+                return (
+                  <Fragment key={key}>
+                    <TableRow
+                      onClick={onRowClick ? () => onRowClick(key) : undefined}
+                      onKeyDown={
+                        onRowClick
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onRowClick(key);
+                              }
+                            }
+                          : undefined
+                      }
+                      tabIndex={onRowClick ? 0 : undefined}
+                      className={onRowClick ? "cursor-pointer" : undefined}
+                      aria-expanded={onRowClick ? isExpanded : undefined}
+                    >
+                      {columns.map((col) => (
+                        <TableCell key={col.key} className={col.className}>
+                          {col.render(row)}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                    {isExpanded && renderExpandedRow && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="p-0 border-t-0"
+                        >
+                          {renderExpandedRow(row)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
+                );
+              })
             )}
           </TableBody>
         </Table>

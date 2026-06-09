@@ -137,7 +137,7 @@ class TestDocuments:
             f"/api/v1/patients/{patient['id']}/documents", headers=_auth(reception_token)
         )
         assert listed.status_code == 200, listed.text
-        assert listed.json()[0]["id"] == created["id"]
+        assert listed.json()["items"][0]["id"] == created["id"]
 
         audit_count = db.execute(
             text(
@@ -364,16 +364,16 @@ class TestTimeline:
             f"/api/v1/patients/{patient['id']}/timeline", headers=_auth(doctor_token)
         )
         assert doctor_view.status_code == 200, doctor_view.text
-        events = doctor_view.json()
+        events = doctor_view.json()["events"]
         event_types = {event["type"] for event in events}
         assert {
-            "visit",
-            "case_sheet",
-            "consultation_note",
-            "prescription",
-            "discharge_summary",
-            "document",
-            "follow_up",
+            "VISIT",
+            "CASE_SHEET",
+            "CONSULTATION_NOTE",
+            "PRESCRIPTION",
+            "DISCHARGE_SUMMARY",
+            "DOCUMENT",
+            "FOLLOW_UP",
         }.issubset(event_types)
         assert events == sorted(events, key=lambda item: item["occurred_on"], reverse=True)
         assert any("Sensitive diagnosis" in event["summary"] for event in events)
@@ -383,6 +383,8 @@ class TestTimeline:
             f"/api/v1/patients/{patient['id']}/timeline", headers=_auth(reception_token)
         )
         assert reception_view.status_code == 200, reception_view.text
-        reception_summaries = " ".join(event["summary"] for event in reception_view.json())
+        reception_summaries = " ".join(
+            event["summary"] for event in reception_view.json()["events"]
+        )
         assert "Sensitive diagnosis" not in reception_summaries
         assert "Discharge diagnosis" not in reception_summaries
