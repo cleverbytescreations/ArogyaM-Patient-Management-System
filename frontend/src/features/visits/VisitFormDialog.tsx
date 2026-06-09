@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -119,6 +120,7 @@ export function VisitFormDialog({ patientId, open, onOpenChange, onCreated }: Vi
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Create Visit</DialogTitle>
+          <DialogDescription>Record a new outpatient or inpatient visit for this patient.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>

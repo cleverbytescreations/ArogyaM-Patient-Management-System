@@ -42,6 +42,27 @@ const DocumentsRegisterPage = lazy(
     }))
 );
 
+const FollowUpRegisterPage = lazy(
+  () =>
+    import("@/features/followups/FollowUpRegisterPage").then((m) => ({
+      default: m.FollowUpRegisterPage,
+    }))
+);
+
+const AuditLogsPage = lazy(
+  () =>
+    import("@/features/audit/AuditLogsPage").then((m) => ({
+      default: m.AuditLogsPage,
+    }))
+);
+
+const BackupStatusPage = lazy(
+  () =>
+    import("@/features/backup/BackupStatusPage").then((m) => ({
+      default: m.BackupStatusPage,
+    }))
+);
+
 function DashboardPlaceholder() {
   return (
     <div className="space-y-2">
@@ -113,6 +134,36 @@ export function AppRoutes() {
                     element={
                       <RequirePermission permission={PERMISSIONS.MANAGE_USERS}>
                         <UsersListPage />
+                      </RequirePermission>
+                    }
+                  />
+
+                  {/* Follow-Up Register */}
+                  <Route
+                    path="/follow-ups"
+                    element={
+                      <RequirePermission permission={PERMISSIONS.MANAGE_FOLLOWUPS}>
+                        <FollowUpRegisterPage />
+                      </RequirePermission>
+                    }
+                  />
+
+                  {/* Audit Logs */}
+                  <Route
+                    path="/audit-logs"
+                    element={
+                      <RequirePermission permission={PERMISSIONS.VIEW_AUDIT}>
+                        <AuditLogsPage />
+                      </RequirePermission>
+                    }
+                  />
+
+                  {/* Backup Status */}
+                  <Route
+                    path="/backup"
+                    element={
+                      <RequirePermission permission={PERMISSIONS.BACKUP_CONTROL}>
+                        <BackupStatusPage />
                       </RequirePermission>
                     }
                   />

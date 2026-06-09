@@ -1157,8 +1157,12 @@ Objective:
 Implement the following UI task from the checklist: If any task is already implemented, please review the changes are in alignment with the scope.
 
 Frontend
-UI-T7.1 Prescriptions tab · UI-T8.1 Discharge Summary (finalize/amend) · UI-T9.1, UI-T9.2 Documents tab + register + secure viewer · UI-T10.1 Timeline view.
+UI-T11.1 Follow-Ups tab + Register · UI-T12.1 Audit Logs + Audit History tab · UI-T13.1 Backup Status.
 
+Hardening (continuous tracks land here)
+TST-T11.1, TST-T0.2 (log-privacy CI guard), TST-T0.3 (migration up/down), TST-T0.4 (perf/load on ~50k seed: search p95 <1s, dashboard <2s), TST-T0.5 (coverage gates).
+SEC-T0.4 OWASP checklist · LOG-T0.3 log storage perms/rotation/retention policy · DEV-TF.2, DEV-TF.3, DEV-TF.5, DEV-TF.6, DEV-TF.8, DEV-TF.9 — prod images, proxy/TLS, security scans, migrations-on-deploy + rollback, encryption-at-rest, observability/uptime.
+Exit criteria (= M4, R1 go-live ready): Every MVP module complete and tested; backups automated + restore drilled; perf NFRs met on seeded data; CI gates (lint/type/test/a11y/dep-scan/image-scan/secret-scan/log-privacy) all green; deploy + rollback rehearsed.
 
 Instructions:
 -------------
@@ -1223,9 +1227,13 @@ Review the recently generated/modified React UI code for possible errors, securi
 
 Implemented task:
 
-
 Frontend
-UI-T7.1 Prescriptions tab · UI-T8.1 Discharge Summary (finalize/amend) · UI-T9.1, UI-T9.2 Documents tab + register + secure viewer · UI-T10.1 Timeline view.
+UI-T11.1 Follow-Ups tab + Register · UI-T12.1 Audit Logs + Audit History tab · UI-T13.1 Backup Status.
+
+Hardening (continuous tracks land here)
+TST-T11.1, TST-T0.2 (log-privacy CI guard), TST-T0.3 (migration up/down), TST-T0.4 (perf/load on ~50k seed: search p95 <1s, dashboard <2s), TST-T0.5 (coverage gates).
+SEC-T0.4 OWASP checklist · LOG-T0.3 log storage perms/rotation/retention policy · DEV-TF.2, DEV-TF.3, DEV-TF.5, DEV-TF.6, DEV-TF.8, DEV-TF.9 — prod images, proxy/TLS, security scans, migrations-on-deploy + rollback, encryption-at-rest, observability/uptime.
+Exit criteria (= M4, R1 go-live ready): Every MVP module complete and tested; backups automated + restore drilled; perf NFRs met on seeded data; CI gates (lint/type/test/a11y/dep-scan/image-scan/secret-scan/log-privacy) all green; deploy + rollback rehearsed.
 
 
 Review and fix:

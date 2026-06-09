@@ -8,6 +8,9 @@ import type { Visit, CaseSheet, ConsultationNote, PatientAlias } from "@/types/v
 import type { DischargeSummary, Prescription } from "@/types/clinical";
 import type { PatientDocument } from "@/types/documents";
 import type { PatientTimeline } from "@/types/timeline";
+import type { FollowUp } from "@/types/followups";
+import type { AuditLogEntry } from "@/types/audit";
+import type { BackupLogEntry } from "@/types/backup";
 
 const BASE = "/api/v1";
 
@@ -319,9 +322,9 @@ export const mockDocuments: PatientDocument[] = [
 export const mockTimeline: PatientTimeline = {
   patient_id: "patient-1",
   events: [
-    { type: "DOCUMENT", occurred_on: "2026-06-05", ref_id: "doc-1", summary: "Scanned prescription uploaded" },
-    { type: "PRESCRIPTION", occurred_on: "2026-06-05", ref_id: "rx-1", summary: "Paracetamol prescribed" },
-    { type: "VISIT", occurred_on: "2026-06-05", ref_id: "visit-1", summary: "New patient visit" },
+    { type: "DOCUMENT", occurred_on: "2026-06-05", ref_id: "doc-1", summary: "Scanned prescription uploaded", visit_id: "visit-1" },
+    { type: "PRESCRIPTION", occurred_on: "2026-06-05", ref_id: "rx-1", summary: "Paracetamol prescribed", visit_id: "visit-1" },
+    { type: "VISIT", occurred_on: "2026-06-05", ref_id: "visit-1", summary: "New patient visit", visit_id: "visit-1" },
   ],
 };
 
@@ -844,4 +847,179 @@ export const handlers = [
       headers: { "Content-Type": "application/pdf" },
     });
   }),
+
+  // ── Follow-ups ────────────────────────────────────────────────────────────
+
+  http.get(`${BASE}/patients/:id/follow-ups`, ({ params, request }) => {
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get("page") ?? "1", 10);
+    const pageSize = parseInt(url.searchParams.get("page_size") ?? "20", 10);
+    const items = params.id === mockPatient.id ? [mockFollowUp] : [];
+    return HttpResponse.json<PaginatedResponse<FollowUp>>({
+      items,
+      total: items.length,
+      page,
+      page_size: pageSize,
+    });
+  }),
+
+  http.post(`${BASE}/patients/:id/follow-ups`, async ({ params, request }) => {
+    const body = await request.json() as Partial<FollowUp>;
+    const newFollowUp: FollowUp = {
+      ...mockFollowUp,
+      id: "fu-new",
+      patient_id: params.id as string,
+      follow_up_date: body.follow_up_date ?? mockFollowUp.follow_up_date,
+      reason: body.reason ?? null,
+      assigned_to: body.assigned_to ?? null,
+      status_code: "PENDING",
+      created_at: new Date().toISOString(),
+    };
+    return HttpResponse.json(newFollowUp, { status: 201 });
+  }),
+
+  http.get(`${BASE}/follow-ups`, ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get("status");
+    const page = parseInt(url.searchParams.get("page") ?? "1", 10);
+    const pageSize = parseInt(url.searchParams.get("page_size") ?? "20", 10);
+    const items = [mockFollowUp].filter(
+      (f) => !status || f.status_code === status
+    );
+    return HttpResponse.json<PaginatedResponse<FollowUp>>({
+      items,
+      total: items.length,
+      page,
+      page_size: pageSize,
+    });
+  }),
+
+  http.put(`${BASE}/follow-ups/:id`, async ({ params, request }) => {
+    const body = await request.json() as Partial<FollowUp>;
+    if (params.id !== mockFollowUp.id) {
+      return HttpResponse.json(
+        { error: { code: "RESOURCE_NOT_FOUND", message: "Follow-up not found.", details: [], request_id: "rfu1" } },
+        { status: 404 }
+      );
+    }
+    return HttpResponse.json({ ...mockFollowUp, ...body, version: mockFollowUp.version + 1 });
+  }),
+
+  // ── Audit logs ────────────────────────────────────────────────────────────
+
+  http.get(`${BASE}/audit-logs`, ({ request }) => {
+    const url = new URL(request.url);
+    const patientId = url.searchParams.get("patient_id");
+    const page = parseInt(url.searchParams.get("page") ?? "1", 10);
+    const pageSize = parseInt(url.searchParams.get("page_size") ?? "20", 10);
+    const items = mockAuditLogs.filter(
+      (e) => !patientId || e.patient_id === patientId
+    );
+    return HttpResponse.json<PaginatedResponse<AuditLogEntry>>({
+      items,
+      total: items.length,
+      page,
+      page_size: pageSize,
+    });
+  }),
+
+  http.get(`${BASE}/audit-logs/:id`, ({ params }) => {
+    const entry = mockAuditLogs.find((e) => String(e.id) === params.id);
+    if (!entry) {
+      return HttpResponse.json(
+        { error: { code: "RESOURCE_NOT_FOUND", message: "Audit entry not found.", details: [], request_id: "ral1" } },
+        { status: 404 }
+      );
+    }
+    return HttpResponse.json(entry);
+  }),
+
+  // ── Backup status ─────────────────────────────────────────────────────────
+
+  http.get(`${BASE}/backup/status`, () => {
+    return HttpResponse.json({
+      latest: mockBackupLogs[0],
+      history: mockBackupLogs,
+    });
+  }),
+];
+
+// ── Follow-up fixtures ───────────────────────────────────────────────────────
+
+export const mockFollowUp: FollowUp = {
+  id: "fu-1",
+  patient_id: "patient-1",
+  visit_id: "visit-1",
+  follow_up_date: "2026-06-20",
+  reason: "Review after treatment",
+  assigned_to: "user-2",
+  status_code: "PENDING",
+  next_followup_id: null,
+  remarks: null,
+  version: 1,
+  created_at: "2026-06-05T11:00:00Z",
+};
+
+// ── Audit log fixtures ───────────────────────────────────────────────────────
+
+export const mockAuditLogs: AuditLogEntry[] = [
+  {
+    id: 1,
+    user_id: "user-1",
+    user_role: "ADMIN",
+    action: "VIEW",
+    entity_type: "patient",
+    entity_id: "patient-1",
+    patient_id: "patient-1",
+    old_value: null,
+    new_value: null,
+    description: "Viewed patient profile",
+    ip_address: "127.0.0.1",
+    user_agent: "Mozilla/5.0",
+    request_id: "req-1",
+    created_at: "2026-06-05T10:00:00Z",
+  },
+  {
+    id: 2,
+    user_id: "user-1",
+    user_role: "ADMIN",
+    action: "UPDATE",
+    entity_type: "patient",
+    entity_id: "patient-1",
+    patient_id: "patient-1",
+    old_value: { full_name: "Old Name" },
+    new_value: { full_name: "Priya Sharma" },
+    description: "Updated patient demographics",
+    ip_address: "127.0.0.1",
+    user_agent: "Mozilla/5.0",
+    request_id: "req-2",
+    created_at: "2026-06-05T11:00:00Z",
+  },
+];
+
+// ── Backup log fixtures ──────────────────────────────────────────────────────
+
+export const mockBackupLogs: BackupLogEntry[] = [
+  {
+    id: 1,
+    backup_type: "FULL",
+    status: "SUCCESS",
+    location_ref: "/backups/2026-06-09/full.tar.gz",
+    size_bytes: 52428800,
+    message: "Backup completed successfully",
+    triggered_by: null,
+    started_at: "2026-06-09T02:00:00Z",
+    completed_at: "2026-06-09T02:05:30Z",
+  },
+  {
+    id: 2,
+    backup_type: "DATABASE",
+    status: "SUCCESS",
+    location_ref: "/backups/2026-06-08/db.sql.gz",
+    size_bytes: 10485760,
+    message: null,
+    triggered_by: null,
+    started_at: "2026-06-08T02:00:00Z",
+    completed_at: "2026-06-08T02:01:45Z",
+  },
 ];

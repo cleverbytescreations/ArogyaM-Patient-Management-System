@@ -16,18 +16,13 @@ import { PrescriptionsTab } from "@/features/clinical/PrescriptionsTab";
 import { DischargeSummaryTab } from "@/features/clinical/DischargeSummaryTab";
 import { DocumentsTab } from "@/features/documents/DocumentsTab";
 import { TimelineTab } from "./tabs/TimelineTab";
+import { FollowUpsTab } from "@/features/followups/FollowUpsTab";
+import { AuditHistoryTab } from "./tabs/AuditHistoryTab";
 import { visitsApi } from "@/api/visitsApi";
 import type { Visit } from "@/types/visits";
 
 const STALE = 5 * 60 * 1000;
 
-function ComingSoonTab({ name }: { name: string }) {
-  return (
-    <div className="py-16 text-center">
-      <p className="text-sm text-muted-foreground">{name} — coming in a future sprint.</p>
-    </div>
-  );
-}
 
 export function PatientProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -138,8 +133,8 @@ export function PatientProfilePage() {
           <TabsTrigger value="discharge">Discharge Summaries</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          <TabsTrigger value="followups" disabled>Follow-Ups</TabsTrigger>
-          <TabsTrigger value="audit" disabled>Audit History</TabsTrigger>
+          <TabsTrigger value="followups">Follow-Ups</TabsTrigger>
+          <TabsTrigger value="audit">Audit History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="pt-0">
@@ -212,11 +207,11 @@ export function PatientProfilePage() {
         </TabsContent>
 
         <TabsContent value="followups" className="pt-0">
-          <ComingSoonTab name="Follow-Ups" />
+          <FollowUpsTab patientId={patient.id} />
         </TabsContent>
 
         <TabsContent value="audit" className="pt-0">
-          <ComingSoonTab name="Audit History" />
+          <AuditHistoryTab patientId={patient.id} />
         </TabsContent>
       </Tabs>
     </div>

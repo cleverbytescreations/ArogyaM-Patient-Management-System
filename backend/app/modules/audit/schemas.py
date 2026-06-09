@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class AuditLogOut(BaseModel):
@@ -23,6 +23,13 @@ class AuditLogOut(BaseModel):
     new_value: Any | None = None
     description: str | None = None
     ip_address: str | None = None
+
+    @field_validator("ip_address", mode="before")
+    @classmethod
+    def coerce_ip_address(cls, v: object) -> str | None:
+        if v is None:
+            return None
+        return str(v)
     user_agent: str | None = None
     request_id: str | None = None
     created_at: datetime

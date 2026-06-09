@@ -7,6 +7,7 @@ import {
   Activity,
   Search,
   Files,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/auth/usePermissions";
@@ -25,6 +26,12 @@ const navItems: NavItem[] = [
     label: "Patient Search",
     icon: Search,
     permission: PERMISSIONS.VIEW_PATIENT,
+  },
+  {
+    to: "/follow-ups",
+    label: "Follow-Up Register",
+    icon: CalendarClock,
+    permission: PERMISSIONS.MANAGE_FOLLOWUPS,
   },
   {
     to: "/users",

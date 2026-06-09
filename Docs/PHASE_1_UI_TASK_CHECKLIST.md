@@ -200,7 +200,7 @@
 
 ### Module 11 — Follow-Up Tracking (UC-20/21)
 
-- [ ] **UI-T11.1 [M]** — Follow-Ups tab + Follow-Up Register screen (MVP)
+- [x] **UI-T11.1 [M]** — Follow-Ups tab + Follow-Up Register screen (MVP)
       **Description:** Patient Follow-Ups tab (create/list/update) and a global Follow-Up Register/queue with filters (`status`, `from/to`, `assigned_to`).
       **Files / Components:** `frontend/src/features/followups/FollowUpsTab.tsx`, `.../FollowUpRegisterPage.tsx`.
       **Implementation Notes:** Lifecycle `PENDING → CONTACTED|NOT_REACHABLE → COMPLETED|RESCHEDULED`; invalid transition → 409 message. Status uses icon+text (not colour-only). Version-checked updates. `manage_followups`.
@@ -208,7 +208,7 @@
 
 ### Module 12 — Audit Logs (UC-25, Admin)
 
-- [ ] **UI-T12.1 [M]** — Audit Logs screen + profile Audit History tab (MVP)
+- [x] **UI-T12.1 [M]** — Audit Logs screen + profile Audit History tab (MVP)
       **Description:** Admin Audit Logs screen (filter by user/patient/action/entity/date, paginated) and a per-patient Audit History tab.
       **Files / Components:** `frontend/src/features/audit/AuditLogsPage.tsx`, `frontend/src/features/patients/tabs/AuditHistoryTab.tsx`.
       **Implementation Notes:** `GET /audit-logs` (admin, `view_audit`) and `GET /audit-logs/{id}` for old/new detail. Read-only.
@@ -216,7 +216,7 @@
 
 ### Module 13 — Backup Status (UC-26, Admin)
 
-- [ ] **UI-T13.1 [S]** — Backup Status screen (MVP)
+- [x] **UI-T13.1 [S]** — Backup Status screen (MVP)
       **Description:** Admin screen showing latest + recent backup runs and outcomes from `GET /backup/status`.
       **Files / Components:** `frontend/src/features/backup/BackupStatusPage.tsx`.
       **Implementation Notes:** Gated by `backup_control`. Read-only (no restore/trigger in UI).
