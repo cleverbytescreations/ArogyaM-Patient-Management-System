@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import NamedTuple
 
-from sqlalchemy import and_, select, func
+from sqlalchemy import and_, delete, select, func
 from sqlalchemy.orm import Session
 
 from app.modules.audit.models import AuditLog
@@ -42,6 +42,19 @@ def get_audit_log_by_id(db: Session, log_id: int) -> AuditLogRow | None:
     if row is None:
         return None
     return AuditLogRow(log=row.AuditLog, user_name=row.user_name, patient_name=row.patient_name)
+
+
+def count_expired(db: Session, cutoff: datetime) -> int:
+    """Count audit rows with created_at < cutoff (used by purge, dry-run safe)."""
+    q = select(func.count()).select_from(
+        select(AuditLog.id).where(AuditLog.created_at < cutoff).subquery()
+    )
+    return db.execute(q).scalar_one()
+
+
+def delete_expired(db: Session, cutoff: datetime) -> None:
+    """Delete audit rows with created_at < cutoff. Does NOT commit."""
+    db.execute(delete(AuditLog).where(AuditLog.created_at < cutoff))
 
 
 def list_audit_logs(

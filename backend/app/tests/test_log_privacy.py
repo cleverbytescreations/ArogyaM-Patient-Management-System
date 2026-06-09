@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from datetime import date
 from typing import Any
 
 import pytest
@@ -194,6 +195,7 @@ class TestClinicalLogPrivacy:
             json={
                 "full_name": f"TestClinical {uuid.uuid4().hex[:6]}",
                 "gender": "MALE",
+                "age_years": 35,
                 "op_category_code": category,
             },
             headers=_auth(admin_token),
@@ -208,7 +210,7 @@ class TestClinicalLogPrivacy:
         visit_resp = client.post(
             f"/api/v1/patients/{patient_id}/visits",
             json={
-                "visit_date": "2026-06-10",
+                "visit_date": str(date.today()),
                 "visit_type_code": "NEW",
                 "consultation_category": "REGULAR",
             },
@@ -262,15 +264,12 @@ class TestRouteTemplateLogging:
 class TestRedactionFilter:
     """Unit-test the redaction filter and JSON formatter directly."""
 
-    def test_sensitive_key_redacted_in_json_output(self) -> None:
+    def test_sensitive_key_excluded_from_json_output(self) -> None:
+        """JSONFormatter uses an allow-list (ALLOWED_EXTRA_KEYS) so sensitive
+        fields are omitted entirely from the output — not just replaced. This is
+        the more secure behaviour: data never appears in the log, even redacted.
+        """
         from app.core.logging import JSONFormatter, RedactionFilter
-
-        handler = logging.StreamHandler()
-        handler.setFormatter(JSONFormatter())
-
-        logger = logging.getLogger("test.redaction")
-        logger.addHandler(handler)
-        logger.addFilter(RedactionFilter())
 
         records: list[str] = []
 
@@ -278,14 +277,16 @@ class TestRedactionFilter:
             def emit(self, r: logging.LogRecord) -> None:
                 records.append(JSONFormatter().format(r))
 
-        cap = _Capture()
-        logger.addHandler(cap)
+        logger = logging.getLogger("test.redaction.allowlist")
+        logger.propagate = False
+        capture = _Capture()
+        capture.addFilter(RedactionFilter())
+        logger.addHandler(capture)
 
-        # Emit with sensitive keys in extra
         logger.info(
             "test event",
             extra={
-                "full_name": "Should Be Redacted",
+                "full_name": "Should Be Excluded",
                 "mobile": "9876543210",
                 "request_id": "req-123",
             },
@@ -293,13 +294,16 @@ class TestRedactionFilter:
 
         assert records, "No log records captured"
         obj = json.loads(records[0])
-        assert obj.get("full_name") == "***REDACTED***", (
-            "full_name was not redacted"
+        # Sensitive keys must NOT appear at all — the allow-list omits them.
+        assert "full_name" not in obj, (
+            "full_name (sensitive) appeared in JSON output — allow-list violated"
         )
-        assert obj.get("mobile") == "***REDACTED***", "mobile was not redacted"
-        # request_id is in the allow-list — must NOT be redacted
+        assert "mobile" not in obj, (
+            "mobile (sensitive) appeared in JSON output — allow-list violated"
+        )
+        # request_id is in ALLOWED_EXTRA_KEYS — must be present and unredacted
         assert obj.get("request_id") == "req-123", (
-            "request_id (allowed field) was incorrectly redacted"
+            "request_id (allowed field) was missing or incorrectly redacted"
         )
 
     def test_nested_pii_redacted(self) -> None:

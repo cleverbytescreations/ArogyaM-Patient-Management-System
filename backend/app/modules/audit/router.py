@@ -11,15 +11,17 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
+from app.core.audit import extract_request_meta
 from app.core.dependencies import get_db, require_permission
-from app.core.permissions import PERM_VIEW_AUDIT
+from app.core.permissions import PERM_BACKUP_CONTROL, PERM_VIEW_AUDIT
 from app.modules.audit import service as svc
 from app.modules.audit.schemas import AuditLogOut
 
 ViewAudit = Annotated[dict, Depends(require_permission(PERM_VIEW_AUDIT))]
+BackupControl = Annotated[dict, Depends(require_permission(PERM_BACKUP_CONTROL))]
 
 router = APIRouter(prefix="/audit-logs", tags=["audit"])
 
@@ -49,6 +51,30 @@ def list_audit_logs(
         to_dt=to_dt,
         page=page,
         page_size=page_size,
+    )
+
+
+@router.post(
+    "/purge",
+    summary="Purge audit log entries older than the configured retention period (admin only)",
+)
+def purge_audit_logs(
+    payload: BackupControl,
+    db: Annotated[Session, Depends(get_db)],
+    request: Request,
+    dry_run: bool = Query(
+        default=False,
+        description="When true, counts matching records but does not delete them.",
+    ),
+) -> dict:
+    ip, ua, rid = extract_request_meta(request)
+    return svc.purge_audit_logs(
+        db,
+        dry_run=dry_run,
+        actor_payload=payload,
+        ip_address=ip,
+        user_agent=ua,
+        request_id=rid,
     )
 
 

@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     # Maximum hours after creation during which a prescription can be edited.
     prescription_edit_window_hours: int = Field(default=8)
 
+    # --- Audit log retention -------------------------------------------------
+    # Hard-delete audit records older than this many days.
+    # 2555 days = 7 years (recommended minimum for medical-record compliance).
+    # Set to 0 to disable automatic purging entirely.
+    # Trigger via: POST /api/v1/audit-logs/purge  OR  scripts/purge_audit_log.py
+    audit_retention_days: int = Field(default=2555)
+
     # --- Login rate limiting (SEC-T1.2) --------------------------------------
     # Disabled when rate_limit_enabled=False (or RATE_LIMIT_ENABLED=false env).
     # When Redis is configured (REDIS_URL), uses Redis for multi-worker safety;
