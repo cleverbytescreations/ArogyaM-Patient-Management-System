@@ -221,6 +221,178 @@ See [core/cache.py](backend/app/core/cache.py) for the full helper implementatio
 - File-size limit: `settings.upload_max_mb` (default 10 MB)
 - Never expose MinIO bucket URLs directly to the client
 
+## Append-Only / Time-Series Table Patterns
+
+Apply these patterns to every table that is strictly append-only and grows without bound
+over time — `audit_log`, `backup_log`, future `notification_log`, `email_log`, event
+tables, etc. The patterns work together as a stack: BRIN keeps reads fast, retention
+keeps the table bounded, and the purge design keeps compliance evidence intact.
+
+### Index choice: BRIN, not B-Tree, on `created_at`
+
+When a table is always appended in timestamp order (`server_default=func.now()`, no
+out-of-order inserts), use a **BRIN** index on `created_at` — not a B-Tree.
+
+```sql
+-- correct for append-only tables
+CREATE INDEX idx_<table>_created_brin ON <table> USING BRIN (created_at);
+
+-- avoid — wastes ~8-12× disk/write I/O on an already-ordered column
+CREATE INDEX idx_<table>_created ON <table> (created_at);
+```
+
+BRIN stores only `min`/`max` per 128-page block range. Because rows are physically
+written in `created_at` order, each block range contains a tight date window — the
+planner skips entire blocks outside any date-range filter at a tiny fraction of
+B-Tree's storage cost. Revert to B-Tree only if out-of-order inserts become possible.
+
+### Retention configuration
+
+Expose the retention window as a pydantic-settings env var; compute the cutoff at
+call-time, never store it:
+
+```python
+# core/config.py
+<table>_retention_days: int = Field(default=2555)  # 7 years; 0 = disabled
+
+# service or script
+cutoff = datetime.now(tz=timezone.utc) - timedelta(days=settings.<table>_retention_days)
+```
+
+`0` means purging is disabled — return early with `skipped=True` rather than deleting
+everything.
+
+### Repository: count and delete (no commit in repo)
+
+```python
+def count_expired(db: Session, cutoff: datetime) -> int:
+    """Dry-run safe: counts rows without deleting."""
+    q = select(func.count()).select_from(
+        select(Model.id).where(Model.created_at < cutoff).subquery()
+    )
+    return db.execute(q).scalar_one()
+
+def delete_expired(db: Session, cutoff: datetime) -> None:
+    """Stages DELETE in the session. Caller (service) commits."""
+    db.execute(delete(Model).where(Model.created_at < cutoff))
+```
+
+### Service: atomic delete + audit trace
+
+Count, delete, write a `PURGE_<TABLE>` audit record, and `db.commit()` in a **single
+transaction**. If the commit fails, neither the deletion nor the evidence of it persists.
+
+```python
+def purge_records(
+    db: Session,
+    *,
+    dry_run: bool = False,
+    actor_payload: dict | None = None,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+    request_id: str | None = None,
+) -> dict:
+    retention_days = settings.<table>_retention_days
+    if retention_days <= 0:
+        return {"purged_count": 0, "cutoff_before": None, "dry_run": dry_run,
+                "skipped": True, "reason": "<TABLE>_RETENTION_DAYS is 0 — purging is disabled"}
+
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=retention_days)
+    count = repo.count_expired(db, cutoff)
+
+    if not dry_run and count > 0:
+        repo.delete_expired(db, cutoff)
+        write_audit(
+            db,
+            action="PURGE_<TABLE>",
+            entity_type="<table>",
+            user_id=actor_payload["sub"] if actor_payload else None,
+            user_role=",".join(actor_payload.get("roles", [])) if actor_payload else None,
+            new_value={"purged_count": count, "cutoff_before": cutoff.isoformat(),
+                       "retention_days": retention_days},
+            description=f"Purged {count} records older than {cutoff.date().isoformat()}",
+            ip_address=ip_address, user_agent=user_agent, request_id=request_id,
+        )
+        db.commit()
+
+    return {"purged_count": count, "cutoff_before": cutoff.isoformat(),
+            "dry_run": dry_run, "skipped": False}
+```
+
+### API endpoint: admin-only with `dry_run` safety
+
+Gate the purge endpoint behind `PERM_BACKUP_CONTROL` (admin-only maintenance action).
+Always expose `?dry_run=true` so operators can preview impact before committing.
+
+```python
+@router.post("/purge", summary="Purge records older than retention period (admin only)")
+def purge_records(
+    payload: Annotated[dict, Depends(require_permission(PERM_BACKUP_CONTROL))],
+    db: Annotated[Session, Depends(get_db)],
+    request: Request,
+    dry_run: bool = Query(default=False, description="Count only, do not delete"),
+) -> dict:
+    ip, ua, rid = extract_request_meta(request)
+    return svc.purge_records(db, dry_run=dry_run, actor_payload=payload,
+                             ip_address=ip, user_agent=ua, request_id=rid)
+```
+
+### Cron script (`backend/scripts/purge_<table>.py`)
+
+Standalone script for scheduled execution. Must:
+- Accept `--dry-run` flag
+- Read settings from the same env vars as the API via `SessionLocal()`
+- Exit `0` on success, `1` on error (enables cron alerting)
+
+```python
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from app.core.db import SessionLocal
+from app.core.config import settings
+from app.modules.<domain> import repository as repo
+
+def main(dry_run: bool) -> None:
+    cutoff = datetime.now(tz=UTC) - timedelta(days=settings.<table>_retention_days)
+    with SessionLocal() as db:
+        count = repo.count_expired(db, cutoff)
+        if not dry_run and count > 0:
+            repo.delete_expired(db, cutoff)
+            write_audit(db, action="PURGE_<TABLE>", ..., triggered_by="cron_script")
+            db.commit()
+```
+
+Suggested monthly cron (first Sunday, 02:00 UTC):
+```cron
+0 2 1-7 * 0  docker compose exec -T api python scripts/purge_<table>.py >> /var/log/purge.log 2>&1
+```
+
+Use `-T` in non-interactive cron environments (disables pseudo-TTY allocation).
+
+### Purge response envelope
+
+All purge endpoints return a consistent shape:
+```json
+{
+  "purged_count": 4821,
+  "cutoff_before": "2019-06-09T10:30:00+00:00",
+  "dry_run": false,
+  "skipped": false
+}
+```
+When retention is disabled (`<TABLE>_RETENTION_DAYS=0`): `purged_count=0`,
+`cutoff_before=null`, `skipped=true`, plus a `reason` string.
+
+### Declarative partitioning escalation
+
+When `pg_total_relation_size('<table>')` exceeds **2 GB** or the row count exceeds
+**2–5 million**, begin planning `pg_partman` monthly range partitioning. At that scale
+a retention `DELETE` can take minutes and hold locks; partition drops are O(1) and
+lock-free. See **architecture-deep-dive skill → Append-Only Table Scale Strategy** for
+trigger criteria and
+[Docs/audit-log-declarative-table-partitioning.md](../../../Docs/audit-log-declarative-table-partitioning.md)
+for the full migration plan.
+
+---
+
 ## Audit Logging Rules
 Every sensitive action must call `write_audit()` from `app/core/audit.py`:
 ```python

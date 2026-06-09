@@ -185,6 +185,33 @@ Entry (Draft) → Finalize (`is_finalized=TRUE`) → Immutable; amendment create
 | Redis | Optional single node | Rate-limiting or denylist needed in prod |
 | Search | PostgreSQL FTS + trgm | p95 search >1s on seeded dataset |
 | Reporting | Direct SQL + views | Slow reports → promote to materialized views |
+| `audit_log` / append-only tables | BRIN index + monthly retention purge | `pg_total_relation_size` > 2 GB or > 2–5M rows → plan `pg_partman` partitioning |
+
+### Append-Only Table Scale Strategy
+
+Any table that is strictly append-only and time-ordered (`audit_log`, `backup_log`,
+future `notification_log`, event tables) follows a dedicated three-phase escalation path.
+
+**Phase A — Index (do immediately on any new append-only table):**
+Use a **BRIN** index on `created_at`, not a B-Tree. Rows are always physically appended
+in timestamp order, so BRIN stores only min/max per 128-page block range at ~8–12× less
+disk/write cost than B-Tree while delivering the same range-scan pruning. Full
+implementation rule lives in **backend-patterns skill → Append-Only / Time-Series Table
+Patterns**.
+
+**Phase B — Retention policy (implement alongside the table):**
+Add a `<TABLE>_RETENTION_DAYS` env var (default 2555 = 7 years for medical records, 0 =
+disabled). A monthly cron script (`scripts/purge_<table>.py`) deletes expired rows
+atomically with a `PURGE_<TABLE>` audit record. This keeps the table bounded without
+partitioning complexity. Full implementation pattern in **backend-patterns skill**.
+
+**Phase C — Declarative partitioning (trigger: 2 GB or 2–5M rows):**
+When `pg_total_relation_size('<table>')` exceeds **2 GB** or row count exceeds **2–5M**,
+begin planning `pg_partman` monthly range partitioning. Partition drops are O(1) and
+lock-free vs. minutes-long `DELETE` at that scale. Outbound FK constraints
+(`audit_log.user_id → users`) are fully supported on partitioned tables in PostgreSQL 11+.
+See [Docs/audit-log-declarative-table-partitioning.md](../../Docs/audit-log-declarative-table-partitioning.md)
+for the full migration plan, `pg_partman` setup, and FK constraint notes.
 
 ## When giving architecture advice
 
