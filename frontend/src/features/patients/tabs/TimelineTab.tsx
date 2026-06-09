@@ -21,15 +21,16 @@ const EVENT_CONFIG: Record<TimelineEventType, { label: string; icon: React.Eleme
 
 interface TimelineTabProps {
   patientId: string;
+  visitId?: string | null;
   onOpenSection?: (section: string) => void;
 }
 
-export function TimelineTab({ patientId, onOpenSection }: TimelineTabProps) {
+export function TimelineTab({ patientId, visitId, onOpenSection }: TimelineTabProps) {
   const { hasPermission } = usePermissions();
   const canRead = hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY);
   const { data, isLoading, error } = useQuery({
-    queryKey: ["patient-timeline", patientId],
-    queryFn: () => patientsApi.timeline(patientId),
+    queryKey: ["patient-timeline", patientId, visitId ?? null],
+    queryFn: () => patientsApi.timeline(patientId, visitId),
     enabled: canRead,
   });
 

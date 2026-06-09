@@ -12,6 +12,7 @@ export interface PatientTimelineEvent {
   occurred_on: string;
   ref_id: string;
   summary: string;
+  visit_id: string | null;
 }
 
 export interface PatientTimeline {

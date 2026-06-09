@@ -28,6 +28,8 @@ export const patientsApi = {
   update: (id: string, data: PatientUpdateRequest) =>
     apiClient.put<Patient>(`/patients/${id}`, data).then((r) => r.data),
 
-  timeline: (id: string) =>
-    apiClient.get<PatientTimeline>(`/patients/${id}/timeline`).then((r) => r.data),
+  timeline: (id: string, visitId?: string | null) =>
+    apiClient
+      .get<PatientTimeline>(`/patients/${id}/timeline`, { params: visitId ? { visit_id: visitId } : undefined })
+      .then((r) => r.data),
 };

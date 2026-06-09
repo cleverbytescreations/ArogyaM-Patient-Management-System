@@ -24,6 +24,11 @@ class TimelineEvent(BaseModel):
     details: dict[str, str | bool | int | None] = Field(default_factory=dict)
 
 
+class PatientTimeline(BaseModel):
+    patient_id: uuid.UUID
+    events: list[TimelineEvent]
+
+
 def _has_medical_view(actor_payload: dict) -> bool:
     return PERM_VIEW_MEDICAL_HISTORY in actor_payload.get("permissions", [])
 
@@ -33,8 +38,11 @@ def _occurred_on(value: datetime) -> datetime:
 
 
 def get_patient_timeline(
-    db: Session, patient_id: uuid.UUID, actor_payload: dict
-) -> list[TimelineEvent]:
+    db: Session,
+    patient_id: uuid.UUID,
+    actor_payload: dict,
+    visit_id: uuid.UUID | None = None,
+) -> PatientTimeline:
     patient = patient_repo.get_patient_by_id(db, patient_id)
     if patient is None:
         raise NotFoundError(f"Patient {patient_id} not found")
@@ -45,7 +53,7 @@ def get_patient_timeline(
     for visit in repo.list_visits(db, patient_id):
         events.append(
             TimelineEvent(
-                type="visit",
+                type="VISIT",
                 occurred_on=repo.as_datetime(visit.visit_date),
                 ref_id=visit.id,
                 visit_id=visit.id,
@@ -58,7 +66,7 @@ def get_patient_timeline(
     for case_sheet in repo.list_case_sheets(db, patient_id):
         events.append(
             TimelineEvent(
-                type="case_sheet",
+                type="CASE_SHEET",
                 occurred_on=_occurred_on(case_sheet.created_at),
                 ref_id=case_sheet.id,
                 visit_id=case_sheet.visit_id,
@@ -74,7 +82,7 @@ def get_patient_timeline(
             summary = f"Consultation note: {note.diagnosis[:120]}"
         events.append(
             TimelineEvent(
-                type="consultation_note",
+                type="CONSULTATION_NOTE",
                 occurred_on=_occurred_on(note.created_at),
                 ref_id=note.id,
                 visit_id=note.visit_id,
@@ -87,7 +95,7 @@ def get_patient_timeline(
     for prescription in repo.list_prescriptions(db, patient_id):
         events.append(
             TimelineEvent(
-                type="prescription",
+                type="PRESCRIPTION",
                 occurred_on=repo.as_datetime(prescription.prescription_date),
                 ref_id=prescription.id,
                 visit_id=prescription.visit_id,
@@ -104,7 +112,7 @@ def get_patient_timeline(
         occurred = summary.finalized_at or summary.updated_at or summary.created_at
         events.append(
             TimelineEvent(
-                type="discharge_summary",
+                type="DISCHARGE_SUMMARY",
                 occurred_on=_occurred_on(occurred),
                 ref_id=summary.id,
                 visit_id=summary.visit_id,
@@ -117,7 +125,7 @@ def get_patient_timeline(
     for document in repo.list_documents(db, patient_id):
         events.append(
             TimelineEvent(
-                type="document",
+                type="DOCUMENT",
                 occurred_on=repo.as_datetime(document.document_date)
                 if document.document_date
                 else _occurred_on(document.uploaded_at),
@@ -132,7 +140,7 @@ def get_patient_timeline(
     for follow_up in repo.list_follow_ups(db, patient_id):
         events.append(
             TimelineEvent(
-                type="follow_up",
+                type="FOLLOW_UP",
                 occurred_on=repo.as_datetime(follow_up.follow_up_date),
                 ref_id=follow_up.id,
                 patient_id=patient_id,
@@ -141,4 +149,8 @@ def get_patient_timeline(
             )
         )
 
-    return sorted(events, key=lambda event: event.occurred_on, reverse=True)
+    if visit_id is not None:
+        events = [e for e in events if e.visit_id == visit_id]
+
+    sorted_events = sorted(events, key=lambda event: event.occurred_on, reverse=True)
+    return PatientTimeline(patient_id=patient_id, events=sorted_events)

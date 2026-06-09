@@ -1084,9 +1084,9 @@ Objective:
 ----------
 Implement the following task from the task list. If any task is already implemented, please validate the feature:
 
-Backend (Stage 4 part 2 + Stage 5)
-BE-T9.1, BE-T9.2, API-T9.1, INT-T9.1, INT-T9.2 — document upload (type/size/sniff), secure proxied/pre-signed download, MinIO client + bucket, optional AV hook.
-BE-T10.1, API-T3.2 — timeline aggregation.
+Security / Tests:
+SEC-T9.1, SEC-T9.2 — upload hardening + authz-before-stream / audited download / URL expiry.
+TST-T6.1 (finish: discharge finalize/amend, date rules), TST-T9.1 — document upload/secure-download/denial/audit.
 
 
 Instructions:
@@ -1114,9 +1114,9 @@ Files to refer (if required - lazy loading):
 Task to review:
 ---------------
 
-Backend (Stage 4 part 2 + Stage 5)
-BE-T9.1, BE-T9.2, API-T9.1, INT-T9.1, INT-T9.2 — document upload (type/size/sniff), secure proxied/pre-signed download, MinIO client + bucket, optional AV hook.
-BE-T10.1, API-T3.2 — timeline aggregation.
+Security / Tests:
+SEC-T9.1, SEC-T9.2 — upload hardening + authz-before-stream / audited download / URL expiry.
+TST-T6.1 (finish: discharge finalize/amend, date rules), TST-T9.1 — document upload/secure-download/denial/audit.
 
 
 Objective:
@@ -1151,9 +1151,7 @@ Objective:
 Implement the following UI task from the checklist: If any task is already implemented, please review the changes are in alignment with the scope.
 
 Frontend
-
-UI-T3.2, UI-T3.3, UI-T3.4 — Patient Profile shell with tabs, Basic Details view/edit, aliases panel.
-UI-T6.1–UI-T6.3 — Visit create + list, Case Sheet form (paper-like), Consultation Notes (append-only).
+UI-T7.1 Prescriptions tab · UI-T8.1 Discharge Summary (finalize/amend) · UI-T9.1, UI-T9.2 Documents tab + register + secure viewer · UI-T10.1 Timeline view.
 
 
 Instructions:
@@ -1219,10 +1217,9 @@ Review the recently generated/modified React UI code for possible errors, securi
 
 Implemented task:
 
-Frontend
 
-UI-T3.2, UI-T3.3, UI-T3.4 — Patient Profile shell with tabs, Basic Details view/edit, aliases panel.
-UI-T6.1–UI-T6.3 — Visit create + list, Case Sheet form (paper-like), Consultation Notes (append-only).
+Frontend
+UI-T7.1 Prescriptions tab · UI-T8.1 Discharge Summary (finalize/amend) · UI-T9.1, UI-T9.2 Documents tab + register + secure viewer · UI-T10.1 Timeline view.
 
 
 Review and fix:

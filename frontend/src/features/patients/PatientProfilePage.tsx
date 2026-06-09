@@ -208,7 +208,7 @@ export function PatientProfilePage() {
         </TabsContent>
 
         <TabsContent value="timeline" className="pt-0">
-          <TimelineTab patientId={patient.id} onOpenSection={setActiveTab} />
+          <TimelineTab patientId={patient.id} visitId={selectedVisitId} onOpenSection={setActiveTab} />
         </TabsContent>
 
         <TabsContent value="followups" className="pt-0">

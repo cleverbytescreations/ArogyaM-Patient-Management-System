@@ -20,7 +20,7 @@ from app.modules.patients.schemas import (
     PatientSearchResult,
     PatientUpdateRequest,
 )
-from app.modules.patients.timeline_service import TimelineEvent
+from app.modules.patients.timeline_service import PatientTimeline
 from app.modules.search import service as search_svc
 
 router = APIRouter(prefix="/patients", tags=["patients"])
@@ -114,12 +114,13 @@ def list_aliases(
 
 @router.get(
     "/{patient_id}/timeline",
-    response_model=list[TimelineEvent],
+    response_model=PatientTimeline,
     summary="Get unified patient timeline",
 )
 def get_patient_timeline(
     patient_id: uuid.UUID,
     payload: ViewPatient,
     db: Annotated[Session, Depends(get_db)],
-) -> list[TimelineEvent]:
-    return timeline_service.get_patient_timeline(db, patient_id, payload)
+    visit_id: uuid.UUID | None = Query(default=None),
+) -> PatientTimeline:
+    return timeline_service.get_patient_timeline(db, patient_id, payload, visit_id=visit_id)
