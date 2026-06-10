@@ -5,10 +5,12 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, exists, select
 from sqlalchemy.orm import Session
 
 from app.modules.followups.models import FollowUp
+from app.modules.patients.models import Patient
+from app.modules.visits.models import Visit
 
 
 def create_followup(db: Session, followup: FollowUp) -> FollowUp:
@@ -52,10 +54,14 @@ def list_followup_queue(
     to_date: date | None = None,
     assigned_to: uuid.UUID | None = None,
     patient_id: uuid.UUID | None = None,
+    doctor_id: uuid.UUID | None = None,
     page: int = 1,
     page_size: int = 20,
-) -> tuple[list[FollowUp], int]:
-    """Return (items, total) for the follow-up queue with optional filters."""
+) -> tuple[list[tuple[FollowUp, str | None]], int]:
+    """Return (items, total) for the follow-up queue with optional filters.
+
+    Each item is a (FollowUp, patient_full_name) tuple.
+    """
     conditions = []
     if status:
         conditions.append(FollowUp.status_code == status)
@@ -67,22 +73,37 @@ def list_followup_queue(
         conditions.append(FollowUp.assigned_to == assigned_to)
     if patient_id:
         conditions.append(FollowUp.patient_id == patient_id)
-
-    base_q = select(FollowUp)
-    if conditions:
-        base_q = base_q.where(and_(*conditions))
+    if doctor_id is not None:
+        conditions.append(
+            exists(
+                select(Visit.id).where(
+                    Visit.patient_id == FollowUp.patient_id,
+                    Visit.doctor_id == doctor_id,
+                )
+            )
+        )
 
     from sqlalchemy import func as sqlfunc
-    count_q = select(sqlfunc.count()).select_from(base_q.subquery())
-    total: int = db.execute(count_q).scalar_one()
 
-    items = list(
-        db.execute(
-            base_q.order_by(FollowUp.follow_up_date.asc(), FollowUp.created_at.asc())
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-        ).scalars()
+    count_base = select(FollowUp)
+    if conditions:
+        count_base = count_base.where(and_(*conditions))
+    total: int = db.execute(select(sqlfunc.count()).select_from(count_base.subquery())).scalar_one()
+
+    data_q = (
+        select(FollowUp, Patient.full_name)
+        .join(Patient, Patient.id == FollowUp.patient_id, isouter=True)
     )
+    if conditions:
+        data_q = data_q.where(and_(*conditions))
+    data_q = (
+        data_q.order_by(FollowUp.follow_up_date.asc(), FollowUp.created_at.asc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+
+    rows = db.execute(data_q).all()
+    items = [(row[0], row[1]) for row in rows]
     return items, total
 
 

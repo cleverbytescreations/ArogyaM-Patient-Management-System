@@ -106,3 +106,4 @@ class PatientSearchResult(BaseModel):
     mobile_masked: str | None = None
     status: str
     registration_date: date
+    latest_doctor_name: str | None = None

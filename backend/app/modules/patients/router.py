@@ -56,6 +56,7 @@ def search_patients(
         status=status,
         limit=page.page_size,
         offset=page.offset,
+        actor_payload=payload,
     )
     return PagedResponse[PatientSearchResult](
         items=items, total=total, page=page.page, page_size=page.page_size

@@ -13,7 +13,7 @@ def mask_mobile(mobile: str | None) -> str | None:
     return f"{'*' * max(len(mobile) - 4, 0)}{visible}"
 
 
-def to_search_result(patient: Patient) -> PatientSearchResult:
+def to_search_result(patient: Patient, latest_doctor_name: str | None = None) -> PatientSearchResult:
     return PatientSearchResult(
         id=patient.id,
         op_number=patient.op_number,
@@ -24,4 +24,5 @@ def to_search_result(patient: Patient) -> PatientSearchResult:
         mobile_masked=mask_mobile(patient.mobile),
         status=patient.status,
         registration_date=patient.registration_date,
+        latest_doctor_name=latest_doctor_name,
     )

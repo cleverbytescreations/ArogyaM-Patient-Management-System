@@ -338,6 +338,7 @@ export const mockPatientSearchResults: PatientSearchResult[] = [
     mobile_masked: "****3210",
     op_category_code: "OPN",
     status: "ACTIVE",
+    latest_doctor_name: "Dr. Anjali Mehta",
   },
   {
     id: "patient-2",
@@ -348,6 +349,7 @@ export const mockPatientSearchResults: PatientSearchResult[] = [
     mobile_masked: "****7890",
     op_category_code: "OPN",
     status: "ACTIVE",
+    latest_doctor_name: null,
   },
 ];
 
@@ -949,6 +951,7 @@ export const handlers = [
 export const mockFollowUp: FollowUp = {
   id: "fu-1",
   patient_id: "patient-1",
+  patient_name: "Test Patient",
   visit_id: "visit-1",
   follow_up_date: "2026-06-20",
   reason: "Review after treatment",

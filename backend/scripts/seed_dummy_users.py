@@ -33,6 +33,15 @@ DUMMY_USERS = [
         "is_doctor": True,
     },
     {
+        "username": "doctor1",
+        "full_name": "John",
+        "email": "john@arogyam.dev",
+        "mobile": "9876543205",
+        "password": "Doctor@12345",
+        "role_code": "DOCTOR",
+        "is_doctor": True,
+    },
+    {
         "username": "receptionist.ravi",
         "full_name": "Ravi Kumar",
         "email": "ravi.kumar@arogyam.dev",

@@ -89,6 +89,7 @@ export interface PatientSearchResult {
   mobile_masked: string | null;
   op_category_code: string;
   status: PatientStatus;
+  latest_doctor_name: string | null;
 }
 
 export interface PatientSearchParams {

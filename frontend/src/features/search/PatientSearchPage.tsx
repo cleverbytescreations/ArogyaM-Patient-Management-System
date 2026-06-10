@@ -86,6 +86,14 @@ function buildColumns(
       className: "w-32 hidden md:table-cell",
     },
     {
+      key: "latest_doctor_name",
+      header: "Doctor",
+      render: (row) => (
+        <span className="text-sm">{row.latest_doctor_name ?? "—"}</span>
+      ),
+      className: "hidden lg:table-cell",
+    },
+    {
       key: "status",
       header: "Status",
       render: (row) => <StatusBadge status={row.status} />,

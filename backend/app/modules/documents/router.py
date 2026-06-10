@@ -73,7 +73,7 @@ def upload_document(
 )
 def list_patient_documents(
     patient_id: uuid.UUID,
-    _: ViewDocumentMetadata,
+    payload: ViewDocumentMetadata,
     db: Annotated[Session, Depends(get_db)],
     pagination: Annotated[PaginationParams, Depends()],
     status: Annotated[str | None, Query()] = None,
@@ -88,6 +88,7 @@ def list_patient_documents(
         visit_id=visit_id,
         page=pagination.page,
         page_size=pagination.page_size,
+        actor_payload=payload,
     )
     return PagedResponse[DocumentOut](
         items=items, total=total, page=pagination.page, page_size=pagination.page_size

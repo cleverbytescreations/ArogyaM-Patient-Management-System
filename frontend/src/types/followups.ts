@@ -8,6 +8,7 @@ export type FollowUpStatusCode =
 export interface FollowUp {
   id: string;
   patient_id: string;
+  patient_name: string | null;
   visit_id: string | null;
   follow_up_date: string;
   reason: string | null;

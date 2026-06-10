@@ -43,6 +43,7 @@ class FollowUpOut(BaseModel):
 
     id: uuid.UUID
     patient_id: uuid.UUID
+    patient_name: str | None = None
     visit_id: uuid.UUID | None = None
     follow_up_date: date
     reason: str | None = None

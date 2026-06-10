@@ -99,9 +99,9 @@ export function FollowUpRegisterPage() {
           variant="link"
           className="h-auto p-0 font-normal"
           onClick={() => navigate(`/patients/${f.patient_id}`)}
-          aria-label={`Open patient profile`}
+          aria-label={`Open patient profile for ${f.patient_name ?? f.patient_id}`}
         >
-          View patient
+          {f.patient_name ?? f.patient_id}
         </Button>
       ),
     },

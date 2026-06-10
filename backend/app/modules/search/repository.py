@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
+import uuid
+
 from sqlalchemy import case, desc, exists, func, literal, or_, select
 from sqlalchemy.orm import Session
 
+from app.modules.auth.models import User
 from app.modules.patients.models import Patient, PatientAlias
+from app.modules.visits.models import Visit
 
 
 def _alias_subquery(term: str):
@@ -31,7 +35,8 @@ def search_patients(
     status: str | None,
     limit: int,
     offset: int,
-) -> tuple[list[Patient], int]:
+    doctor_id: uuid.UUID | None = None,
+) -> tuple[list[tuple[Patient, str | None]], int]:
     conditions = []
     rank_terms: list[Any] = []
 
@@ -87,15 +92,34 @@ def search_patients(
         filters.append(Patient.status == status)
     else:
         filters.append(Patient.status != "MERGED")
+    if doctor_id is not None:
+        filters.append(
+            exists(
+                select(Visit.id).where(
+                    Visit.patient_id == Patient.id,
+                    Visit.doctor_id == doctor_id,
+                )
+            )
+        )
+
+    latest_doctor_subq = (
+        select(User.full_name)
+        .join(Visit, Visit.doctor_id == User.id)
+        .where(Visit.patient_id == Patient.id, Visit.doctor_id.isnot(None))
+        .order_by(Visit.visit_date.desc(), Visit.created_at.desc())
+        .limit(1)
+        .correlate(Patient)
+        .scalar_subquery()
+    )
 
     rank = sum(rank_terms) if rank_terms else literal(0.0)
     base = select(Patient).where(*filters)
     total = db.execute(select(func.count()).select_from(base.subquery())).scalar_one()
-    rows = db.execute(
-        select(Patient)
+    raw_rows = db.execute(
+        select(Patient, latest_doctor_subq.label("latest_doctor_name"))
         .where(*filters)
         .order_by(desc(rank), Patient.full_name)
         .limit(limit)
         .offset(offset)
-    ).scalars()
-    return list(rows), total
+    ).all()
+    return [(row[0], row[1]) for row in raw_rows], total

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.audit import extract_request_meta, write_audit
 from app.core.concurrency import bump_version, ensure_current_version
 from app.core.errors import InvalidStateTransitionError, NotFoundError
+from app.core.permissions import ROLE_ADMIN, ROLE_DOCTOR
 from app.modules.followups import repository as repo
 from app.modules.followups.models import FollowUp
 from app.modules.followups.schemas import (
@@ -106,18 +107,31 @@ def get_followup_queue(
     page_size: int,
     actor_payload: dict,
 ) -> dict:
-    items, total = repo.list_followup_queue(
+    doctor_id: uuid.UUID | None = None
+    _roles = actor_payload.get("roles", [])
+    if bool(actor_payload.get("is_doctor")) or (
+        ROLE_DOCTOR in _roles and ROLE_ADMIN not in _roles
+    ):
+        doctor_id = _actor_id(actor_payload)
+
+    rows, total = repo.list_followup_queue(
         db,
         status=status,
         from_date=from_date,
         to_date=to_date,
         assigned_to=assigned_to,
         patient_id=patient_id,
+        doctor_id=doctor_id,
         page=page,
         page_size=page_size,
     )
+    items = []
+    for f, patient_name in rows:
+        out = _out(f)
+        out.patient_name = patient_name
+        items.append(out)
     return {
-        "items": [_out(f) for f in items],
+        "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,

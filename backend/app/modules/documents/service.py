@@ -15,8 +15,10 @@ from sqlalchemy.orm import Session
 
 from app.core.audit import extract_request_meta, write_audit
 from app.core.config import settings
+from app.core.permissions import ROLE_ADMIN, ROLE_DOCTOR
 from app.core.errors import (
     FileTooLargeError,
+    ForbiddenError,
     InvalidFileTypeError,
     NotFoundError,
     ServiceUnavailableError,
@@ -219,9 +221,19 @@ def list_patient_documents(
     visit_id: uuid.UUID | None = None,
     page: int = 1,
     page_size: int = 20,
+    actor_payload: dict | None = None,
 ) -> tuple[list[DocumentOut], int]:
     if patient_repo.get_patient_by_id(db, patient_id) is None:
         raise NotFoundError(f"Patient {patient_id} not found")
+    _roles = (actor_payload or {}).get("roles", [])
+    _is_doctor_scoped = actor_payload and (
+        bool(actor_payload.get("is_doctor"))
+        or (ROLE_DOCTOR in _roles and ROLE_ADMIN not in _roles)
+    )
+    if _is_doctor_scoped:
+        doctor_id = uuid.UUID(actor_payload["sub"])
+        if not visit_repo.doctor_has_visit_for_patient(db, doctor_id, patient_id):
+            raise ForbiddenError("Access to this patient's documents is not permitted")
     documents, total = repo.list_documents_for_patient(
         db,
         patient_id,

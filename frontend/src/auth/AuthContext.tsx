@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTokenStore } from "./tokenStore";
 import { apiClient } from "@/api/client";
 import type { UserProfile, TokenResponse } from "@/types/auth";
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const { setAccessToken, setRefreshToken, clearTokens, getRefreshToken } =
     useTokenStore();
+  const queryClient = useQueryClient();
 
   const fetchUserInfo = useCallback(async () => {
     const { data } = await apiClient.get<UserProfile>("/me");
@@ -47,8 +49,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setPermissions([]);
       setRoles([]);
+      // Drop all cached query data so the next user can never see the
+      // previous user's PHI from a matching query key (e.g. patient search).
+      queryClient.clear();
     }
-  }, [clearTokens]);
+  }, [clearTokens, queryClient]);
 
   useEffect(() => {
     const handleSessionExpired = () => {
@@ -56,12 +61,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setPermissions([]);
       setRoles([]);
       clearTokens();
+      queryClient.clear();
     };
     window.addEventListener("auth:session-expired", handleSessionExpired);
     return () => {
       window.removeEventListener("auth:session-expired", handleSessionExpired);
     };
-  }, [clearTokens]);
+  }, [clearTokens, queryClient]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -94,6 +100,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (username: string, password: string) => {
+      // Defensively drop any residual cache before authenticating a new user,
+      // in case a prior session was not explicitly logged out.
+      queryClient.clear();
       const { data } = await apiClient.post<TokenResponse>("/auth/login", {
         username,
         password,
@@ -102,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRefreshToken(data.refresh_token);
       await fetchUserInfo();
     },
-    [fetchUserInfo, setAccessToken, setRefreshToken]
+    [fetchUserInfo, queryClient, setAccessToken, setRefreshToken]
   );
 
   return (

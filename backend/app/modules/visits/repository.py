@@ -38,6 +38,18 @@ def save_visit(db: Session, visit: Visit) -> Visit:
     return visit
 
 
+def doctor_has_visit_for_patient(
+    db: Session, doctor_id: uuid.UUID, patient_id: uuid.UUID
+) -> bool:
+    """Return True if the doctor has at least one visit recorded for the patient."""
+    return db.execute(
+        select(func.count()).where(
+            Visit.doctor_id == doctor_id,
+            Visit.patient_id == patient_id,
+        )
+    ).scalar_one() > 0
+
+
 # ── Case sheets ────────────────────────────────────────────────────────────────
 
 
