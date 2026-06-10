@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request, status
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import CurrentUser, get_db, require_permission
@@ -141,4 +141,51 @@ def reset_password(
     request: Request,
 ) -> Response:
     service.reset_password(db, user_id, body, payload, request)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put(
+    "/{user_id}/signature",
+    response_model=UserOut,
+    summary="Upload or replace a doctor's signature image",
+)
+def upload_signature(
+    user_id: str,
+    payload: ManageUsers,
+    db: Annotated[Session, Depends(get_db)],
+    request: Request,
+    file: Annotated[UploadFile, File(...)],
+) -> UserOut:
+    return service.set_user_signature(db, user_id, file, payload, request)
+
+
+@router.get("/{user_id}/signature", summary="Securely stream a doctor's signature image")
+def get_signature(
+    user_id: str,
+    _: ManageUsers,
+    db: Annotated[Session, Depends(get_db)],
+) -> StreamingResponse:
+    download = service.get_user_signature(db, user_id)
+    headers = {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"}
+    if download.content_length is not None:
+        headers["Content-Length"] = str(download.content_length)
+    return StreamingResponse(
+        download.body,
+        media_type=download.content_type or "application/octet-stream",
+        headers=headers,
+    )
+
+
+@router.delete(
+    "/{user_id}/signature",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a doctor's signature image",
+)
+def delete_signature(
+    user_id: str,
+    payload: ManageUsers,
+    db: Annotated[Session, Depends(get_db)],
+    request: Request,
+) -> Response:
+    service.delete_user_signature(db, user_id, payload, request)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

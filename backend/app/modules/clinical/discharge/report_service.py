@@ -12,7 +12,6 @@ from datetime import date
 from typing import Any
 
 import markdown as _md
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -25,6 +24,7 @@ from app.modules.clinical.discharge.report_pdf import render_discharge_summary_p
 from app.modules.masterdata import repository as masterdata_repo
 from app.modules.patients import repository as patient_repo
 from app.modules.patients.models import Patient
+from app.modules.users.signature_assets import signature_data_uri
 
 REPORT_TITLE = "DISCHARGE SUMMARY"
 MANTRA_LINES = ("SARVE BHAVANTU SUKHINA,", "SARVE SANTU NIRAMAYA")
@@ -101,6 +101,7 @@ def _build_context(
         "medications": _split_lines(summary.medications),
         "yoga_guidance": summary.yoga_guidance,
         "signature_lines": _signature_lines(doctor),
+        "signature_image": signature_data_uri(doctor),
         "mantra_lines": MANTRA_LINES,
         "footer_url": FOOTER_URL,
     }

@@ -10,7 +10,13 @@ import { DEFAULT_PAGE_SIZE, PERMISSIONS } from "@/lib/constants";
 import { usePermissions } from "@/auth/usePermissions";
 import type { AuditLogEntry } from "@/types/audit";
 
-function AuditEntryDetailPanel({ entry }: { entry: AuditLogEntry }) {
+function AuditEntryDetailPanel({
+  entry,
+  onClose,
+}: {
+  entry: AuditLogEntry;
+  onClose: () => void;
+}) {
   const actor = entry.user_name ?? entry.user_id?.slice(0, 8) ?? "System";
   const target = entry.patient_name ?? entry.patient_id?.slice(0, 8) ?? "—";
 
@@ -20,6 +26,16 @@ function AuditEntryDetailPanel({ entry }: { entry: AuditLogEntry }) {
       aria-label="Audit entry details"
       className="bg-muted/60 border-t px-4 py-3 space-y-3 text-sm"
     >
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close details"
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          Close
+        </button>
+      </div>
       <p className="font-medium text-foreground">
         <span className="text-primary">{actor}</span>
         {entry.user_role && (
@@ -165,13 +181,24 @@ export function AuditHistoryTab({ patientId }: AuditHistoryTabProps) {
     },
     {
       key: "detail",
-      header: "",
-      render: (e) => (
-        <ChevronRight
-          className={`h-4 w-4 transition-transform text-muted-foreground ${expandedId === String(e.id) ? "rotate-90" : ""}`}
-          aria-hidden="true"
-        />
-      ),
+      header: <span className="sr-only">Details</span>,
+      render: (e) => {
+        const isExpanded = expandedId === String(e.id);
+        return (
+          <button
+            type="button"
+            onClick={() => setExpandedId(isExpanded ? null : String(e.id))}
+            aria-expanded={isExpanded}
+            aria-label="View entry details"
+            className="inline-flex items-center justify-center rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ChevronRight
+              className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+        );
+      },
       className: "w-10",
     },
   ];
@@ -214,8 +241,9 @@ export function AuditHistoryTab({ patientId }: AuditHistoryTabProps) {
         onPageChange={(p) => { setPage(p); setExpandedId(null); }}
         getRowKey={(e) => String(e.id)}
         expandedRowKey={expandedId}
-        renderExpandedRow={(e) => <AuditEntryDetailPanel entry={e} />}
-        onRowClick={(key) => setExpandedId(expandedId === key ? null : key)}
+        renderExpandedRow={(e) => (
+          <AuditEntryDetailPanel entry={e} onClose={() => setExpandedId(null)} />
+        )}
         emptyMessage="No audit history for this patient."
       />
     </div>

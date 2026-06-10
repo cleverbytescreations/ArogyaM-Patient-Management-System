@@ -279,6 +279,9 @@ class TestRedactionFilter:
 
         logger = logging.getLogger("test.redaction.allowlist")
         logger.propagate = False
+        # Pin the level so emission doesn't depend on the global root level,
+        # which other tests may raise to WARNING (dropping this INFO record).
+        logger.setLevel(logging.INFO)
         capture = _Capture()
         capture.addFilter(RedactionFilter())
         logger.addHandler(capture)

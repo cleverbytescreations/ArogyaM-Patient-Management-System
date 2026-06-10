@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { usersApi } from "./usersApi";
+import { SignatureUpload } from "./SignatureUpload";
 import {
   createUserSchema,
   editUserSchema,
@@ -68,8 +68,7 @@ export function UserFormDialog({
       email: "",
       mobile: "",
       password: "",
-      is_doctor: false,
-      role_codes: [],
+      role_code: undefined,
     },
   });
 
@@ -79,8 +78,7 @@ export function UserFormDialog({
       full_name: user?.full_name ?? "",
       email: user?.email ?? "",
       mobile: user?.mobile ?? "",
-      is_doctor: user?.is_doctor ?? false,
-      role_codes: user?.roles ?? [],
+      role_code: user?.roles[0],
     },
   });
 
@@ -90,8 +88,7 @@ export function UserFormDialog({
         full_name: user.full_name,
         email: user.email ?? "",
         mobile: user.mobile ?? "",
-        is_doctor: user.is_doctor,
-        role_codes: user.roles,
+        role_code: user.roles[0],
       });
     }
   }, [isEdit, user, open, editForm]);
@@ -99,9 +96,13 @@ export function UserFormDialog({
   const createMutation = useMutation({
     mutationFn: (data: CreateUserFormValues) =>
       usersApi.create({
-        ...data,
+        username: data.username,
+        full_name: data.full_name,
+        password: data.password,
         email: data.email || undefined,
         mobile: data.mobile || undefined,
+        role_codes: [data.role_code],
+        is_doctor: data.role_code === "DOCTOR",
       }),
     onSuccess: (created) => {
       void queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -123,9 +124,11 @@ export function UserFormDialog({
   const editMutation = useMutation({
     mutationFn: (data: EditUserFormValues) =>
       usersApi.update(user!.id, {
-        ...data,
+        full_name: data.full_name,
         email: data.email || undefined,
         mobile: data.mobile || undefined,
+        role_codes: [data.role_code],
+        is_doctor: data.role_code === "DOCTOR",
         version: user!.version,
       }),
     onSuccess: () => {
@@ -192,6 +195,11 @@ export function UserFormDialog({
                 roleCodes={roleCodes}
                 showPasswordField={false}
               />
+              {user && user.is_doctor && editForm.watch("role_code") === "DOCTOR" && (
+                <div className="pt-2">
+                  <SignatureUpload user={user} />
+                </div>
+              )}
             </form>
           </Form>
         ) : (
@@ -350,63 +358,33 @@ function UserFormFields({
 
       <FormField
         control={form.control}
-        name="is_doctor"
-        render={({ field }: { field: { value: boolean; onChange: (v: boolean) => void; name: string } }) => (
-          <FormItem className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <FormLabel className="cursor-pointer">Doctor</FormLabel>
-              <FormDescription>
-                Mark this user as a consulting doctor
-              </FormDescription>
-            </div>
-            <FormControl>
-              <Switch
-                checked={field.value}
-                onCheckedChange={field.onChange}
-                disabled={isPending}
-                aria-label="Is doctor"
-              />
-            </FormControl>
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name="role_codes"
-        render={({ field }: { field: { value: RoleCode[]; onChange: (v: RoleCode[]) => void } }) => (
+        name="role_code"
+        render={({ field }: { field: { value: RoleCode | undefined; onChange: (v: RoleCode) => void } }) => (
           <FormItem>
             <FormLabel>
-              Roles <span aria-hidden="true">*</span>
+              Role <span aria-hidden="true">*</span>
             </FormLabel>
-            <FormDescription>Select one or more roles</FormDescription>
+            <FormDescription>
+              Each user has a single role. Choose "Doctor" for consulting doctors.
+            </FormDescription>
             <div className="space-y-2 pt-1">
-              {roleCodes.map((code) => {
-                const checked = field.value.includes(code);
-                return (
-                  <label
-                    key={code}
-                    className="flex items-center gap-2 cursor-pointer text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={isPending}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          field.onChange([...field.value, code]);
-                        } else {
-                          field.onChange(
-                            field.value.filter((r) => r !== code)
-                          );
-                        }
-                      }}
-                      className="rounded border-input"
-                    />
-                    {formatRoleCode(code)}
-                  </label>
-                );
-              })}
+              {roleCodes.map((code) => (
+                <label
+                  key={code}
+                  className="flex items-center gap-2 cursor-pointer text-sm"
+                >
+                  <input
+                    type="radio"
+                    name="role_code"
+                    value={code}
+                    checked={field.value === code}
+                    disabled={isPending}
+                    onChange={() => field.onChange(code)}
+                    className="border-input"
+                  />
+                  {formatRoleCode(code)}
+                </label>
+              ))}
             </div>
             <FormMessage />
           </FormItem>

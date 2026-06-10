@@ -164,6 +164,13 @@
   .footer .doctor-signature {
     text-align: center;
   }
+  .footer .signature-image {
+    display: block;
+    max-height: 16mm;
+    max-width: 50mm;
+    object-fit: contain;
+    margin: 0 auto 1mm;
+  }
   .footer .signature-name {
     font-style: italic;
     color: #5a6b1a;
@@ -314,6 +321,7 @@
       <div class="signature-label">Sign of Care Seeker</div>
     </div>
     <div class="doctor-signature">
+      {% if signature_image %}<img class="signature-image" src="{{ signature_image }}" alt="">{% endif %}
       {% for line in signature_lines %}
       <div class="signature-name">{{ line }}</div>
       {% endfor %}

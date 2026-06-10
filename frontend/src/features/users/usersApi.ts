@@ -31,6 +31,20 @@ export const usersApi = {
   resetPassword: (id: string, data: PasswordResetRequest) =>
     apiClient.post(`/users/${id}/reset-password`, data),
 
+  uploadSignature: (id: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return apiClient.put<User>(`/users/${id}/signature`, form).then((r) => r.data);
+  },
+
+  getSignatureBlob: (id: string) =>
+    apiClient
+      .get(`/users/${id}/signature`, { responseType: "blob" })
+      .then((r) => r.data as Blob),
+
+  deleteSignature: (id: string) =>
+    apiClient.delete(`/users/${id}/signature`),
+
   getRoles: () =>
     apiClient.get<Role[]>("/roles").then((r) => r.data),
 };

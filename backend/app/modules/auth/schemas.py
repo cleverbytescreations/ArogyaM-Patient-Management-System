@@ -129,6 +129,7 @@ class UserOut(BaseModel):
     is_doctor: bool
     qualification: str | None = None
     registration_number: str | None = None
+    has_signature: bool = False
     is_superuser: bool = False
     roles: list[str] = Field(default_factory=list)
     version: int

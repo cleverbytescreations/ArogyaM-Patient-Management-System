@@ -24,6 +24,7 @@ from app.modules.clinical.prescriptions.report_pdf import render_prescription_pd
 from app.modules.masterdata import repository as masterdata_repo
 from app.modules.patients import repository as patient_repo
 from app.modules.patients.models import Patient
+from app.modules.users.signature_assets import signature_data_uri
 
 REPORT_TITLE = "PRESCRIPTION"
 
@@ -102,6 +103,7 @@ def _build_context(
         "instructions": prescription.instructions,
         "review_advice": prescription.review_advice,
         "signature_name": _signature_line(doctor),
+        "signature_image": signature_data_uri(doctor),
     }
 
 

@@ -162,6 +162,14 @@
     margin-top: 14mm;
     text-align: right;
   }
+  .footer .signature-image {
+    display: block;
+    max-height: 18mm;
+    max-width: 55mm;
+    object-fit: contain;
+    margin-left: auto;
+    margin-bottom: 1mm;
+  }
   .footer .signature-name {
     font-style: italic;
     color: #5a6b1a;
@@ -272,6 +280,7 @@
   </section>
 
   <footer class="footer">
+    {% if signature_image %}<img class="signature-image" src="{{ signature_image }}" alt="">{% endif %}
     {% if signature_name %}<div class="signature-name">{{ signature_name }}</div>{% endif %}
     <div class="signature-label">SIGNATURE</div>
   </footer>

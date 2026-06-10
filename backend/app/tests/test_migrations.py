@@ -73,7 +73,8 @@ EXPECTED_INDEXES = [
     "idx_audit_log_user",
     "idx_audit_log_patient",
     "idx_audit_log_entity",
-    "idx_audit_log_created",
+    # Replaced the btree idx_audit_log_created with a BRIN index in migration 0011.
+    "idx_audit_log_created_brin",
     "idx_master_data_type",
     "idx_visits_patient",
     "idx_documents_patient",

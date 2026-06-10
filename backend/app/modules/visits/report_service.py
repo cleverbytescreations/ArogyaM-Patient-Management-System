@@ -19,6 +19,7 @@ from app.core.errors import NotFoundError
 from app.modules.auth.models import User
 from app.modules.patients import repository as patient_repo
 from app.modules.patients.models import Patient
+from app.modules.users.signature_assets import signature_data_uri
 from app.modules.visits import repository as repo
 from app.modules.visits.models import CaseSheet, Visit
 from app.modules.visits.report_pdf import render_case_sheet_pdf
@@ -84,6 +85,7 @@ def _build_context(
         "other_observations": case_sheet.other_observations,
         "remarks": case_sheet.remarks,
         "signature_name": _signature_line(doctor),
+        "signature_image": signature_data_uri(doctor),
     }
 
 

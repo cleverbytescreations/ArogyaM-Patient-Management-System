@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, X } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,7 @@ function AuditEntryDetailPanel({
     <div
       role="region"
       aria-label="Audit entry details"
-      className="rounded-md border bg-card p-4 space-y-4"
+      className="bg-muted/60 border-t px-4 py-3 space-y-3 text-sm"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -43,14 +43,14 @@ function AuditEntryDetailPanel({
             {formatDateTime(entry.created_at)}
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
+        <button
+          type="button"
           onClick={onClose}
-          aria-label="Close details panel"
+          aria-label="Close details"
+          className="text-xs text-muted-foreground hover:text-foreground"
         >
-          <X className="h-4 w-4" aria-hidden="true" />
-        </Button>
+          Close
+        </button>
       </div>
 
       <div className="grid gap-3 text-sm sm:grid-cols-2">
@@ -109,7 +109,7 @@ export function AuditLogsPage() {
   const [fromFilter, setFromFilter] = useState("");
   const [toFilter, setToFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [selectedEntry, setSelectedEntry] = useState<AuditLogEntry | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const params = {
     user_id: userIdFilter || undefined,
@@ -182,20 +182,23 @@ export function AuditLogsPage() {
     {
       key: "detail",
       header: "Details",
-      render: (e) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setSelectedEntry(selectedEntry?.id === e.id ? null : e)}
-          aria-expanded={selectedEntry?.id === e.id}
-          aria-label="View entry details"
-        >
-          <ChevronRight
-            className={`h-4 w-4 transition-transform ${selectedEntry?.id === e.id ? "rotate-90" : ""}`}
-            aria-hidden="true"
-          />
-        </Button>
-      ),
+      render: (e) => {
+        const isExpanded = expandedId === String(e.id);
+        return (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setExpandedId(isExpanded ? null : String(e.id))}
+            aria-expanded={isExpanded}
+            aria-label="View entry details"
+          >
+            <ChevronRight
+              className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+              aria-hidden="true"
+            />
+          </Button>
+        );
+      },
       className: "w-10",
     },
   ];
@@ -285,17 +288,14 @@ export function AuditLogsPage() {
         total={total}
         page={page}
         pageSize={DEFAULT_PAGE_SIZE}
-        onPageChange={setPage}
+        onPageChange={(p) => { setPage(p); setExpandedId(null); }}
         getRowKey={(e) => String(e.id)}
+        expandedRowKey={expandedId}
+        renderExpandedRow={(e) => (
+          <AuditEntryDetailPanel entry={e} onClose={() => setExpandedId(null)} />
+        )}
         emptyMessage="No audit log entries match the current filters."
       />
-
-      {selectedEntry && (
-        <AuditEntryDetailPanel
-          entry={selectedEntry}
-          onClose={() => setSelectedEntry(null)}
-        />
-      )}
     </div>
   );
 }

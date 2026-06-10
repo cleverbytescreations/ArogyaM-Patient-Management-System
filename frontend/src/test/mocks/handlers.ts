@@ -52,6 +52,7 @@ export const mockUserList: User[] = [
     mobile: null,
     roles: ["ADMIN"],
     is_doctor: false,
+    has_signature: false,
     is_superuser: true,
     status: "ACTIVE",
     version: 1,
@@ -68,6 +69,7 @@ export const mockUserList: User[] = [
     mobile: "9876543210",
     roles: ["DOCTOR"],
     is_doctor: true,
+    has_signature: false,
     is_superuser: false,
     status: "ACTIVE",
     version: 2,
@@ -447,6 +449,7 @@ export const handlers = [
       mobile: null,
       roles: ["DATA_ENTRY"],
       is_doctor: false,
+      has_signature: false,
       is_superuser: false,
       status: "ACTIVE",
       version: 1,
@@ -477,6 +480,24 @@ export const handlers = [
   }),
 
   http.post(`${BASE}/users/:id/reset-password`, () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.put(`${BASE}/users/:id/signature`, ({ params }) => {
+    const user = mockUserList.find((u) => u.id === params.id);
+    if (!user) return HttpResponse.json({}, { status: 404 });
+    return HttpResponse.json({ ...user, has_signature: true });
+  }),
+
+  http.get(`${BASE}/users/:id/signature`, ({ params }) => {
+    const user = mockUserList.find((u) => u.id === params.id);
+    if (!user || !user.has_signature) return HttpResponse.json({}, { status: 404 });
+    // 1x1 transparent PNG
+    const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    return new HttpResponse(png, { headers: { "Content-Type": "image/png" } });
+  }),
+
+  http.delete(`${BASE}/users/:id/signature`, () => {
     return new HttpResponse(null, { status: 204 });
   }),
 

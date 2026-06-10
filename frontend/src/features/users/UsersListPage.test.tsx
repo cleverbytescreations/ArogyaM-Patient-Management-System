@@ -157,9 +157,9 @@ describe("UsersListPage", () => {
     await user.type(screen.getByLabelText(/full name/i), "New User");
     await user.type(screen.getByLabelText(/^password/i), "password123");
 
-    // Select a role (first checkbox)
-    const roleCheckboxes = screen.getAllByRole("checkbox");
-    await user.click(roleCheckboxes[0]);
+    // Select a single role (radio)
+    const roleRadios = screen.getAllByRole("radio");
+    await user.click(roleRadios[0]);
 
     // Mock roles response is already set up in handlers
     server.use(

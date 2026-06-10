@@ -10,10 +10,18 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
+from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.audit import extract_request_meta, write_audit
-from app.core.errors import ConflictError, NotFoundError, VersionConflictError
+from app.core.errors import (
+    ConflictError,
+    FileTooLargeError,
+    InvalidFileTypeError,
+    NotFoundError,
+    ValidationAppError,
+    VersionConflictError,
+)
 from app.core.security import hash_password
 from app.modules.auth import repository as auth_repo
 from app.modules.auth.models import User
@@ -24,9 +32,42 @@ from app.modules.auth.schemas import (
     UserStatusUpdateRequest,
     UserUpdateRequest,
 )
+from app.modules.documents.storage import DownloadStream, storage
 from app.modules.users import repository as user_repo
 
 logger = logging.getLogger(__name__)
+
+# Signature uploads are small scanned images; cap well under the document limit.
+SIGNATURE_MAX_BYTES = 2 * 1024 * 1024
+SIGNATURE_CONTENT_TYPES = {"image/png", "image/jpeg"}
+
+
+def _sniff_signature_content_type(data: bytes) -> str:
+    """Return the image content type from magic bytes; reject anything else."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    raise InvalidFileTypeError("Signature must be a PNG or JPEG image")
+
+
+def _read_and_validate_signature(file: UploadFile) -> tuple[bytes, str]:
+    data = file.file.read(SIGNATURE_MAX_BYTES + 1)
+    if len(data) > SIGNATURE_MAX_BYTES:
+        raise FileTooLargeError(
+            f"Signature image exceeds {SIGNATURE_MAX_BYTES // (1024 * 1024)} MB"
+        )
+    if not data:
+        raise ValidationAppError(
+            "Signature image is empty",
+            details=[{"field": "file", "code": "empty_file", "message": "File cannot be empty"}],
+        )
+    sniffed = _sniff_signature_content_type(data)
+    if file.content_type and file.content_type not in SIGNATURE_CONTENT_TYPES:
+        raise InvalidFileTypeError("Signature must be a PNG or JPEG image")
+    if file.content_type and file.content_type != sniffed:
+        raise InvalidFileTypeError("Uploaded file content does not match declared type")
+    return data, sniffed
 
 
 def _user_role_codes(user: User) -> list[str]:
@@ -44,6 +85,7 @@ def _to_out(user: User) -> UserOut:
         is_doctor=user.is_doctor,
         qualification=user.qualification,
         registration_number=user.registration_number,
+        has_signature=user.signature_object_key is not None,
         is_superuser=user.is_superuser,
         roles=_user_role_codes(user),
         version=user.version,
@@ -302,6 +344,108 @@ def reset_password(
         entity_type="user",
         entity_id=str(user.id),
         description=f"Password reset for user {user.username}",
+        ip_address=ip,
+        user_agent=ua,
+        request_id=rid,
+    )
+    db.commit()
+
+
+def _signature_object_key(user_id: uuid.UUID) -> str:
+    return f"doctors/{user_id}/signature"
+
+
+def set_user_signature(
+    db: Session,
+    user_id: str,
+    file: UploadFile,
+    actor_payload: dict,
+    request=None,
+) -> UserOut:
+    """Upload (or replace) a doctor's scanned signature image."""
+    ip, ua, rid = extract_request_meta(request)
+    actor_id = uuid.UUID(actor_payload["sub"])
+
+    user = user_repo.get_user_by_id(db, user_id)
+    if user is None:
+        raise NotFoundError(f"User {user_id} not found")
+    if not user.is_doctor:
+        raise ValidationAppError(
+            "Only doctor accounts can have a signature",
+            details=[
+                {
+                    "field": "user",
+                    "code": "not_a_doctor",
+                    "message": "Signatures can only be attached to doctor accounts",
+                }
+            ],
+        )
+
+    data, content_type = _read_and_validate_signature(file)
+    object_key = _signature_object_key(user.id)
+    storage.upload_bytes(object_key, data, content_type)
+
+    user.signature_object_key = object_key
+    user.signature_content_type = content_type
+    user.signature_uploaded_at = datetime.now(UTC)
+    user.updated_by = actor_id
+
+    write_audit(
+        db,
+        action="UPLOAD",
+        user_id=actor_id,
+        user_role=",".join(actor_payload.get("roles", [])),
+        entity_type="user_signature",
+        entity_id=str(user.id),
+        new_value={"content_type": content_type, "file_size_bytes": len(data)},
+        description=f"Uploaded signature for doctor {user.username}",
+        ip_address=ip,
+        user_agent=ua,
+        request_id=rid,
+    )
+    db.commit()
+    result = user_repo.get_user_by_id(db, user.id)
+    assert result is not None
+    return _to_out(result)
+
+
+def get_user_signature(db: Session, user_id: str) -> DownloadStream:
+    """Stream a doctor's signature image; 404 if none is set."""
+    user = user_repo.get_user_by_id(db, user_id)
+    if user is None or user.signature_object_key is None:
+        raise NotFoundError(f"No signature for user {user_id}")
+    return storage.stream(user.signature_object_key)
+
+
+def delete_user_signature(
+    db: Session,
+    user_id: str,
+    actor_payload: dict,
+    request=None,
+) -> None:
+    """Remove a doctor's signature reference (text-only signature returns)."""
+    ip, ua, rid = extract_request_meta(request)
+    actor_id = uuid.UUID(actor_payload["sub"])
+
+    user = user_repo.get_user_by_id(db, user_id)
+    if user is None:
+        raise NotFoundError(f"User {user_id} not found")
+    if user.signature_object_key is None:
+        raise NotFoundError(f"No signature for user {user_id}")
+
+    user.signature_object_key = None
+    user.signature_content_type = None
+    user.signature_uploaded_at = None
+    user.updated_by = actor_id
+
+    write_audit(
+        db,
+        action="DELETE",
+        user_id=actor_id,
+        user_role=",".join(actor_payload.get("roles", [])),
+        entity_type="user_signature",
+        entity_id=str(user.id),
+        description=f"Removed signature for doctor {user.username}",
         ip_address=ip,
         user_agent=ua,
         request_id=rid,

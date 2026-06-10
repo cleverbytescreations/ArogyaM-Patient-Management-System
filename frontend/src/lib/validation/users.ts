@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-const roleCodeEnum = z.enum(["ADMIN", "DOCTOR", "RECEPTION", "DATA_ENTRY"]);
+// A user has exactly one role. Doctor status (and signature upload) is derived
+// from the DOCTOR role rather than a separate flag.
+const roleCodeEnum = z.enum(["ADMIN", "DOCTOR", "RECEPTION", "DATA_ENTRY"], {
+  required_error: "A role is required",
+  invalid_type_error: "A role is required",
+});
 
 export const createUserSchema = z.object({
   username: z
@@ -19,10 +24,7 @@ export const createUserSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .max(128, "Password too long"),
-  is_doctor: z.boolean(),
-  role_codes: z
-    .array(roleCodeEnum)
-    .min(1, "At least one role is required"),
+  role_code: roleCodeEnum,
 });
 
 export const editUserSchema = z.object({
@@ -33,10 +35,7 @@ export const editUserSchema = z.object({
     .regex(/^\d{10,15}$/, "Mobile must be 10–15 digits")
     .optional()
     .or(z.literal("")),
-  is_doctor: z.boolean(),
-  role_codes: z
-    .array(roleCodeEnum)
-    .min(1, "At least one role is required"),
+  role_code: roleCodeEnum,
 });
 
 export const resetPasswordSchema = z

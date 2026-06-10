@@ -107,7 +107,7 @@ describe("AuditLogsPage — detail panel", () => {
     await user.click(detailBtn);
     await screen.findByRole("region", { name: /audit entry details/i });
 
-    await user.click(screen.getByRole("button", { name: /close details panel/i }));
+    await user.click(screen.getByRole("button", { name: /close details/i }));
 
     await waitFor(() =>
       expect(
