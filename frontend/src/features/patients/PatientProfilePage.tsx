@@ -20,6 +20,8 @@ import { FollowUpsTab } from "@/features/followups/FollowUpsTab";
 import { AuditHistoryTab } from "./tabs/AuditHistoryTab";
 import { visitsApi } from "@/api/visitsApi";
 import type { Visit } from "@/types/visits";
+import { usePermissions } from "@/auth/usePermissions";
+import { PERMISSIONS } from "@/lib/constants";
 
 const STALE = 5 * 60 * 1000;
 
@@ -27,6 +29,13 @@ const STALE = 5 * 60 * 1000;
 export function PatientProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  const { hasPermission } = usePermissions();
+  const canViewMedicalHistory = hasPermission(PERMISSIONS.VIEW_MEDICAL_HISTORY);
+  const canViewCaseSheet = canViewMedicalHistory || hasPermission(PERMISSIONS.ADD_CONSULTATION);
+  const canViewPrescriptions = canViewMedicalHistory || hasPermission(PERMISSIONS.ADD_PRESCRIPTION);
+  const canViewDocuments = canViewMedicalHistory || hasPermission(PERMISSIONS.UPLOAD_DOCUMENT);
+  const canViewAudit = hasPermission(PERMISSIONS.VIEW_AUDIT);
 
   const [activeTab, setActiveTab] = useState("basic");
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
@@ -117,24 +126,28 @@ export function PatientProfilePage() {
         <TabsList aria-label="Patient profile sections" className="flex-wrap gap-0">
           <TabsTrigger value="basic">Basic Details</TabsTrigger>
           <TabsTrigger value="visits">Visits</TabsTrigger>
-          <TabsTrigger value="case-sheet">
-            Case Sheet
-            {selectedVisitId && (
-              <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="consultation-notes">
-            Consultation Notes
-            {selectedVisitId && (
-              <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
-          <TabsTrigger value="discharge">Discharge Summaries</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          {canViewCaseSheet && (
+            <TabsTrigger value="case-sheet">
+              Case Sheet
+              {selectedVisitId && (
+                <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+              )}
+            </TabsTrigger>
+          )}
+          {canViewCaseSheet && (
+            <TabsTrigger value="consultation-notes">
+              Consultation Notes
+              {selectedVisitId && (
+                <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+              )}
+            </TabsTrigger>
+          )}
+          {canViewPrescriptions && <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>}
+          {canViewCaseSheet && <TabsTrigger value="discharge">Discharge Summaries</TabsTrigger>}
+          {canViewDocuments && <TabsTrigger value="documents">Documents</TabsTrigger>}
+          {canViewMedicalHistory && <TabsTrigger value="timeline">Timeline</TabsTrigger>}
           <TabsTrigger value="followups">Follow-Ups</TabsTrigger>
-          <TabsTrigger value="audit">Audit History</TabsTrigger>
+          {canViewAudit && <TabsTrigger value="audit">Audit History</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="basic" className="pt-0">
@@ -156,63 +169,77 @@ export function PatientProfilePage() {
           />
         </TabsContent>
 
-        <TabsContent value="case-sheet" className="pt-0">
-          <CaseSheetTab
-            selectedVisit={selectedVisit ?? null}
-            patientGender={patient.gender}
-            onSelectVisitTab={() => setActiveTab("visits")}
-          />
-        </TabsContent>
+        {canViewCaseSheet && (
+          <TabsContent value="case-sheet" className="pt-0">
+            <CaseSheetTab
+              selectedVisit={selectedVisit ?? null}
+              patientGender={patient.gender}
+              onSelectVisitTab={() => setActiveTab("visits")}
+            />
+          </TabsContent>
+        )}
 
-        <TabsContent value="consultation-notes" className="pt-0">
-          <ConsultationNotesTab
-            selectedVisit={selectedVisit ?? null}
-            onSelectVisitTab={() => setActiveTab("visits")}
-          />
-        </TabsContent>
+        {canViewCaseSheet && (
+          <TabsContent value="consultation-notes" className="pt-0">
+            <ConsultationNotesTab
+              selectedVisit={selectedVisit ?? null}
+              onSelectVisitTab={() => setActiveTab("visits")}
+            />
+          </TabsContent>
+        )}
 
-        <TabsContent value="prescriptions" className="pt-0">
-          <PrescriptionsTab
-            selectedVisit={selectedVisit ?? null}
-            onSelectVisitTab={() => setActiveTab("visits")}
-            onUploadScanned={() => {
-              setDocumentUploadType("PRESCRIPTION");
-              setDocumentUploadVisitId(selectedVisit?.id);
-              setActiveTab("documents");
-            }}
-          />
-        </TabsContent>
+        {canViewPrescriptions && (
+          <TabsContent value="prescriptions" className="pt-0">
+            <PrescriptionsTab
+              selectedVisit={selectedVisit ?? null}
+              onSelectVisitTab={() => setActiveTab("visits")}
+              onUploadScanned={() => {
+                setDocumentUploadType("PRESCRIPTION");
+                setDocumentUploadVisitId(selectedVisit?.id);
+                setActiveTab("documents");
+              }}
+            />
+          </TabsContent>
+        )}
 
-        <TabsContent value="discharge" className="pt-0">
-          <DischargeSummaryTab
-            selectedVisit={selectedVisit ?? null}
-            onSelectVisitTab={() => setActiveTab("visits")}
-          />
-        </TabsContent>
+        {canViewCaseSheet && (
+          <TabsContent value="discharge" className="pt-0">
+            <DischargeSummaryTab
+              selectedVisit={selectedVisit ?? null}
+              onSelectVisitTab={() => setActiveTab("visits")}
+            />
+          </TabsContent>
+        )}
 
-        <TabsContent value="documents" className="pt-0">
-          <DocumentsTab
-            patientId={patient.id}
-            defaultDocumentType={documentUploadType}
-            defaultVisitId={documentUploadVisitId}
-            onDefaultDocumentTypeConsumed={() => {
-              setDocumentUploadType(undefined);
-              setDocumentUploadVisitId(undefined);
-            }}
-          />
-        </TabsContent>
+        {canViewDocuments && (
+          <TabsContent value="documents" className="pt-0">
+            <DocumentsTab
+              patientId={patient.id}
+              defaultDocumentType={documentUploadType}
+              defaultVisitId={documentUploadVisitId}
+              onDefaultDocumentTypeConsumed={() => {
+                setDocumentUploadType(undefined);
+                setDocumentUploadVisitId(undefined);
+              }}
+            />
+          </TabsContent>
+        )}
 
-        <TabsContent value="timeline" className="pt-0">
-          <TimelineTab patientId={patient.id} visitId={selectedVisitId} onOpenSection={setActiveTab} />
-        </TabsContent>
+        {canViewMedicalHistory && (
+          <TabsContent value="timeline" className="pt-0">
+            <TimelineTab patientId={patient.id} visitId={selectedVisitId} onOpenSection={setActiveTab} />
+          </TabsContent>
+        )}
 
         <TabsContent value="followups" className="pt-0">
           <FollowUpsTab patientId={patient.id} />
         </TabsContent>
 
-        <TabsContent value="audit" className="pt-0">
-          <AuditHistoryTab patientId={patient.id} />
-        </TabsContent>
+        {canViewAudit && (
+          <TabsContent value="audit" className="pt-0">
+            <AuditHistoryTab patientId={patient.id} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
