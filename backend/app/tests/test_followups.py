@@ -510,6 +510,31 @@ class TestBackupStatusAPI:
         r = client.get("/api/v1/backup/status")
         assert r.status_code == 401
 
+    def test_backup_trigger_returns_202_for_admin(
+        self, client, admin_token: str, tmp_path, monkeypatch
+    ) -> None:
+        from app.modules.backup import service as backup_svc
+        trigger_file = tmp_path / ".trigger"
+        monkeypatch.setattr(
+            "app.core.config.settings.backup_trigger_file", str(trigger_file)
+        )
+        r = client.post("/api/v1/backup/trigger", headers=_auth(admin_token))
+        assert r.status_code == 202
+        body = r.json()
+        assert "triggered_at" in body
+        assert "message" in body
+        assert trigger_file.exists()
+
+    def test_backup_trigger_forbidden_for_non_admin(
+        self, client, reception_token: str
+    ) -> None:
+        r = client.post("/api/v1/backup/trigger", headers=_auth(reception_token))
+        assert r.status_code == 403
+
+    def test_backup_trigger_unauthenticated_returns_401(self, client) -> None:
+        r = client.post("/api/v1/backup/trigger")
+        assert r.status_code == 401
+
 
 class TestHealthEndpoints:
     def test_health_returns_200(self, client) -> None:
