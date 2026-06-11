@@ -23,33 +23,40 @@ export function SignatureUpload({ user }: SignatureUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // The `user` prop is a snapshot from the list query and is not refreshed
+  // while the dialog stays open, so we track signature presence locally and
+  // bump a key to force a fresh blob fetch after each mutation.
+  const [hasSignature, setHasSignature] = useState(user.has_signature);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    setHasSignature(user.has_signature);
+  }, [user.id, user.has_signature]);
+
   const signatureQuery = useQuery({
-    queryKey: ["user-signature", user.id, user.version],
+    queryKey: ["user-signature", user.id, refreshKey],
     queryFn: () => usersApi.getSignatureBlob(user.id),
-    enabled: user.has_signature,
+    enabled: hasSignature,
     staleTime: 0,
   });
 
   useEffect(() => {
-    if (!signatureQuery.data) {
+    if (!hasSignature || !signatureQuery.data) {
       setPreviewUrl(null);
       return;
     }
     const url = URL.createObjectURL(signatureQuery.data);
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
-  }, [signatureQuery.data]);
-
-  const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ["users"] });
-    void queryClient.invalidateQueries({ queryKey: ["user-signature", user.id] });
-  };
+  }, [hasSignature, signatureQuery.data]);
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => usersApi.uploadSignature(user.id, file),
     onSuccess: () => {
       toast.success("Signature uploaded.");
-      invalidate();
+      setHasSignature(true);
+      setRefreshKey((key) => key + 1);
+      void queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (error: unknown) => {
       toast.error(getApiErrorMessage(error, "Failed to upload signature."));
@@ -60,7 +67,10 @@ export function SignatureUpload({ user }: SignatureUploadProps) {
     mutationFn: () => usersApi.deleteSignature(user.id),
     onSuccess: () => {
       toast.success("Signature removed.");
-      invalidate();
+      setHasSignature(false);
+      setPreviewUrl(null);
+      queryClient.removeQueries({ queryKey: ["user-signature", user.id] });
+      void queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (error: unknown) => {
       toast.error(getApiErrorMessage(error, "Failed to remove signature."));
@@ -93,17 +103,17 @@ export function SignatureUpload({ user }: SignatureUploadProps) {
         </p>
       </div>
 
-      {user.has_signature && previewUrl && (
+      {hasSignature && previewUrl && (
         <img
           src={previewUrl}
           alt="Doctor signature preview"
           className="max-h-20 max-w-[200px] rounded border bg-white object-contain p-1"
         />
       )}
-      {user.has_signature && signatureQuery.isLoading && (
+      {hasSignature && signatureQuery.isLoading && (
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
       )}
-      {!user.has_signature && (
+      {!hasSignature && (
         <p className="text-sm text-muted-foreground">No signature uploaded yet.</p>
       )}
 
@@ -128,9 +138,9 @@ export function SignatureUpload({ user }: SignatureUploadProps) {
           ) : (
             <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
           )}
-          {user.has_signature ? "Replace" : "Upload"}
+          {hasSignature ? "Replace" : "Upload"}
         </Button>
-        {user.has_signature && (
+        {hasSignature && (
           <Button
             type="button"
             variant="outline"
