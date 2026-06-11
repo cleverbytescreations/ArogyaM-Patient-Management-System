@@ -68,4 +68,43 @@ describe("SignatureUpload", () => {
     await waitFor(() => expect(spy).toHaveBeenCalledWith(doctor.id, file));
     expect(toast.success).toHaveBeenCalledWith("Signature uploaded.");
   });
+
+  it("shows the preview live after upload without the user prop changing", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(usersApi, "uploadSignature").mockResolvedValue({
+      ...doctor,
+      has_signature: true,
+    });
+    vi.spyOn(usersApi, "getSignatureBlob").mockResolvedValue(
+      new Blob([new Uint8Array([0x89, 0x50])], { type: "image/png" })
+    );
+    // Prop stays has_signature: false (stale snapshot) for the whole test.
+    renderWithProviders(<SignatureUpload user={{ ...doctor, has_signature: false }} />);
+    const input = screen.getByLabelText(/signature image file/i) as HTMLInputElement;
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "sig.png", {
+      type: "image/png",
+    });
+    await user.upload(input, file);
+    await waitFor(() =>
+      expect(screen.getByAltText(/doctor signature preview/i)).toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: /replace/i })).toBeInTheDocument();
+  });
+
+  it("clears the preview live after delete without the user prop changing", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(usersApi, "getSignatureBlob").mockResolvedValue(
+      new Blob([new Uint8Array([0x89, 0x50])], { type: "image/png" })
+    );
+    vi.spyOn(usersApi, "deleteSignature").mockResolvedValue({} as never);
+    renderWithProviders(<SignatureUpload user={{ ...doctor, has_signature: true }} />);
+    await waitFor(() =>
+      expect(screen.getByAltText(/doctor signature preview/i)).toBeInTheDocument()
+    );
+    await user.click(screen.getByRole("button", { name: /remove/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/no signature uploaded yet/i)).toBeInTheDocument()
+    );
+    expect(screen.queryByAltText(/doctor signature preview/i)).not.toBeInTheDocument();
+  });
 });
