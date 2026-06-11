@@ -26,3 +26,8 @@ class BackupLogOut(BaseModel):
 class BackupStatusOut(BaseModel):
     latest: BackupLogOut | None = None
     recent: list[BackupLogOut] = []
+
+
+class BackupTriggerOut(BaseModel):
+    triggered_at: datetime
+    message: str = "Backup triggered — check status in a few moments."

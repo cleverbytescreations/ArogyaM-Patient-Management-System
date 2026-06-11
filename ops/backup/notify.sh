@@ -15,10 +15,11 @@ MESSAGE="${3:-No message}"
 HOSTNAME="$(hostname -f 2>/dev/null || hostname)"
 TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 
-# No-op when SMTP is not configured
+# No-op when SMTP is not configured.
+# Exit 2 (not 0) so callers can distinguish "skipped" from "sent successfully".
 if [ -z "${SMTP_HOST:-}" ]; then
     echo "[notify] SMTP not configured — skipping backup alert."
-    exit 0
+    exit 2
 fi
 
 : "${SMTP_PORT:=587}"

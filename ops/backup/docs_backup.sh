@@ -3,7 +3,7 @@
 # Syncs the documents bucket to an off-server target, records in backup_log.
 #
 # Required env vars:
-#   DATABASE_URL        — PostgreSQL URL for backup_log writes
+#   DATABASE_URL        — PostgreSQL URL for backup_log writes (plain postgresql://, NOT +psycopg)
 #   MINIO_ENDPOINT      — e.g. http://minio:9000
 #   MINIO_ACCESS_KEY    — MinIO/S3 access key
 #   MINIO_SECRET_KEY    — MinIO/S3 secret key
@@ -29,18 +29,24 @@ STATUS="STARTED"
 START_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 MESSAGE=""
 
-# Uses psql --set + :'var' quoting to avoid SQL injection from shell variables.
+# Passes values as psql --set variables and reads SQL from stdin so that
+# psql's :'varname' interpolation is active (it is NOT active with -c).
+# MANUAL_TRIGGER_USER_ID env var (optional) is set by entrypoint.sh when the
+# run was triggered via POST /backup/trigger; it is recorded as triggered_by.
 _log_to_db() {
     local status="$1" message="${2:-}" completed="${3:-}"
+    local trigger_user="${MANUAL_TRIGGER_USER_ID:-}"
     psql "${DATABASE_URL}" --no-psqlrc \
         --set="btype=${BACKUP_TYPE}" \
         --set="bstatus=${status}" \
         --set="bmsg=${message}" \
         --set="bstart=${START_TIME}" \
         --set="bcomp=${completed}" \
-        -c "INSERT INTO backup_log (backup_type, status, message, started_at, completed_at)
-VALUES (:'btype', :'bstatus', NULLIF(:'bmsg',''), :'bstart', NULLIF(:'bcomp',''));" \
-        2>/dev/null || true
+        --set="btrigger=${trigger_user}" \
+        <<SQL 2>/dev/null || true
+INSERT INTO backup_log (backup_type, status, message, triggered_by, started_at, completed_at)
+VALUES (:'btype', :'bstatus', NULLIF(:'bmsg',''), NULLIF(:'btrigger','')::uuid, :'bstart'::timestamptz, NULLIF(:'bcomp','')::timestamptz);
+SQL
 }
 
 # Update notification_status on the row written by this run (LOG-T13.1).
@@ -50,9 +56,10 @@ _update_notification() {
         --set="btype=${BACKUP_TYPE}" \
         --set="bstart=${START_TIME}" \
         --set="nstatus=${notif_status}" \
-        -c "UPDATE backup_log SET notification_status = :'nstatus'
-WHERE backup_type = :'btype' AND started_at = :'bstart';" \
-        2>/dev/null || true
+        <<SQL 2>/dev/null || true
+UPDATE backup_log SET notification_status = :'nstatus'
+WHERE backup_type = :'btype' AND started_at = :'bstart'::timestamptz;
+SQL
 }
 
 _log_to_db "STARTED"
@@ -80,13 +87,16 @@ else
     echo "[$(date -u)] ERROR: ${MESSAGE}" >&2
 fi
 
-# Send email notification and record outcome in backup_log (INT-T13.2 / LOG-T13.1)
+# Send email notification and record outcome in backup_log (INT-T13.2 / LOG-T13.1).
+# notify.sh exit codes: 0 = sent, 2 = SMTP not configured (skipped), other = failed.
 if [ -x "${SCRIPT_DIR}/notify.sh" ]; then
-    if "${SCRIPT_DIR}/notify.sh" "${BACKUP_TYPE}" "${STATUS}" "${MESSAGE}"; then
-        _update_notification "SENT"
-    else
-        _update_notification "FAILED"
-    fi
+    NOTIFY_EXIT=0
+    "${SCRIPT_DIR}/notify.sh" "${BACKUP_TYPE}" "${STATUS}" "${MESSAGE}" || NOTIFY_EXIT=$?
+    case "${NOTIFY_EXIT}" in
+        0) _update_notification "SENT" ;;
+        2) _update_notification "SKIPPED" ;;
+        *) _update_notification "FAILED" ;;
+    esac
 else
     _update_notification "SKIPPED"
 fi

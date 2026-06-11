@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   XCircle,
@@ -6,8 +6,10 @@ import {
   Database,
   FileArchive,
   Server,
+  PlayCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DataTable, type Column } from "@/components/DataTable";
 import { PageHeader } from "@/components/PageHeader";
@@ -153,6 +155,8 @@ const historyColumns: Column<BackupLogEntry>[] = [
 ];
 
 export function BackupStatusPage() {
+  const queryClient = useQueryClient();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["backup-status"],
     queryFn: backupApi.getStatus,
@@ -160,13 +164,54 @@ export function BackupStatusPage() {
     refetchInterval: 5 * 60 * 1000,
   });
 
+  const triggerMutation = useMutation({
+    mutationFn: backupApi.triggerBackup,
+    onSuccess: () => {
+      // Backup runs asynchronously — poll for new rows after a short delay
+      setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: ["backup-status"] });
+      }, 5000);
+    },
+  });
+
+  const runBackupButton = (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => triggerMutation.mutate()}
+      disabled={triggerMutation.isPending || triggerMutation.isSuccess}
+      aria-label="Run backup now"
+    >
+      {triggerMutation.isPending ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : (
+        <PlayCircle className="mr-2 h-4 w-4" aria-hidden="true" />
+      )}
+      {triggerMutation.isPending
+        ? "Triggering…"
+        : triggerMutation.isSuccess
+          ? "Triggered — check status shortly"
+          : "Run Backup Now"}
+    </Button>
+  );
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
         eyebrow="Admin"
         title="Backup Status"
-        subtitle="Read-only view of automated backup runs and outcomes. Restore is performed out-of-band by authorized technical personnel."
+        subtitle="View automated backup runs or trigger an immediate backup. Restore is performed out-of-band by authorized technical personnel."
+        actions={runBackupButton}
       />
+
+      {triggerMutation.isError && (
+        <div
+          role="alert"
+          className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {getApiErrorMessage(triggerMutation.error, "Could not trigger backup.")}
+        </div>
+      )}
 
       {error && (
         <div
@@ -203,11 +248,11 @@ export function BackupStatusPage() {
             </h2>
             <DataTable
               columns={historyColumns}
-              data={data?.history ?? []}
+              data={data?.recent ?? []}
               isLoading={false}
-              total={data?.history?.length ?? 0}
+              total={data?.recent?.length ?? 0}
               page={1}
-              pageSize={Math.max(data?.history?.length ?? 1, 1)}
+              pageSize={Math.max(data?.recent?.length ?? 1, 1)}
               onPageChange={() => {}}
               getRowKey={(e) => String(e.id)}
               emptyMessage="No backup history available."

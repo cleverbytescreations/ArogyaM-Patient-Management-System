@@ -957,13 +957,20 @@ export const handlers = [
     return HttpResponse.json(entry);
   }),
 
-  // ── Backup status ─────────────────────────────────────────────────────────
+  // ── Backup ────────────────────────────────────────────────────────────────
 
   http.get(`${BASE}/backup/status`, () => {
     return HttpResponse.json({
       latest: mockBackupLogs[0],
-      history: mockBackupLogs,
+      recent: mockBackupLogs,
     });
+  }),
+
+  http.post(`${BASE}/backup/trigger`, () => {
+    return HttpResponse.json(
+      { triggered_at: "2026-06-11T10:00:00Z", message: "Backup triggered — check status in a few moments." },
+      { status: 202 }
+    );
   }),
 ];
 

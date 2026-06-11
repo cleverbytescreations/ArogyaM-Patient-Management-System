@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     # Maximum hours after creation during which a prescription can be edited.
     prescription_edit_window_hours: int = Field(default=8)
 
+    # --- Backup -----------------------------------------------------------------
+    # Path where the API writes the manual-trigger sentinel file.
+    # Must match the path mounted as /backups/.trigger in both api and backup
+    # containers (same named volume: backup_data_dev in docker-compose.dev.yml).
+    backup_trigger_file: str = Field(default="/backups/.trigger")
+
     # --- Audit log retention -------------------------------------------------
     # Hard-delete audit records older than this many days.
     # 2555 days = 7 years (recommended minimum for medical-record compliance).

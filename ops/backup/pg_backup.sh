@@ -3,13 +3,9 @@
 # Runs pg_dump, compresses, uploads to off-server target, records in backup_log.
 #
 # Required env vars:
-#   DATABASE_URL        — PostgreSQL connection URL
+#   DATABASE_URL        — PostgreSQL connection URL (plain postgresql://, NOT +psycopg)
 #   BACKUP_DEST         — destination path or s3://bucket/prefix for rclone
 #   DB_NAME             — database name (for pg_dump -d)
-#   DB_HOST, DB_PORT, DB_USER, PGPASSWORD  — or use DATABASE_URL
-#
-# Optional env vars (for backup_log writing):
-#   BACKUP_LOG_DB_URL   — defaults to DATABASE_URL
 #
 # Alerting env vars (see notify.sh):
 #   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_TO
@@ -31,12 +27,16 @@ MESSAGE=""
 SIZE_BYTES=0
 
 # Helper: write a backup_log row via psql.
-# Uses psql --set + quoted :'var' syntax to avoid SQL injection from shell variables.
+# Passes values as psql variables (--set) and reads SQL from stdin so that
+# psql's :'varname' interpolation is active (it is NOT active with -c).
 # NULLIF(:'var','') converts empty strings to SQL NULL.
+# MANUAL_TRIGGER_USER_ID env var (optional) is set by entrypoint.sh when the
+# run was triggered via POST /backup/trigger; it is recorded as triggered_by.
 _log_to_db() {
     local status="$1" message="${2:-}" completed="${3:-}" size="${4:-}" location_ref="${5:-}"
     local size_sql="NULL"
     [ -n "${size}" ] && size_sql="${size}"
+    local trigger_user="${MANUAL_TRIGGER_USER_ID:-}"
     psql "${DATABASE_URL}" --no-psqlrc \
         --set="btype=${BACKUP_TYPE}" \
         --set="bstatus=${status}" \
@@ -44,9 +44,11 @@ _log_to_db() {
         --set="bstart=${START_TIME}" \
         --set="bloc=${location_ref}" \
         --set="bcomp=${completed}" \
-        -c "INSERT INTO backup_log (backup_type, status, location_ref, size_bytes, message, started_at, completed_at)
-VALUES (:'btype', :'bstatus', NULLIF(:'bloc',''), ${size_sql}, NULLIF(:'bmsg',''), :'bstart', NULLIF(:'bcomp',''));" \
-        2>/dev/null || true
+        --set="btrigger=${trigger_user}" \
+        <<SQL 2>/dev/null || true
+INSERT INTO backup_log (backup_type, status, location_ref, size_bytes, message, triggered_by, started_at, completed_at)
+VALUES (:'btype', :'bstatus', NULLIF(:'bloc',''), ${size_sql}, NULLIF(:'bmsg',''), NULLIF(:'btrigger','')::uuid, :'bstart'::timestamptz, NULLIF(:'bcomp','')::timestamptz);
+SQL
 }
 
 # Helper: update notification_status on the row written by this run (LOG-T13.1).
@@ -56,9 +58,10 @@ _update_notification() {
         --set="btype=${BACKUP_TYPE}" \
         --set="bstart=${START_TIME}" \
         --set="nstatus=${notif_status}" \
-        -c "UPDATE backup_log SET notification_status = :'nstatus'
-WHERE backup_type = :'btype' AND started_at = :'bstart';" \
-        2>/dev/null || true
+        <<SQL 2>/dev/null || true
+UPDATE backup_log SET notification_status = :'nstatus'
+WHERE backup_type = :'btype' AND started_at = :'bstart'::timestamptz;
+SQL
 }
 
 # Record STARTED
@@ -93,13 +96,16 @@ fi
 # Clean up temp file
 rm -f "${BACKUP_FILE}"
 
-# Send email notification and record outcome in backup_log (INT-T13.2 / LOG-T13.1)
+# Send email notification and record outcome in backup_log (INT-T13.2 / LOG-T13.1).
+# notify.sh exit codes: 0 = sent, 2 = SMTP not configured (skipped), other = failed.
 if [ -x "${SCRIPT_DIR}/notify.sh" ]; then
-    if "${SCRIPT_DIR}/notify.sh" "${BACKUP_TYPE}" "${STATUS}" "${MESSAGE}"; then
-        _update_notification "SENT"
-    else
-        _update_notification "FAILED"
-    fi
+    NOTIFY_EXIT=0
+    "${SCRIPT_DIR}/notify.sh" "${BACKUP_TYPE}" "${STATUS}" "${MESSAGE}" || NOTIFY_EXIT=$?
+    case "${NOTIFY_EXIT}" in
+        0) _update_notification "SENT" ;;
+        2) _update_notification "SKIPPED" ;;
+        *) _update_notification "FAILED" ;;
+    esac
 else
     _update_notification "SKIPPED"
 fi

@@ -3,7 +3,7 @@
  * Covers UI-T13.1.
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { http, HttpResponse } from "msw";
@@ -82,12 +82,21 @@ describe("BackupStatusPage — rendering", () => {
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
 
-  it("has no restore/trigger controls (read-only)", async () => {
+  it("has no restore button (restore is out-of-band)", async () => {
     render(<BackupStatusPage />, { wrapper: makeWrapper() });
     await screen.findByText(/latest backup/i);
     expect(screen.queryByRole("button", { name: /restore/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /trigger/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /run backup/i })).not.toBeInTheDocument();
+  });
+
+  it("shows Run Backup Now button and triggers on click", async () => {
+    render(<BackupStatusPage />, { wrapper: makeWrapper() });
+    await screen.findByText(/latest backup/i);
+    const btn = screen.getByRole("button", { name: /run backup now/i });
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /triggered/i })).toBeInTheDocument()
+    );
   });
 
   it("has no a11y violations on load", async () => {

@@ -178,10 +178,12 @@ services:
       UPLOAD_MAX_MB: ${UPLOAD_MAX_MB:-10}
       LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
       SQL_ECHO: "false"   # never echo SQL — would leak PHI into logs (SAD §10.1)
+      BACKUP_TRIGGER_FILE: /backups/.trigger
     volumes:
       - ./backend:/app          # hot reload
       - /app/.venv              # keep container venv (do not shadow with host)
       - ./nginx:/app/nginx:ro   # nginx configs accessible for proxy-config tests (LOG-T0.2)
+      - backup_data_dev:/backups  # shared with backup service for trigger-file protocol
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
@@ -198,6 +200,42 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    logging: *default-logging
+    networks: [arogyam]
+
+  # ---------------------------------------------------------------------------
+  # backup — runs pg_backup.sh + docs_backup.sh immediately on startup so
+  # backup_log is never empty in dev, then repeats every 30 min via cron.
+  # DATABASE_URL uses the plain postgresql:// scheme (no +psycopg driver prefix)
+  # because pg_dump/psql do not understand SQLAlchemy driver qualifiers.
+  # ---------------------------------------------------------------------------
+  backup:
+    build:
+      context: ./ops/backup
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-arogyam}:${POSTGRES_PASSWORD:-arogyam_dev_pw}@db:5432/${POSTGRES_DB:-arogyam}"
+      BACKUP_DEST: /backups
+      DB_NAME: ${POSTGRES_DB:-arogyam}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:-arogyam}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-arogyam_dev_pw}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin_dev_pw}
+      MINIO_BUCKET: ${MINIO_BUCKET:-arogyam-documents}
+      # SMTP alerting — leave blank in dev to skip email (notify.sh no-ops when SMTP_HOST unset)
+      SMTP_HOST: ""
+      BACKUP_INTERVAL_SECONDS: "${BACKUP_INTERVAL_SECONDS:-1800}"
+      BACKUP_TRIGGER_FILE: /backups/.trigger
+    volumes:
+      - backup_data_dev:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
     logging: *default-logging
     networks: [arogyam]
 
@@ -263,6 +301,7 @@ services:
 volumes:
   pg_data_dev:
   minio_data_dev:
+  backup_data_dev:
 
 networks:
   arogyam:
