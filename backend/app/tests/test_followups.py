@@ -513,7 +513,6 @@ class TestBackupStatusAPI:
     def test_backup_trigger_returns_202_for_admin(
         self, client, admin_token: str, tmp_path, monkeypatch
     ) -> None:
-        from app.modules.backup import service as backup_svc
         trigger_file = tmp_path / ".trigger"
         monkeypatch.setattr(
             "app.core.config.settings.backup_trigger_file", str(trigger_file)

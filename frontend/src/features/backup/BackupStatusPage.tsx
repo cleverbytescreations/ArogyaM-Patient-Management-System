@@ -7,6 +7,7 @@ import {
   FileArchive,
   Server,
   PlayCircle,
+  RefreshCw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -157,7 +158,13 @@ const historyColumns: Column<BackupLogEntry>[] = [
 export function BackupStatusPage() {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useQuery({
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["backup-status"],
     queryFn: backupApi.getStatus,
     staleTime: 60_000,
@@ -180,7 +187,6 @@ export function BackupStatusPage() {
       variant="outline"
       onClick={() => triggerMutation.mutate()}
       disabled={triggerMutation.isPending || triggerMutation.isSuccess}
-      aria-label="Run backup now"
     >
       {triggerMutation.isPending ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -195,13 +201,33 @@ export function BackupStatusPage() {
     </Button>
   );
 
+  const refreshButton = (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => void refetch()}
+      disabled={isFetching}
+    >
+      <RefreshCw
+        className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+        aria-hidden="true"
+      />
+      Refresh
+    </Button>
+  );
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader
         eyebrow="Admin"
         title="Backup Status"
         subtitle="View automated backup runs or trigger an immediate backup. Restore is performed out-of-band by authorized technical personnel."
-        actions={runBackupButton}
+        actions={
+          <>
+            {refreshButton}
+            {runBackupButton}
+          </>
+        }
       />
 
       {triggerMutation.isError && (
