@@ -21,6 +21,7 @@ class BackupLogOut(BaseModel):
     started_at: datetime
     completed_at: datetime | None = None
     notification_status: str | None = None
+    deleted_at: datetime | None = None
 
 
 class BackupStatusOut(BaseModel):

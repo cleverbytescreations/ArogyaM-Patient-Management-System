@@ -4,7 +4,8 @@
 # 1. Runs both backup scripts immediately so backup_log has data on first startup.
 # 2. Loops with a short poll interval (BACKUP_POLL_SECONDS, default 10 s) to detect
 #    manual trigger files written by the API via POST /backup/trigger.
-# 3. Runs a full scheduled backup every BACKUP_INTERVAL_SECONDS (default 1800 s).
+# 3. Runs a full scheduled backup once per day at midnight (container local time).
+#    Set TZ env var on the container to control which timezone midnight refers to.
 #
 # Uses a sleep loop instead of crond — crond requires setpgid which Docker's
 # default seccomp profile blocks inside unprivileged containers.
@@ -16,7 +17,6 @@
 #   then deletes the file and runs backups immediately.
 set -euo pipefail
 
-INTERVAL="${BACKUP_INTERVAL_SECONDS:-1800}"
 POLL="${BACKUP_POLL_SECONDS:-10}"
 TRIGGER_FILE="${BACKUP_TRIGGER_FILE:-/backups/.trigger}"
 
@@ -38,15 +38,23 @@ run_backups() {
     fi
 }
 
+run_purge() {
+    log "=== Retention purge (7 days) ==="
+    if /scripts/purge.sh >> /var/log/arogyam-backup.log 2>&1; then
+        log "Retention purge: SUCCESS"
+    else
+        log "Retention purge: FAILED (non-fatal — see /var/log/arogyam-backup.log)"
+    fi
+}
+
 log "Backup service starting — running initial backups..."
 unset MANUAL_TRIGGER_USER_ID
 run_backups
 
-log "Entering scheduled loop (interval=${INTERVAL}s, poll=${POLL}s)..."
-elapsed=0
+log "Entering scheduled loop (daily at midnight, poll=${POLL}s)..."
+last_scheduled_date=""
 while true; do
     sleep "${POLL}"
-    elapsed=$((elapsed + POLL))
 
     if [ -f "${TRIGGER_FILE}" ]; then
         MANUAL_TRIGGER_USER_ID="$(cat "${TRIGGER_FILE}" 2>/dev/null || echo '')"
@@ -55,11 +63,17 @@ while true; do
         log "Manual backup triggered by user ${MANUAL_TRIGGER_USER_ID:-unknown}..."
         run_backups
         unset MANUAL_TRIGGER_USER_ID
-        elapsed=0
-    elif [ "${elapsed}" -ge "${INTERVAL}" ]; then
+    fi
+
+    # Scheduled midnight backup + purge — fires once per calendar day when the
+    # clock reads 00:00 (within the 10 s poll window).  last_scheduled_date
+    # guards against re-firing if the poll wakes up multiple times inside that minute.
+    today="$(date +%Y-%m-%d)"
+    if [ "$(date +%H:%M)" = "00:00" ] && [ "${last_scheduled_date}" != "${today}" ]; then
+        last_scheduled_date="${today}"
         unset MANUAL_TRIGGER_USER_ID
-        log "Running scheduled backup..."
+        log "Running scheduled midnight backup..."
         run_backups
-        elapsed=0
+        run_purge
     fi
 done

@@ -356,9 +356,9 @@ services:
       # --- Backup behaviour ---
       BACKUP_DIR: /backups
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
-      BACKUP_CRON_DB: ${BACKUP_CRON_DB:-0 2 * * *}       # nightly 02:00
-      BACKUP_CRON_MINIO: ${BACKUP_CRON_MINIO:-0 3 * * *} # nightly 03:00
-      TZ: ${TZ:-UTC}
+      BACKUP_CRON_DB: ${BACKUP_CRON_DB:-0 0 * * *}       # daily midnight IST
+      BACKUP_CRON_MINIO: ${BACKUP_CRON_MINIO:-0 0 * * *} # daily midnight IST
+      TZ: ${TZ:-Asia/Kolkata}
       # --- Optional: record run + alert on failure (UC-26) ---
       BACKUP_LOG_TO_DB: ${BACKUP_LOG_TO_DB:-true}
       ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}

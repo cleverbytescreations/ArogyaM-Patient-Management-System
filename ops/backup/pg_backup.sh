@@ -25,47 +25,63 @@ STATUS="STARTED"
 START_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 MESSAGE=""
 SIZE_BYTES=0
+LOG_ID=""
 
-# Helper: write a backup_log row via psql.
-# Passes values as psql variables (--set) and reads SQL from stdin so that
-# psql's :'varname' interpolation is active (it is NOT active with -c).
-# NULLIF(:'var','') converts empty strings to SQL NULL.
+# Insert the STARTED row and capture its id for subsequent updates.
 # MANUAL_TRIGGER_USER_ID env var (optional) is set by entrypoint.sh when the
 # run was triggered via POST /backup/trigger; it is recorded as triggered_by.
-_log_to_db() {
+_insert_started() {
+    local trigger_user="${MANUAL_TRIGGER_USER_ID:-}"
+    LOG_ID="$(psql "${DATABASE_URL}" --no-psqlrc -t -A \
+        --set="btype=${BACKUP_TYPE}" \
+        --set="bstart=${START_TIME}" \
+        --set="btrigger=${trigger_user}" \
+        <<SQL 2>/dev/null | grep -E '^[0-9]+$' || true
+INSERT INTO backup_log (backup_type, status, triggered_by, started_at)
+VALUES (:'btype', 'STARTED', NULLIF(:'btrigger','')::uuid, :'bstart'::timestamptz)
+RETURNING id;
+SQL
+    )"
+}
+
+# Update the existing STARTED row with final status/details.
+_update_log() {
     local status="$1" message="${2:-}" completed="${3:-}" size="${4:-}" location_ref="${5:-}"
     local size_sql="NULL"
     [ -n "${size}" ] && size_sql="${size}"
-    local trigger_user="${MANUAL_TRIGGER_USER_ID:-}"
+    [ -z "${LOG_ID}" ] && return
     psql "${DATABASE_URL}" --no-psqlrc \
-        --set="btype=${BACKUP_TYPE}" \
+        --set="lid=${LOG_ID}" \
         --set="bstatus=${status}" \
         --set="bmsg=${message}" \
-        --set="bstart=${START_TIME}" \
-        --set="bloc=${location_ref}" \
         --set="bcomp=${completed}" \
-        --set="btrigger=${trigger_user}" \
+        --set="bloc=${location_ref}" \
         <<SQL 2>/dev/null || true
-INSERT INTO backup_log (backup_type, status, location_ref, size_bytes, message, triggered_by, started_at, completed_at)
-VALUES (:'btype', :'bstatus', NULLIF(:'bloc',''), ${size_sql}, NULLIF(:'bmsg',''), NULLIF(:'btrigger','')::uuid, :'bstart'::timestamptz, NULLIF(:'bcomp','')::timestamptz);
+UPDATE backup_log
+SET status       = :'bstatus',
+    message      = NULLIF(:'bmsg',''),
+    completed_at = NULLIF(:'bcomp','')::timestamptz,
+    location_ref = NULLIF(:'bloc',''),
+    size_bytes   = ${size_sql}
+WHERE id = :'lid'::bigint;
 SQL
 }
 
-# Helper: update notification_status on the row written by this run (LOG-T13.1).
+# Update notification_status on the same row.
 _update_notification() {
     local notif_status="$1"
+    [ -z "${LOG_ID}" ] && return
     psql "${DATABASE_URL}" --no-psqlrc \
-        --set="btype=${BACKUP_TYPE}" \
-        --set="bstart=${START_TIME}" \
+        --set="lid=${LOG_ID}" \
         --set="nstatus=${notif_status}" \
         <<SQL 2>/dev/null || true
 UPDATE backup_log SET notification_status = :'nstatus'
-WHERE backup_type = :'btype' AND started_at = :'bstart'::timestamptz;
+WHERE id = :'lid'::bigint;
 SQL
 }
 
 # Record STARTED
-_log_to_db "STARTED"
+_insert_started
 
 # Run pg_dump
 if pg_dump "${DATABASE_URL}" | gzip > "${BACKUP_FILE}"; then
@@ -83,13 +99,13 @@ if pg_dump "${DATABASE_URL}" | gzip > "${BACKUP_FILE}"; then
 
     STATUS="SUCCESS"
     MESSAGE="Backup completed: ${DEST_PATH}"
-    _log_to_db "SUCCESS" "${MESSAGE}" "${COMPLETED_TIME}" "${SIZE_BYTES}" "${DEST_PATH}"
+    _update_log "SUCCESS" "${MESSAGE}" "${COMPLETED_TIME}" "${SIZE_BYTES}" "${DEST_PATH}"
     echo "[$(date -u)] ${MESSAGE}"
 else
     COMPLETED_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     STATUS="FAILED"
     MESSAGE="pg_dump failed for database ${DB_NAME}"
-    _log_to_db "FAILED" "${MESSAGE}" "${COMPLETED_TIME}"
+    _update_log "FAILED" "${MESSAGE}" "${COMPLETED_TIME}"
     echo "[$(date -u)] ERROR: ${MESSAGE}" >&2
 fi
 

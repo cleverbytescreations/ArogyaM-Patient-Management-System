@@ -27,6 +27,7 @@ interface DataTableProps<T> {
   onPageChange: (page: number) => void;
   emptyMessage?: string;
   getRowKey: (row: T) => string;
+  getRowClassName?: (row: T) => string | undefined;
   expandedRowKey?: string | null;
   renderExpandedRow?: (row: T) => ReactNode;
   onRowClick?: (key: string) => void;
@@ -42,6 +43,7 @@ export function DataTable<T>({
   onPageChange,
   emptyMessage = "No results found.",
   getRowKey,
+  getRowClassName,
   expandedRowKey = null,
   renderExpandedRow,
   onRowClick,
@@ -104,7 +106,12 @@ export function DataTable<T>({
                           : undefined
                       }
                       tabIndex={onRowClick ? 0 : undefined}
-                      className={onRowClick ? "cursor-pointer" : undefined}
+                      className={[
+                        onRowClick ? "cursor-pointer" : undefined,
+                        getRowClassName?.(row),
+                      ]
+                        .filter(Boolean)
+                        .join(" ") || undefined}
                       aria-expanded={onRowClick ? isExpanded : undefined}
                     >
                       {columns.map((col) => (

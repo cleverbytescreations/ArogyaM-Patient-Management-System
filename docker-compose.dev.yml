@@ -205,7 +205,7 @@ services:
 
   # ---------------------------------------------------------------------------
   # backup — runs pg_backup.sh + docs_backup.sh immediately on startup so
-  # backup_log is never empty in dev, then repeats every 30 min via cron.
+  # backup_log is never empty in dev, then runs daily at midnight (IST).
   # DATABASE_URL uses the plain postgresql:// scheme (no +psycopg driver prefix)
   # because pg_dump/psql do not understand SQLAlchemy driver qualifiers.
   # ---------------------------------------------------------------------------
@@ -227,8 +227,8 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:-arogyam-documents}
       # SMTP alerting — leave blank in dev to skip email (notify.sh no-ops when SMTP_HOST unset)
       SMTP_HOST: ""
-      BACKUP_INTERVAL_SECONDS: "${BACKUP_INTERVAL_SECONDS:-1800}"
       BACKUP_TRIGGER_FILE: /backups/.trigger
+      TZ: Asia/Kolkata
     volumes:
       - backup_data_dev:/backups
     depends_on:

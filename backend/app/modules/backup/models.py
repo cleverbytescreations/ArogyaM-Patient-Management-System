@@ -29,3 +29,4 @@ class BackupLog(Base):
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notification_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

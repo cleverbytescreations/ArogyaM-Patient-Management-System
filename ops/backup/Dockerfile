@@ -14,9 +14,9 @@ COPY --from=mc_stage /usr/bin/mc /usr/local/bin/mc
 RUN apk add --no-cache bash \
     && mkdir -p /var/log /backups
 
-COPY pg_backup.sh docs_backup.sh notify.sh entrypoint.sh /scripts/
+COPY pg_backup.sh docs_backup.sh notify.sh purge.sh entrypoint.sh /scripts/
 RUN chmod +x /scripts/pg_backup.sh /scripts/docs_backup.sh \
-               /scripts/notify.sh /scripts/entrypoint.sh
+               /scripts/notify.sh /scripts/purge.sh /scripts/entrypoint.sh
 
 VOLUME ["/backups"]
 ENTRYPOINT ["/scripts/entrypoint.sh"]

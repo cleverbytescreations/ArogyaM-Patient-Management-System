@@ -8,6 +8,7 @@ import {
   Server,
   PlayCircle,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,28 @@ const STATUS_CONFIG: Record<
   },
 };
 
+function isPurged(entry: BackupLogEntry): boolean {
+  return entry.deleted_at != null;
+}
+
+function StatusBadge({ entry }: { entry: BackupLogEntry }) {
+  if (isPurged(entry)) {
+    return (
+      <Badge variant="destructive" className="flex w-fit items-center gap-1 opacity-80">
+        <Trash2 className="h-3 w-3" aria-hidden="true" />
+        <span>Purged</span>
+      </Badge>
+    );
+  }
+  const cfg = STATUS_CONFIG[entry.status];
+  return (
+    <Badge variant={cfg.variant} className="flex w-fit items-center gap-1">
+      {cfg.icon}
+      <span>{cfg.label}</span>
+    </Badge>
+  );
+}
+
 function formatBytes(bytes: number | null): string {
   if (bytes == null) return "—";
   if (bytes < 1024) return `${bytes} B`;
@@ -57,21 +80,30 @@ function formatBytes(bytes: number | null): string {
 function LatestBackupCard({ entry }: { entry: BackupLogEntry }) {
   const typeCfg = BACKUP_TYPE_CONFIG[entry.backup_type];
   const statusCfg = STATUS_CONFIG[entry.status];
+  const purged = isPurged(entry);
 
   return (
-    <Card>
+    <Card className={purged ? "border-destructive/40 bg-destructive/5" : undefined}>
       <CardHeader className="pb-2">
-        <p className="flex items-center gap-2 text-base font-semibold">
+        <p className={`flex items-center gap-2 text-base font-semibold ${purged ? "text-destructive" : ""}`}>
           {typeCfg.icon}
           Latest Backup — {typeCfg.label}
+          {purged && <span className="text-xs font-normal">(storage purged)</span>}
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center gap-2">
-          <Badge variant={statusCfg.variant} className="flex items-center gap-1">
-            {statusCfg.icon}
-            <span>{statusCfg.label}</span>
-          </Badge>
+          {purged ? (
+            <Badge variant="destructive" className="flex items-center gap-1 opacity-80">
+              <Trash2 className="h-3 w-3" aria-hidden="true" />
+              <span>Purged</span>
+            </Badge>
+          ) : (
+            <Badge variant={statusCfg.variant} className="flex items-center gap-1">
+              {statusCfg.icon}
+              <span>{statusCfg.label}</span>
+            </Badge>
+          )}
         </div>
         <dl className="grid gap-1 text-sm sm:grid-cols-2">
           <div>
@@ -86,6 +118,12 @@ function LatestBackupCard({ entry }: { entry: BackupLogEntry }) {
             <div>
               <dt className="text-xs font-medium text-muted-foreground">Size</dt>
               <dd>{formatBytes(entry.size_bytes)}</dd>
+            </div>
+          )}
+          {purged && entry.deleted_at && (
+            <div>
+              <dt className="text-xs font-medium text-muted-foreground">Purged at</dt>
+              <dd className="text-destructive">{formatDateTime(entry.deleted_at)}</dd>
             </div>
           )}
           {entry.message && (
@@ -124,15 +162,7 @@ const historyColumns: Column<BackupLogEntry>[] = [
   {
     key: "status",
     header: "Status",
-    render: (e) => {
-      const cfg = STATUS_CONFIG[e.status];
-      return (
-        <Badge variant={cfg.variant} className="flex w-fit items-center gap-1">
-          {cfg.icon}
-          <span>{cfg.label}</span>
-        </Badge>
-      );
-    },
+    render: (e) => <StatusBadge entry={e} />,
   },
   {
     key: "size_bytes",
@@ -154,6 +184,12 @@ const historyColumns: Column<BackupLogEntry>[] = [
     ),
   },
 ];
+
+function getHistoryRowClassName(entry: BackupLogEntry): string | undefined {
+  return isPurged(entry)
+    ? "bg-destructive/5 text-destructive/80 hover:bg-destructive/10"
+    : undefined;
+}
 
 export function BackupStatusPage() {
   const queryClient = useQueryClient();
@@ -221,7 +257,7 @@ export function BackupStatusPage() {
       <PageHeader
         eyebrow="Admin"
         title="Backup Status"
-        subtitle="View automated backup runs or trigger an immediate backup. Restore is performed out-of-band by authorized technical personnel."
+        subtitle="View automated backup runs or trigger an immediate backup. Backups older than 7 days are automatically purged from storage (shown in red). Restore is performed out-of-band by authorized technical personnel."
         actions={
           <>
             {refreshButton}
@@ -271,6 +307,11 @@ export function BackupStatusPage() {
               className="mb-3 text-base font-semibold"
             >
               Recent Runs
+              {data?.recent?.some(isPurged) && (
+                <span className="ml-2 text-xs font-normal text-destructive">
+                  — red rows have been purged from storage (7-day retention)
+                </span>
+              )}
             </h2>
             <DataTable
               columns={historyColumns}
@@ -281,6 +322,7 @@ export function BackupStatusPage() {
               pageSize={Math.max(data?.recent?.length ?? 1, 1)}
               onPageChange={() => {}}
               getRowKey={(e) => String(e.id)}
+              getRowClassName={getHistoryRowClassName}
               emptyMessage="No backup history available."
             />
           </section>

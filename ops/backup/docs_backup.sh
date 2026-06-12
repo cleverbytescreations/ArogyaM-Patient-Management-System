@@ -28,41 +28,59 @@ BACKUP_TYPE="DOCUMENTS"
 STATUS="STARTED"
 START_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 MESSAGE=""
+LOG_ID=""
 
-# Passes values as psql --set variables and reads SQL from stdin so that
-# psql's :'varname' interpolation is active (it is NOT active with -c).
+# Insert the STARTED row and capture its id for subsequent updates.
 # MANUAL_TRIGGER_USER_ID env var (optional) is set by entrypoint.sh when the
 # run was triggered via POST /backup/trigger; it is recorded as triggered_by.
-_log_to_db() {
-    local status="$1" message="${2:-}" completed="${3:-}"
+_insert_started() {
     local trigger_user="${MANUAL_TRIGGER_USER_ID:-}"
-    psql "${DATABASE_URL}" --no-psqlrc \
+    LOG_ID="$(psql "${DATABASE_URL}" --no-psqlrc -t -A \
         --set="btype=${BACKUP_TYPE}" \
+        --set="bstart=${START_TIME}" \
+        --set="btrigger=${trigger_user}" \
+        <<SQL 2>/dev/null | grep -E '^[0-9]+$' || true
+INSERT INTO backup_log (backup_type, status, triggered_by, started_at)
+VALUES (:'btype', 'STARTED', NULLIF(:'btrigger','')::uuid, :'bstart'::timestamptz)
+RETURNING id;
+SQL
+    )"
+}
+
+# Update the existing STARTED row with final status/details.
+_update_log() {
+    local status="$1" message="${2:-}" completed="${3:-}" location_ref="${4:-}"
+    [ -z "${LOG_ID}" ] && return
+    psql "${DATABASE_URL}" --no-psqlrc \
+        --set="lid=${LOG_ID}" \
         --set="bstatus=${status}" \
         --set="bmsg=${message}" \
-        --set="bstart=${START_TIME}" \
         --set="bcomp=${completed}" \
-        --set="btrigger=${trigger_user}" \
+        --set="bloc=${location_ref}" \
         <<SQL 2>/dev/null || true
-INSERT INTO backup_log (backup_type, status, message, triggered_by, started_at, completed_at)
-VALUES (:'btype', :'bstatus', NULLIF(:'bmsg',''), NULLIF(:'btrigger','')::uuid, :'bstart'::timestamptz, NULLIF(:'bcomp','')::timestamptz);
+UPDATE backup_log
+SET status       = :'bstatus',
+    message      = NULLIF(:'bmsg',''),
+    completed_at = NULLIF(:'bcomp','')::timestamptz,
+    location_ref = NULLIF(:'bloc','')
+WHERE id = :'lid'::bigint;
 SQL
 }
 
-# Update notification_status on the row written by this run (LOG-T13.1).
+# Update notification_status on the same row.
 _update_notification() {
     local notif_status="$1"
+    [ -z "${LOG_ID}" ] && return
     psql "${DATABASE_URL}" --no-psqlrc \
-        --set="btype=${BACKUP_TYPE}" \
-        --set="bstart=${START_TIME}" \
+        --set="lid=${LOG_ID}" \
         --set="nstatus=${notif_status}" \
         <<SQL 2>/dev/null || true
 UPDATE backup_log SET notification_status = :'nstatus'
-WHERE backup_type = :'btype' AND started_at = :'bstart'::timestamptz;
+WHERE id = :'lid'::bigint;
 SQL
 }
 
-_log_to_db "STARTED"
+_insert_started
 
 # Use mc (MinIO Client) to mirror the bucket.
 # mc reads credentials from MC_HOST_<alias> as http://KEY:SECRET@host:port.
@@ -77,13 +95,13 @@ if mc mirror --overwrite "src/${MINIO_BUCKET}" "${DEST_PATH}"; then
     COMPLETED_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     STATUS="SUCCESS"
     MESSAGE="Documents backup completed: ${DEST_PATH}"
-    _log_to_db "SUCCESS" "${MESSAGE}" "${COMPLETED_TIME}"
+    _update_log "SUCCESS" "${MESSAGE}" "${COMPLETED_TIME}" "${DEST_PATH}"
     echo "[$(date -u)] ${MESSAGE}"
 else
     COMPLETED_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     STATUS="FAILED"
     MESSAGE="MinIO mirror failed for bucket ${MINIO_BUCKET}"
-    _log_to_db "FAILED" "${MESSAGE}" "${COMPLETED_TIME}"
+    _update_log "FAILED" "${MESSAGE}" "${COMPLETED_TIME}"
     echo "[$(date -u)] ERROR: ${MESSAGE}" >&2
 fi
 

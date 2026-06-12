@@ -11,4 +11,5 @@ export interface BackupLogEntry {
   triggered_by: string | null;
   started_at: string;
   completed_at: string | null;
+  deleted_at: string | null;
 }
