@@ -8,6 +8,7 @@ import {
   Phone,
   RefreshCw,
   Pencil,
+  CalendarPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ import { getApiErrorMessage } from "@/api/errors";
 import { formatDate } from "@/lib/format";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { FollowUpFormDialog } from "./FollowUpFormDialog";
+import { RegisterFollowUpVisitDialog } from "./RegisterFollowUpVisitDialog";
 import type { FollowUp, FollowUpStatusCode } from "@/types/followups";
 
 const STATUS_CONFIG: Record<
@@ -58,6 +60,7 @@ export function FollowUpRegisterPage() {
   const [assignedToFilter, setAssignedToFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [editFollowUp, setEditFollowUp] = useState<FollowUp | null>(null);
+  const [registerVisitFollowUp, setRegisterVisitFollowUp] = useState<FollowUp | null>(null);
 
   const params = {
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -135,17 +138,37 @@ export function FollowUpRegisterPage() {
       key: "actions",
       header: "Actions",
       render: (f) => (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setEditFollowUp(f)}
-          aria-label={`Update follow-up for ${formatDate(f.follow_up_date)}`}
-        >
-          <Pencil className="mr-1 h-3 w-3" aria-hidden="true" />
-          Update
-        </Button>
+        <div className="flex items-center gap-2">
+          {f.visit_id === null && f.status_code !== "COMPLETED" && f.status_code !== "RESCHEDULED" && (
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => setRegisterVisitFollowUp(f)}
+              aria-label={`Register arrival visit for follow-up on ${formatDate(f.follow_up_date)}`}
+            >
+              <CalendarPlus className="mr-1 h-3 w-3" aria-hidden="true" />
+              Register Visit
+            </Button>
+          )}
+          {f.status_code === "COMPLETED" ? (
+            <Badge variant="success" className="flex w-fit items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+              No action required
+            </Badge>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEditFollowUp(f)}
+              aria-label={`Update follow-up for ${formatDate(f.follow_up_date)}`}
+            >
+              <Pencil className="mr-1 h-3 w-3" aria-hidden="true" />
+              Update
+            </Button>
+          )}
+        </div>
       ),
-      className: "w-28",
+      className: "w-56",
     },
   ];
 
@@ -253,6 +276,16 @@ export function FollowUpRegisterPage() {
             if (!open) setEditFollowUp(null);
           }}
           onSaved={() => setEditFollowUp(null)}
+        />
+      )}
+
+      {registerVisitFollowUp && (
+        <RegisterFollowUpVisitDialog
+          followUp={registerVisitFollowUp}
+          open={Boolean(registerVisitFollowUp)}
+          onOpenChange={(open) => {
+            if (!open) setRegisterVisitFollowUp(null);
+          }}
         />
       )}
     </div>

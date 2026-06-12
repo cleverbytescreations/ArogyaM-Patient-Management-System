@@ -6,21 +6,29 @@ import uuid
 from datetime import date
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.audit import extract_request_meta, write_audit
 from app.core.concurrency import bump_version, ensure_current_version
-from app.core.errors import InvalidStateTransitionError, NotFoundError
+from app.core.errors import InvalidStateTransitionError, NotFoundError, ValidationAppError
 from app.core.permissions import ROLE_ADMIN, ROLE_DOCTOR
+from app.modules.auth.models import User
 from app.modules.followups import repository as repo
 from app.modules.followups.models import FollowUp
 from app.modules.followups.schemas import (
     FollowUpCreateRequest,
     FollowUpOut,
     FollowUpUpdateRequest,
+    RegisterVisitRequest,
+    RegisterVisitResponse,
     VALID_TRANSITIONS,
 )
+from app.modules.masterdata import repository as master_repo
 from app.modules.patients import repository as patient_repo
+from app.modules.visits import repository as visit_repo
+from app.modules.visits.models import Visit
+from app.modules.visits.schemas import VisitOut
 
 
 def _actor_id(actor_payload: dict) -> uuid.UUID:
@@ -112,7 +120,11 @@ def get_followup_queue(
     if bool(actor_payload.get("is_doctor")) or (
         ROLE_DOCTOR in _roles and ROLE_ADMIN not in _roles
     ):
-        doctor_id = _actor_id(actor_payload)
+        # Skip the visit-history scoping filter when assigned_to is already
+        # provided — the assignment filter already narrows to the right doctor,
+        # and the EXISTS check would hide follow-ups for new patients.
+        if assigned_to is None:
+            doctor_id = _actor_id(actor_payload)
 
     rows, total = repo.list_followup_queue(
         db,
@@ -136,6 +148,138 @@ def get_followup_queue(
         "page": page,
         "page_size": page_size,
     }
+
+
+def register_followup_visit(
+    db: Session,
+    followup_id: uuid.UUID,
+    body: RegisterVisitRequest,
+    actor_payload: dict,
+    request: Any = None,
+) -> RegisterVisitResponse:
+    """Convert a follow-up into a clinical visit in a single atomic transaction.
+
+    Creates the Visit, links it to the follow-up via visit_id, and marks the
+    follow-up COMPLETED — bypassing the normal status-machine since arriving in
+    person is a distinct terminal action regardless of prior contact state.
+    """
+    followup = repo.get_followup_by_id(db, followup_id)
+    if not followup:
+        raise NotFoundError(f"Follow-up {followup_id} not found")
+
+    if followup.status_code in ("COMPLETED", "RESCHEDULED"):
+        raise InvalidStateTransitionError(
+            f"Cannot register a visit: follow-up is already {followup.status_code}"
+        )
+    if followup.visit_id is not None:
+        raise InvalidStateTransitionError("A visit is already registered for this follow-up")
+
+    patient = patient_repo.get_patient_by_id(db, followup.patient_id)
+    if not patient:
+        raise NotFoundError(f"Patient {followup.patient_id} not found")
+
+    # Validate master-data lookups
+    details = []
+    if master_repo.get_by_type_and_code(db, "visit_type", body.visit_type_code) is None:
+        details.append({
+            "field": "visit_type_code",
+            "code": "invalid_lookup",
+            "message": f"Unknown visit_type code '{body.visit_type_code}'",
+        })
+    if body.consultation_category is not None:
+        if master_repo.get_by_type_and_code(db, "consultation_category", body.consultation_category) is None:
+            details.append({
+                "field": "consultation_category",
+                "code": "invalid_lookup",
+                "message": f"Unknown consultation_category code '{body.consultation_category}'",
+            })
+    if body.doctor_id is not None:
+        doctor = db.execute(
+            select(User).where(User.id == body.doctor_id, User.is_doctor.is_(True))
+        ).scalar_one_or_none()
+        if doctor is None:
+            details.append({
+                "field": "doctor_id",
+                "code": "invalid_doctor",
+                "message": f"User '{body.doctor_id}' is not a doctor or does not exist",
+            })
+    if details:
+        raise ValidationAppError("Invalid visit fields", details=details)
+
+    if not body.is_scheduled and body.visit_date > date.today():
+        raise ValidationAppError(
+            "Non-scheduled visit date cannot be in the future",
+            details=[{
+                "field": "visit_date",
+                "code": "future_visit_date",
+                "message": "Set is_scheduled=true to allow a future visit date",
+            }],
+        )
+
+    actor = _actor_id(actor_payload)
+
+    visit = Visit(
+        patient_id=followup.patient_id,
+        visit_date=body.visit_date,
+        visit_type_code=body.visit_type_code,
+        consultation_category=body.consultation_category,
+        doctor_id=body.doctor_id,
+        is_scheduled=body.is_scheduled,
+        reason=body.reason,
+        status="OPEN",
+        version=1,
+        created_by=actor,
+        updated_by=actor,
+    )
+    visit_repo.create_visit(db, visit)
+
+    followup.visit_id = visit.id
+    followup.status_code = "COMPLETED"
+    followup.updated_by = actor
+    bump_version(followup)
+    repo.save_followup(db, followup)
+
+    ip, ua, rid = extract_request_meta(request)
+    write_audit(
+        db,
+        action="CREATE",
+        user_id=actor,
+        user_role=_role_snapshot(actor_payload),
+        entity_type="visit",
+        entity_id=str(visit.id),
+        patient_id=followup.patient_id,
+        new_value={
+            "visit_date": str(body.visit_date),
+            "visit_type_code": body.visit_type_code,
+            "source": "follow_up_register",
+            "follow_up_id": str(followup_id),
+        },
+        description="Created visit from follow-up registration",
+        ip_address=ip,
+        user_agent=ua,
+        request_id=rid,
+    )
+    write_audit(
+        db,
+        action="FOLLOWUP_REGISTER_VISIT",
+        user_id=actor,
+        user_role=_role_snapshot(actor_payload),
+        entity_type="follow_up",
+        entity_id=str(followup_id),
+        patient_id=followup.patient_id,
+        new_value={"status_code": "COMPLETED", "visit_id": str(visit.id)},
+        ip_address=ip,
+        user_agent=ua,
+        request_id=rid,
+    )
+
+    db.commit()
+    db.refresh(visit)
+    db.refresh(followup)
+    return RegisterVisitResponse(
+        visit=VisitOut.model_validate(visit),
+        follow_up=_out(followup),
+    )
 
 
 def update_followup(

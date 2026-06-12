@@ -11,6 +11,7 @@ import type { PatientTimeline } from "@/types/timeline";
 import type { FollowUp } from "@/types/followups";
 import type { AuditLogEntry } from "@/types/audit";
 import type { BackupLogEntry } from "@/types/backup";
+import type { DashboardSummary } from "@/types/dashboard";
 
 const BASE = "/api/v1";
 
@@ -972,6 +973,11 @@ export const handlers = [
       { status: 202 }
     );
   }),
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+  http.get(`${BASE}/dashboard/summary`, () => {
+    return HttpResponse.json(mockDashboardSummary);
+  }),
 ];
 
 // ── Follow-up fixtures ───────────────────────────────────────────────────────
@@ -1084,3 +1090,61 @@ export const mockBackupLogs: BackupLogEntry[] = [
     deleted_at: "2026-06-09T00:05:02Z",
   },
 ];
+
+// ── Dashboard fixtures ───────────────────────────────────────────────────────
+
+export const mockDashboardSummary: DashboardSummary = {
+  registrations: { today: 4, this_week: 17 },
+  visits: { open_today: 3, completed_today: 8 },
+  followups: { due_today: 5, overdue: 2 },
+  merge_requests: { pending: 1 },
+  users: { active: 7, locked: 0 },
+  backup: {
+    last_run_at: "2026-06-09T02:05:30Z",
+    last_status: "SUCCESS",
+    age_hours: 72.0,
+  },
+  audit_recent: [
+    {
+      id: 1,
+      action: "LOGIN",
+      entity_type: "user",
+      user_name: "Admin User",
+      created_at: "2026-06-12T09:00:00Z",
+    },
+    {
+      id: 2,
+      action: "CREATE",
+      entity_type: "patient",
+      user_name: "Receptionist One",
+      created_at: "2026-06-12T08:55:00Z",
+    },
+    {
+      id: 3,
+      action: "FOLLOWUP_UPDATE",
+      entity_type: "follow_up",
+      user_name: "Doctor A",
+      created_at: "2026-06-12T08:50:00Z",
+    },
+  ],
+};
+
+export const mockDashboardSummaryDoctor: DashboardSummary = {
+  registrations: { today: 4, this_week: 17 },
+  visits: { open_today: 3, completed_today: 8 },
+  followups: { due_today: 5, overdue: 2 },
+  merge_requests: null,
+  users: null,
+  backup: null,
+  audit_recent: null,
+};
+
+export const mockDashboardSummaryReception: DashboardSummary = {
+  registrations: { today: 4, this_week: 17 },
+  visits: { open_today: 3, completed_today: 8 },
+  followups: { due_today: 5, overdue: 2 },
+  merge_requests: null,
+  users: null,
+  backup: null,
+  audit_recent: null,
+};

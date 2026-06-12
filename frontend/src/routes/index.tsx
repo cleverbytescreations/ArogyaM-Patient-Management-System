@@ -7,6 +7,13 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { PageLoader } from "@/components/PageLoader";
 import { PERMISSIONS } from "@/lib/constants";
 
+const DashboardPage = lazy(
+  () =>
+    import("@/features/dashboard/DashboardPage").then((m) => ({
+      default: m.DashboardPage,
+    }))
+);
+
 const UsersListPage = lazy(
   () =>
     import("@/features/users/UsersListPage").then((m) => ({
@@ -63,17 +70,6 @@ const BackupStatusPage = lazy(
     }))
 );
 
-function DashboardPlaceholder() {
-  return (
-    <div className="space-y-2">
-      <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-      <p className="text-muted-foreground">
-        Welcome to ArogyaM Patient Management System. Use the navigation to
-        get started.
-      </p>
-    </div>
-  );
-}
 
 export function AppRoutes() {
   return (
@@ -87,7 +83,7 @@ export function AppRoutes() {
             <AppShell>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/" element={<DashboardPlaceholder />} />
+                  <Route path="/" element={<DashboardPage />} />
 
                   {/* Patient search — default landing for staff */}
                   <Route

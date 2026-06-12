@@ -13,7 +13,7 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, get_db, require_permission
@@ -23,6 +23,8 @@ from app.modules.followups.schemas import (
     FollowUpCreateRequest,
     FollowUpOut,
     FollowUpUpdateRequest,
+    RegisterVisitRequest,
+    RegisterVisitResponse,
 )
 
 ManageFollowups = Annotated[dict, Depends(require_permission(PERM_MANAGE_FOLLOWUPS))]
@@ -112,3 +114,19 @@ def update_followup(
     request: Request,
 ) -> FollowUpOut:
     return svc.update_followup(db, followup_id, body, payload, request)
+
+
+@followups_router.post(
+    "/{followup_id}/register-visit",
+    response_model=RegisterVisitResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register the patient's arrival and convert the follow-up into a new visit",
+)
+def register_followup_visit(
+    followup_id: uuid.UUID,
+    body: RegisterVisitRequest,
+    payload: ManageFollowups,
+    db: Annotated[Session, Depends(get_db)],
+    request: Request,
+) -> RegisterVisitResponse:
+    return svc.register_followup_visit(db, followup_id, body, payload, request)

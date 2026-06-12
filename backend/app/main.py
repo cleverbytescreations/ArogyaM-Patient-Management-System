@@ -45,6 +45,7 @@ from app.modules.users.router import roles_router
 from app.modules.users.router import router as users_router
 from app.modules.audit.router import router as audit_router
 from app.modules.backup.router import router as backup_router
+from app.modules.dashboard.router import router as dashboard_router
 from app.modules.followups.router import followups_router
 from app.modules.followups.router import patients_router as followup_patients_router
 from app.modules.visits.router import patients_router as visit_patients_router
@@ -106,6 +107,7 @@ app.include_router(followup_patients_router, prefix=API_PREFIX)
 app.include_router(followups_router, prefix=API_PREFIX)
 app.include_router(audit_router, prefix=API_PREFIX)
 app.include_router(backup_router, prefix=API_PREFIX)
+app.include_router(dashboard_router, prefix=API_PREFIX)
 
 
 @app.get("/", include_in_schema=False)

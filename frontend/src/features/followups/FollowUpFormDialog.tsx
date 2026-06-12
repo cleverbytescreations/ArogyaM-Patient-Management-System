@@ -127,6 +127,7 @@ export function FollowUpFormDialog({
       }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["follow-ups", patientId] });
+      queryClient.invalidateQueries({ queryKey: ["followups", "today-doctor"] });
       toast.success("Follow-up created.");
       onSaved(result);
       onOpenChange(false);
@@ -155,6 +156,7 @@ export function FollowUpFormDialog({
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["follow-ups", patientId] });
       queryClient.invalidateQueries({ queryKey: ["follow-ups-register"] });
+      queryClient.invalidateQueries({ queryKey: ["followups", "today-doctor"] });
       toast.success("Follow-up updated.");
       onSaved(result);
       onOpenChange(false);

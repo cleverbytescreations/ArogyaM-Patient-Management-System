@@ -5,6 +5,7 @@ import type {
   FollowUpCreateRequest,
   FollowUpUpdateRequest,
 } from "@/types/followups";
+import type { Visit, VisitCreateRequest } from "@/types/visits";
 
 export interface FollowUpListParams {
   status?: string;
@@ -36,5 +37,10 @@ export const followupsApi = {
   list: (params?: FollowUpListParams) =>
     apiClient
       .get<PaginatedResponse<FollowUp>>("/follow-ups", { params })
+      .then((r) => r.data),
+
+  registerVisit: (followUpId: string, data: VisitCreateRequest) =>
+    apiClient
+      .post<{ visit: Visit; follow_up: FollowUp }>(`/follow-ups/${followUpId}/register-visit`, data)
       .then((r) => r.data),
 };

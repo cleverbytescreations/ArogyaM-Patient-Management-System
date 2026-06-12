@@ -115,18 +115,24 @@ export function FollowUpsTab({ patientId }: FollowUpsTabProps) {
           {
             key: "actions" as const,
             header: "Actions",
-            render: (f: FollowUp) => (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setEditFollowUp(f)}
-                aria-label={`Update follow-up scheduled for ${formatDate(f.follow_up_date)}`}
-              >
-                <Pencil className="mr-1 h-3 w-3" aria-hidden="true" />
-                Update
-              </Button>
-            ),
-            className: "w-28",
+            render: (f: FollowUp) =>
+              f.status_code === "COMPLETED" ? (
+                <Badge variant="success" className="flex w-fit items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                  No action required
+                </Badge>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditFollowUp(f)}
+                  aria-label={`Update follow-up scheduled for ${formatDate(f.follow_up_date)}`}
+                >
+                  <Pencil className="mr-1 h-3 w-3" aria-hidden="true" />
+                  Update
+                </Button>
+              ),
+            className: "w-40",
           },
         ]
       : []),

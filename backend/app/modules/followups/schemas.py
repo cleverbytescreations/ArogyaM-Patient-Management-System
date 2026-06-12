@@ -6,6 +6,7 @@ import uuid
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field
+from app.modules.visits.schemas import VisitOut
 
 # Valid status codes and allowed transitions
 FOLLOWUP_STATUSES = frozenset({"PENDING", "CONTACTED", "NOT_REACHABLE", "COMPLETED", "RESCHEDULED"})
@@ -36,6 +37,22 @@ class FollowUpUpdateRequest(BaseModel):
     remarks: str | None = None
     next_followup_id: uuid.UUID | None = None
     version: int = Field(..., ge=1)
+
+
+class RegisterVisitRequest(BaseModel):
+    visit_date: date
+    visit_type_code: str = Field(..., min_length=1, max_length=40)
+    consultation_category: str | None = Field(default=None, max_length=40)
+    doctor_id: uuid.UUID | None = None
+    is_scheduled: bool = False
+    reason: str | None = Field(default=None, max_length=255)
+
+
+class RegisterVisitResponse(BaseModel):
+    model_config = {"from_attributes": True}
+
+    visit: VisitOut
+    follow_up: "FollowUpOut"
 
 
 class FollowUpOut(BaseModel):
