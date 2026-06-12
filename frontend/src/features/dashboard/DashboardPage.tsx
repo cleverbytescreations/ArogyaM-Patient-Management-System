@@ -12,6 +12,8 @@ import { UsersWidget } from "./widgets/UsersWidget";
 import { BackupWidget } from "./widgets/BackupWidget";
 import { AuditFeedWidget } from "./widgets/AuditFeedWidget";
 import { TodayFollowupsWidget } from "./widgets/TodayFollowupsWidget";
+import { ScheduledVisitsWidget } from "./widgets/ScheduledVisitsWidget";
+import { UpcomingFollowupsWidget } from "./widgets/UpcomingFollowupsWidget";
 
 function greet() {
   const h = new Date().getHours();
@@ -93,6 +95,16 @@ export function DashboardPage() {
                 <WidgetGuard permission={PERMISSIONS.VIEW_PATIENT}>
                   <RegistrationsWidget data={data?.registrations} loading={isLoading} />
                 </WidgetGuard>
+              )}
+              {!isAdmin && !isDoctor && (
+                <>
+                  <WidgetGuard permission={PERMISSIONS.VIEW_PATIENT}>
+                    <ScheduledVisitsWidget data={data?.visits} loading={isLoading} />
+                  </WidgetGuard>
+                  <WidgetGuard permission={PERMISSIONS.MANAGE_FOLLOWUPS}>
+                    <UpcomingFollowupsWidget data={data?.followups} loading={isLoading} />
+                  </WidgetGuard>
+                </>
               )}
             </>
           )}

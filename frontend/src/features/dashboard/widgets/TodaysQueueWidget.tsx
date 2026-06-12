@@ -1,5 +1,6 @@
 import { Clock, CheckCircle } from "lucide-react";
 import { WidgetCard, WidgetCardSkeleton } from "../WidgetCard";
+import { HelpTooltip } from "../HelpTooltip";
 import type { VisitsSummary } from "@/types/dashboard";
 
 interface Props {
@@ -16,6 +17,7 @@ export function TodaysQueueWidget({ data, loading }: Props) {
           <span className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4 text-amber-500" aria-hidden="true" />
             Waiting / Open
+            <HelpTooltip text="Visits logged for today that have not yet been marked as completed. Includes patients currently waiting or being seen by a doctor." />
           </span>
           <span
             className="text-lg font-semibold tabular-nums"
@@ -28,6 +30,7 @@ export function TodaysQueueWidget({ data, loading }: Props) {
           <span className="flex items-center gap-2 text-sm text-muted-foreground">
             <CheckCircle className="h-4 w-4 text-green-500" aria-hidden="true" />
             Completed
+            <HelpTooltip text="Visits where the consultation has been finished and the record marked complete today." />
           </span>
           <span
             className="text-lg font-semibold tabular-nums"

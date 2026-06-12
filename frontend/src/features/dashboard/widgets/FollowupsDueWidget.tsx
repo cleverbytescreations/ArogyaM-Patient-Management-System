@@ -1,5 +1,6 @@
 import { CalendarClock, AlertCircle } from "lucide-react";
 import { WidgetCard, WidgetCardSkeleton } from "../WidgetCard";
+import { HelpTooltip } from "../HelpTooltip";
 import type { FollowupsSummary } from "@/types/dashboard";
 
 interface Props {
@@ -20,6 +21,7 @@ export function FollowupsDueWidget({ data, loading }: Props) {
           <span className="flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarClock className="h-4 w-4 text-blue-500" aria-hidden="true" />
             Due today
+            <HelpTooltip text="Patients with a pending follow-up scheduled for today. These patients should be contacted or seen today." />
           </span>
           <span
             className="text-lg font-semibold tabular-nums"
@@ -35,6 +37,7 @@ export function FollowupsDueWidget({ data, loading }: Props) {
               aria-hidden="true"
             />
             Overdue
+            <HelpTooltip text="Pending follow-ups whose scheduled date has already passed without being actioned. These require rescheduling or urgent attention." />
           </span>
           <span
             className={`text-lg font-semibold tabular-nums ${(data?.overdue ?? 0) > 0 ? "text-destructive" : ""}`}

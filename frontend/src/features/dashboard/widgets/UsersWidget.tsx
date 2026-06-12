@@ -1,5 +1,6 @@
 import { Users, ShieldAlert } from "lucide-react";
 import { WidgetCard, WidgetCardSkeleton } from "../WidgetCard";
+import { HelpTooltip } from "../HelpTooltip";
 import type { UsersSummary } from "@/types/dashboard";
 
 interface Props {
@@ -16,6 +17,7 @@ export function UsersWidget({ data, loading }: Props) {
           <span className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4 text-green-500" aria-hidden="true" />
             Active
+            <HelpTooltip text="Staff accounts with Active status that can currently log in to the system." />
           </span>
           <span
             className="text-lg font-semibold tabular-nums"
@@ -31,6 +33,7 @@ export function UsersWidget({ data, loading }: Props) {
               aria-hidden="true"
             />
             Locked
+            <HelpTooltip text="Accounts locked due to too many failed login attempts or manually locked by an administrator. These users cannot log in until unlocked." />
           </span>
           <span
             className={`text-lg font-semibold tabular-nums ${(data?.locked ?? 0) > 0 ? "text-destructive" : ""}`}

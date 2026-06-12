@@ -60,8 +60,27 @@ def count_visits_by_status(
     return open_count, completed_count
 
 
-def count_followups_due(db: Session, today: date) -> tuple[int, int]:
-    """Return (due_today, overdue) counts for PENDING follow-ups."""
+def count_scheduled_visits(db: Session, today: date) -> tuple[int, int]:
+    """Return (scheduled_today, walkin_today) based on is_scheduled flag."""
+    scheduled: int = db.execute(
+        select(func.count(Visit.id)).where(
+            Visit.visit_date == today,
+            Visit.is_scheduled.is_(True),
+        )
+    ).scalar_one()
+
+    walkin: int = db.execute(
+        select(func.count(Visit.id)).where(
+            Visit.visit_date == today,
+            Visit.is_scheduled.is_(False),
+        )
+    ).scalar_one()
+
+    return scheduled, walkin
+
+
+def count_followups_due(db: Session, today: date) -> tuple[int, int, int]:
+    """Return (due_today, overdue, upcoming_7days) counts for PENDING follow-ups."""
     due_today: int = db.execute(
         select(func.count(FollowUp.id)).where(
             FollowUp.follow_up_date == today,
@@ -76,7 +95,16 @@ def count_followups_due(db: Session, today: date) -> tuple[int, int]:
         )
     ).scalar_one()
 
-    return due_today, overdue
+    week_end = today + timedelta(days=7)
+    upcoming_7days: int = db.execute(
+        select(func.count(FollowUp.id)).where(
+            FollowUp.follow_up_date > today,
+            FollowUp.follow_up_date <= week_end,
+            FollowUp.status_code == "PENDING",
+        )
+    ).scalar_one()
+
+    return due_today, overdue, upcoming_7days
 
 
 def count_pending_merge_requests(db: Session) -> int:

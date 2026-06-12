@@ -2,11 +2,13 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { HelpTooltip } from "./HelpTooltip";
 
 interface KpiCardProps {
   title: string;
   value: number | string;
   description?: string;
+  help?: string;
   icon?: ReactNode;
   to?: string;
   className?: string;
@@ -17,6 +19,7 @@ export function KpiCard({
   title,
   value,
   description,
+  help,
   icon,
   to,
   className,
@@ -25,8 +28,9 @@ export function KpiCard({
   const content = (
     <Card className={cn("transition-shadow hover:shadow-md", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
           {title}
+          {help && <HelpTooltip text={help} />}
         </CardTitle>
         {icon && (
           <span className="text-muted-foreground" aria-hidden="true">

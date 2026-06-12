@@ -15,11 +15,14 @@ class RegistrationsSummary(BaseModel):
 class VisitsSummary(BaseModel):
     open_today: int
     completed_today: int
+    scheduled_today: int = 0
+    walkin_today: int = 0
 
 
 class FollowupsSummary(BaseModel):
     due_today: int
     overdue: int
+    upcoming_7days: int = 0
 
 
 class MergeRequestsSummary(BaseModel):

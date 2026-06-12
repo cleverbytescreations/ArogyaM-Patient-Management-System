@@ -42,11 +42,17 @@ def get_summary(db: Session, actor_payload: dict) -> DashboardSummary:
         result.registrations = RegistrationsSummary(today=today_reg, this_week=week_reg)
 
         open_v, completed_v = repo.count_visits_by_status(db, today, doctor_id=doctor_id)
-        result.visits = VisitsSummary(open_today=open_v, completed_today=completed_v)
+        scheduled_v, walkin_v = repo.count_scheduled_visits(db, today)
+        result.visits = VisitsSummary(
+            open_today=open_v,
+            completed_today=completed_v,
+            scheduled_today=scheduled_v,
+            walkin_today=walkin_v,
+        )
 
     if PERM_MANAGE_FOLLOWUPS in perms:
-        due, overdue = repo.count_followups_due(db, today)
-        result.followups = FollowupsSummary(due_today=due, overdue=overdue)
+        due, overdue, upcoming = repo.count_followups_due(db, today)
+        result.followups = FollowupsSummary(due_today=due, overdue=overdue, upcoming_7days=upcoming)
 
     if PERM_MERGE_RECORDS in perms:
         pending = repo.count_pending_merge_requests(db)

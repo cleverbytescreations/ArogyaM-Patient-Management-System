@@ -1095,8 +1095,8 @@ export const mockBackupLogs: BackupLogEntry[] = [
 
 export const mockDashboardSummary: DashboardSummary = {
   registrations: { today: 4, this_week: 17 },
-  visits: { open_today: 3, completed_today: 8 },
-  followups: { due_today: 5, overdue: 2 },
+  visits: { open_today: 3, completed_today: 8, scheduled_today: 2, walkin_today: 1 },
+  followups: { due_today: 5, overdue: 2, upcoming_7days: 9 },
   merge_requests: { pending: 1 },
   users: { active: 7, locked: 0 },
   backup: {
@@ -1131,8 +1131,8 @@ export const mockDashboardSummary: DashboardSummary = {
 
 export const mockDashboardSummaryDoctor: DashboardSummary = {
   registrations: { today: 4, this_week: 17 },
-  visits: { open_today: 3, completed_today: 8 },
-  followups: { due_today: 5, overdue: 2 },
+  visits: { open_today: 3, completed_today: 8, scheduled_today: 2, walkin_today: 1 },
+  followups: { due_today: 5, overdue: 2, upcoming_7days: 9 },
   merge_requests: null,
   users: null,
   backup: null,
@@ -1141,8 +1141,8 @@ export const mockDashboardSummaryDoctor: DashboardSummary = {
 
 export const mockDashboardSummaryReception: DashboardSummary = {
   registrations: { today: 4, this_week: 17 },
-  visits: { open_today: 3, completed_today: 8 },
-  followups: { due_today: 5, overdue: 2 },
+  visits: { open_today: 3, completed_today: 8, scheduled_today: 2, walkin_today: 1 },
+  followups: { due_today: 5, overdue: 2, upcoming_7days: 9 },
   merge_requests: null,
   users: null,
   backup: null,

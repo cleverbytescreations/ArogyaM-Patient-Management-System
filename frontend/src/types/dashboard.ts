@@ -6,11 +6,14 @@ export interface RegistrationsSummary {
 export interface VisitsSummary {
   open_today: number;
   completed_today: number;
+  scheduled_today: number;
+  walkin_today: number;
 }
 
 export interface FollowupsSummary {
   due_today: number;
   overdue: number;
+  upcoming_7days: number;
 }
 
 export interface MergeRequestsSummary {

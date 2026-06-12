@@ -1,5 +1,6 @@
 import { HardDrive, CheckCircle, XCircle, Clock } from "lucide-react";
 import { WidgetCard, WidgetCardSkeleton } from "../WidgetCard";
+import { HelpTooltip } from "../HelpTooltip";
 import { format, parseISO } from "date-fns";
 import type { BackupSummary } from "@/types/dashboard";
 
@@ -37,6 +38,7 @@ export function BackupWidget({ data, loading }: Props) {
           <dt className="flex items-center gap-2 text-sm text-muted-foreground">
             <HardDrive className="h-4 w-4" aria-hidden="true" />
             Last backup
+            <HelpTooltip text="Date and time the most recent database backup job was started. Backups protect against data loss." />
           </dt>
           <dd className="text-sm font-medium tabular-nums">{formattedDate}</dd>
         </div>
@@ -45,6 +47,7 @@ export function BackupWidget({ data, loading }: Props) {
             <dt className="flex items-center gap-2 text-sm text-muted-foreground">
               {statusIcon(data?.last_status ?? null)}
               Status
+              <HelpTooltip text="Result of the last backup job: SUCCESS means the backup completed without errors, FAILED means it encountered an error and may need attention." />
             </dt>
             <dd
               className={`text-sm font-medium ${data?.last_status === "FAILED" ? "text-destructive" : ""}`}
