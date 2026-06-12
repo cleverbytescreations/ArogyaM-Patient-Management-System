@@ -49,6 +49,13 @@ const DocumentsRegisterPage = lazy(
     }))
 );
 
+const VisitRegisterPage = lazy(
+  () =>
+    import("@/features/visits/VisitRegisterPage").then((m) => ({
+      default: m.VisitRegisterPage,
+    }))
+);
+
 const FollowUpRegisterPage = lazy(
   () =>
     import("@/features/followups/FollowUpRegisterPage").then((m) => ({
@@ -136,6 +143,16 @@ export function AppRoutes() {
                     element={
                       <RequirePermission permission={PERMISSIONS.MANAGE_USERS}>
                         <UsersListPage />
+                      </RequirePermission>
+                    }
+                  />
+
+                  {/* Visit Register */}
+                  <Route
+                    path="/visit-register"
+                    element={
+                      <RequirePermission permission={PERMISSIONS.VIEW_PATIENT}>
+                        <VisitRegisterPage />
                       </RequirePermission>
                     }
                   />

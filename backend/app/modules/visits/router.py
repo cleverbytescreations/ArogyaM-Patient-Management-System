@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, get_db, require_permission
 from app.core.errors import ForbiddenError
+from app.core.pagination import PagedResponse, PaginationParams
 from app.core.permissions import (
     PERM_ADD_CONSULTATION,
     PERM_EXPORT,
@@ -41,6 +42,7 @@ from app.modules.visits.schemas import (
     VisitListItemOut,
     VisitOut,
     VisitQueueItem,
+    VisitRegisterItem,
     VisitUpdateRequest,
 )
 
@@ -118,6 +120,38 @@ def get_visit_queue(
         doctor_id=doctor_id,
         visit_date=visit_date,
         status=status,
+    )
+
+
+@visits_router.get(
+    "/register",
+    response_model=PagedResponse[VisitRegisterItem],
+    summary="Visit Register — paginated list of visits with filters",
+)
+def get_visit_register(
+    payload: ViewPatient,
+    db: Annotated[Session, Depends(get_db)],
+    pagination: Annotated[PaginationParams, Depends()],
+    from_date: date | None = None,
+    to_date: date | None = None,
+    doctor_id: uuid.UUID | None = None,
+    status: str | None = None,
+) -> PagedResponse[VisitRegisterItem]:
+    items, total = svc.get_visit_register(
+        db,
+        from_date=from_date,
+        to_date=to_date,
+        doctor_id=doctor_id,
+        status=status,
+        offset=pagination.offset,
+        limit=pagination.page_size,
+        actor_payload=payload,
+    )
+    return PagedResponse(
+        items=items,
+        total=total,
+        page=pagination.page,
+        page_size=pagination.page_size,
     )
 
 

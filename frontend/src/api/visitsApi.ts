@@ -1,9 +1,11 @@
 import { apiClient } from "@/api/client";
+import type { PaginatedResponse } from "@/types/api";
 import type {
   Visit,
   VisitCreateRequest,
   VisitUpdateRequest,
   VisitQueueItem,
+  VisitRegisterItem,
   CaseSheet,
   CaseSheetUpsertRequest,
   ConsultationNote,
@@ -11,7 +13,21 @@ import type {
   PatientAlias,
 } from "@/types/visits";
 
+export interface VisitRegisterParams {
+  from_date?: string;
+  to_date?: string;
+  doctor_id?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}
+
 export const visitsApi = {
+  register: (params?: VisitRegisterParams) =>
+    apiClient
+      .get<PaginatedResponse<VisitRegisterItem>>("/visits/register", { params })
+      .then((r) => r.data),
+
   queue: (params?: { doctor_id?: string; visit_date?: string; status?: string }) =>
     apiClient
       .get<VisitQueueItem[]>("/visits/queue", { params })

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.audit import extract_request_meta, write_audit
 from app.core.concurrency import bump_version, ensure_current_version
 from app.core.errors import NotFoundError, ValidationAppError, VersionConflictError
-from app.core.permissions import PERM_VIEW_MEDICAL_HISTORY
+from app.core.permissions import PERM_VIEW_MEDICAL_HISTORY, ROLE_ADMIN, ROLE_DOCTOR
 from app.modules.auth.models import User
 from app.modules.masterdata import repository as master_repo
 from app.modules.patients import repository as patient_repo
@@ -29,6 +29,7 @@ from app.modules.visits.schemas import (
     VisitListItemOut,
     VisitOut,
     VisitQueueItem,
+    VisitRegisterItem,
     VisitUpdateRequest,
 )
 
@@ -184,6 +185,51 @@ def get_visit_queue(
         )
         for v, patient_name, op_number, doctor_name in rows
     ]
+
+
+def get_visit_register(
+    db: Session,
+    *,
+    from_date: date | None,
+    to_date: date | None,
+    doctor_id: uuid.UUID | None,
+    status: str | None,
+    offset: int,
+    limit: int,
+    actor_payload: dict,
+) -> tuple[list[VisitRegisterItem], int]:
+    _roles = actor_payload.get("roles", [])
+    if (bool(actor_payload.get("is_doctor")) or ROLE_DOCTOR in _roles) and ROLE_ADMIN not in _roles:
+        # Doctor role: scope to only their own visits regardless of any filter sent
+        doctor_id = _actor_id(actor_payload)
+
+    rows, total = repo.list_visits_for_register(
+        db,
+        from_date=from_date,
+        to_date=to_date,
+        doctor_id=doctor_id,
+        status=status,
+        offset=offset,
+        limit=limit,
+    )
+    items = [
+        VisitRegisterItem(
+            id=v.id,
+            patient_id=v.patient_id,
+            patient_name=patient_name,
+            op_number=op_number,
+            visit_date=v.visit_date,
+            visit_type_code=v.visit_type_code,
+            consultation_category=v.consultation_category,
+            is_scheduled=v.is_scheduled,
+            status=v.status,
+            reason=v.reason,
+            doctor_id=doctor_user_id,
+            doctor_name=doctor_name,
+        )
+        for v, patient_name, op_number, doctor_name, doctor_user_id in rows
+    ]
+    return items, total
 
 
 # ── Visit service (BE-T6.1) ────────────────────────────────────────────────────

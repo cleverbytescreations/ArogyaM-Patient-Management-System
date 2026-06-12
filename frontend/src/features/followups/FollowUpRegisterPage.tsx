@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/auth/AuthContext";
 import {
   Clock,
   CheckCircle2,
@@ -53,11 +54,15 @@ const ALL_STATUSES: FollowUpStatusCode[] = [
 
 export function FollowUpRegisterPage() {
   const navigate = useNavigate();
+  const { user, roles } = useAuth();
+  const isDoctor = roles.includes("DOCTOR") && !roles.includes("ADMIN");
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [fromFilter, setFromFilter] = useState("");
   const [toFilter, setToFilter] = useState("");
-  const [assignedToFilter, setAssignedToFilter] = useState<string>("all");
+  const [assignedToFilter, setAssignedToFilter] = useState<string>(
+    isDoctor && user ? user.id : "all"
+  );
   const [page, setPage] = useState(1);
   const [editFollowUp, setEditFollowUp] = useState<FollowUp | null>(null);
   const [registerVisitFollowUp, setRegisterVisitFollowUp] = useState<FollowUp | null>(null);
@@ -224,25 +229,27 @@ export function FollowUpRegisterPage() {
             />
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="fu-assigned-filter">Assigned To</Label>
-            <Select
-              value={assignedToFilter}
-              onValueChange={(v) => { setAssignedToFilter(v); setPage(1); }}
-            >
-              <SelectTrigger id="fu-assigned-filter" aria-label="Filter by assigned staff">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All staff</SelectItem>
-                {doctors.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    {d.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!isDoctor && (
+            <div className="space-y-1">
+              <Label htmlFor="fu-assigned-filter">Assigned To</Label>
+              <Select
+                value={assignedToFilter}
+                onValueChange={(v) => { setAssignedToFilter(v); setPage(1); }}
+              >
+                <SelectTrigger id="fu-assigned-filter" aria-label="Filter by assigned staff">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All staff</SelectItem>
+                  {doctors.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </fieldset>
 

@@ -76,6 +76,55 @@ def list_visits_for_queue(
     return [(row[0], row[1], row[2], row[3]) for row in rows]
 
 
+def list_visits_for_register(
+    db: Session,
+    *,
+    from_date: date | None = None,
+    to_date: date | None = None,
+    doctor_id: uuid.UUID | None = None,
+    status: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[tuple[Visit, str, str, str | None, uuid.UUID | None]], int]:
+    """Return (Visit, patient_name, op_number, doctor_name, doctor_id) tuples with total count."""
+    from sqlalchemy import and_, func
+    from sqlalchemy.orm import aliased
+
+    from app.modules.auth.models import User
+    from app.modules.patients.models import Patient
+
+    DoctorUser = aliased(User)
+
+    conditions = []
+    if from_date is not None:
+        conditions.append(Visit.visit_date >= from_date)
+    if to_date is not None:
+        conditions.append(Visit.visit_date <= to_date)
+    if doctor_id is not None:
+        conditions.append(Visit.doctor_id == doctor_id)
+    if status is not None:
+        conditions.append(Visit.status == status)
+
+    base = (
+        select(Visit, Patient.full_name, Patient.op_number, DoctorUser.full_name, DoctorUser.id)
+        .join(Patient, Patient.id == Visit.patient_id)
+        .outerjoin(DoctorUser, DoctorUser.id == Visit.doctor_id)
+    )
+    if conditions:
+        base = base.where(and_(*conditions))
+
+    total: int = db.execute(
+        select(func.count()).select_from(base.subquery())
+    ).scalar_one()
+
+    rows = db.execute(
+        base.order_by(Visit.visit_date.asc(), Visit.created_at.asc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    return [(row[0], row[1], row[2], row[3], row[4]) for row in rows], total
+
+
 def doctor_has_visit_for_patient(
     db: Session, doctor_id: uuid.UUID, patient_id: uuid.UUID
 ) -> bool:

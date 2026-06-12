@@ -8,6 +8,7 @@ import {
   Search,
   Files,
   CalendarClock,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/auth/usePermissions";
@@ -25,6 +26,12 @@ const navItems: NavItem[] = [
     to: "/patients/search",
     label: "Patient Search",
     icon: Search,
+    permission: PERMISSIONS.VIEW_PATIENT,
+  },
+  {
+    to: "/visit-register",
+    label: "Visit Register",
+    icon: CalendarDays,
     permission: PERMISSIONS.VIEW_PATIENT,
   },
   {

@@ -92,6 +92,25 @@ class VisitQueueItem(BaseModel):
     doctor_name: str | None = None
 
 
+class VisitRegisterItem(BaseModel):
+    """Paginated visit row for the Visit Register — includes is_scheduled flag."""
+
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    patient_id: uuid.UUID
+    patient_name: str
+    op_number: str
+    visit_date: date
+    visit_type_code: str
+    consultation_category: str | None = None
+    is_scheduled: bool
+    status: str
+    reason: str | None = None
+    doctor_id: uuid.UUID | None = None
+    doctor_name: str | None = None
+
+
 # ── Case sheet ─────────────────────────────────────────────────────────────────
 
 # All content fields are marked optional so a partial upsert is possible.
