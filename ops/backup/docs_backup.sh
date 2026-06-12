@@ -49,7 +49,9 @@ SQL
 
 # Update the existing STARTED row with final status/details.
 _update_log() {
-    local status="$1" message="${2:-}" completed="${3:-}" location_ref="${4:-}"
+    local status="$1" message="${2:-}" completed="${3:-}" location_ref="${4:-}" size="${5:-}"
+    local size_sql="NULL"
+    [ -n "${size}" ] && size_sql="${size}"
     [ -z "${LOG_ID}" ] && return
     psql "${DATABASE_URL}" --no-psqlrc \
         --set="lid=${LOG_ID}" \
@@ -62,7 +64,8 @@ UPDATE backup_log
 SET status       = :'bstatus',
     message      = NULLIF(:'bmsg',''),
     completed_at = NULLIF(:'bcomp','')::timestamptz,
-    location_ref = NULLIF(:'bloc','')
+    location_ref = NULLIF(:'bloc',''),
+    size_bytes   = ${size_sql}
 WHERE id = :'lid'::bigint;
 SQL
 }
@@ -93,9 +96,11 @@ DEST_PATH="${BACKUP_DEST}/docs_${TIMESTAMP}"
 
 if mc mirror --overwrite "src/${MINIO_BUCKET}" "${DEST_PATH}"; then
     COMPLETED_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    # du -sb gives total bytes for the directory; busybox and GNU both support -b.
+    SIZE_BYTES="$(du -sb "${DEST_PATH}" 2>/dev/null | cut -f1 || echo 0)"
     STATUS="SUCCESS"
     MESSAGE="Documents backup completed: ${DEST_PATH}"
-    _update_log "SUCCESS" "${MESSAGE}" "${COMPLETED_TIME}" "${DEST_PATH}"
+    _update_log "SUCCESS" "${MESSAGE}" "${COMPLETED_TIME}" "${DEST_PATH}" "${SIZE_BYTES}"
     echo "[$(date -u)] ${MESSAGE}"
 else
     COMPLETED_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

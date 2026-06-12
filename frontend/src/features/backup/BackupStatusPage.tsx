@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -9,10 +10,18 @@ import {
   PlayCircle,
   RefreshCw,
   Trash2,
+  Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { DataTable, type Column } from "@/components/DataTable";
 import { PageHeader } from "@/components/PageHeader";
 import { backupApi } from "@/api/backupApi";
@@ -77,6 +86,88 @@ function formatBytes(bytes: number | null): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+// ─── Details dialog ──────────────────────────────────────────────────────────
+
+function DetailRow({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+  return (
+    <div className="grid grid-cols-[140px_1fr] gap-x-3 gap-y-0.5">
+      <dt className="text-xs font-medium text-muted-foreground pt-0.5">{label}</dt>
+      <dd className={`text-sm break-all ${mono ? "font-mono text-xs" : ""}`}>{value ?? "—"}</dd>
+    </div>
+  );
+}
+
+function BackupDetailsDialog({
+  entry,
+  open,
+  onClose,
+}: {
+  entry: BackupLogEntry | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!entry) return null;
+
+  const typeCfg = BACKUP_TYPE_CONFIG[entry.backup_type];
+  const purged = isPurged(entry);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {typeCfg.icon}
+            Backup Run Details
+            {purged && (
+              <Badge variant="destructive" className="ml-1 flex items-center gap-1 text-xs">
+                <Trash2 className="h-3 w-3" aria-hidden="true" />
+                Purged
+              </Badge>
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            Full details for backup run #{entry.id}
+          </DialogDescription>
+        </DialogHeader>
+
+        <dl className="space-y-2.5 mt-1">
+          <DetailRow label="ID" value={`#${entry.id}`} />
+          <DetailRow label="Type" value={
+            <span className="flex items-center gap-1">
+              {typeCfg.icon} {typeCfg.label}
+            </span>
+          } />
+          <DetailRow label="Status" value={<StatusBadge entry={entry} />} />
+          <DetailRow label="Started" value={formatDateTime(entry.started_at)} />
+          <DetailRow label="Completed" value={formatDateTime(entry.completed_at)} />
+          {entry.size_bytes != null && (
+            <DetailRow label="Size" value={formatBytes(entry.size_bytes)} />
+          )}
+          {entry.location_ref && (
+            <DetailRow label="Storage path" value={entry.location_ref} mono />
+          )}
+          {entry.message && (
+            <DetailRow label="Message" value={entry.message} />
+          )}
+          {entry.triggered_by && (
+            <DetailRow label="Triggered by" value={entry.triggered_by} mono />
+          )}
+          {purged && entry.deleted_at && (
+            <DetailRow
+              label="Purged at"
+              value={
+                <span className="text-destructive">{formatDateTime(entry.deleted_at)}</span>
+              }
+            />
+          )}
+        </dl>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Latest backup card ───────────────────────────────────────────────────────
+
 function LatestBackupCard({ entry }: { entry: BackupLogEntry }) {
   const typeCfg = BACKUP_TYPE_CONFIG[entry.backup_type];
   const statusCfg = STATUS_CONFIG[entry.status];
@@ -129,7 +220,7 @@ function LatestBackupCard({ entry }: { entry: BackupLogEntry }) {
           {entry.message && (
             <div className="sm:col-span-2">
               <dt className="text-xs font-medium text-muted-foreground">Message</dt>
-              <dd>{entry.message}</dd>
+              <dd className="truncate">{entry.message}</dd>
             </div>
           )}
         </dl>
@@ -138,52 +229,7 @@ function LatestBackupCard({ entry }: { entry: BackupLogEntry }) {
   );
 }
 
-const historyColumns: Column<BackupLogEntry>[] = [
-  {
-    key: "started_at",
-    header: "Started",
-    render: (e) => (
-      <span className="whitespace-nowrap text-sm">{formatDateTime(e.started_at)}</span>
-    ),
-  },
-  {
-    key: "backup_type",
-    header: "Type",
-    render: (e) => {
-      const cfg = BACKUP_TYPE_CONFIG[e.backup_type];
-      return (
-        <span className="flex items-center gap-1 text-sm">
-          {cfg.icon}
-          {cfg.label}
-        </span>
-      );
-    },
-  },
-  {
-    key: "status",
-    header: "Status",
-    render: (e) => <StatusBadge entry={e} />,
-  },
-  {
-    key: "size_bytes",
-    header: "Size",
-    render: (e) => formatBytes(e.size_bytes),
-  },
-  {
-    key: "completed_at",
-    header: "Completed",
-    render: (e) => (
-      <span className="whitespace-nowrap text-sm">{formatDateTime(e.completed_at)}</span>
-    ),
-  },
-  {
-    key: "message",
-    header: "Message",
-    render: (e) => (
-      <span className="max-w-[240px] truncate block text-sm">{e.message ?? "—"}</span>
-    ),
-  },
-];
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 function getHistoryRowClassName(entry: BackupLogEntry): string | undefined {
   return isPurged(entry)
@@ -193,6 +239,7 @@ function getHistoryRowClassName(entry: BackupLogEntry): string | undefined {
 
 export function BackupStatusPage() {
   const queryClient = useQueryClient();
+  const [detailEntry, setDetailEntry] = useState<BackupLogEntry | null>(null);
 
   const {
     data,
@@ -210,12 +257,70 @@ export function BackupStatusPage() {
   const triggerMutation = useMutation({
     mutationFn: backupApi.triggerBackup,
     onSuccess: () => {
-      // Backup runs asynchronously — poll for new rows after a short delay
       setTimeout(() => {
         void queryClient.invalidateQueries({ queryKey: ["backup-status"] });
       }, 5000);
     },
   });
+
+  const historyColumns: Column<BackupLogEntry>[] = [
+    {
+      key: "started_at",
+      header: "Started",
+      render: (e) => (
+        <span className="whitespace-nowrap text-sm">{formatDateTime(e.started_at)}</span>
+      ),
+    },
+    {
+      key: "backup_type",
+      header: "Type",
+      render: (e) => {
+        const cfg = BACKUP_TYPE_CONFIG[e.backup_type];
+        return (
+          <span className="flex items-center gap-1 text-sm">
+            {cfg.icon}
+            {cfg.label}
+          </span>
+        );
+      },
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (e) => <StatusBadge entry={e} />,
+    },
+    {
+      key: "size_bytes",
+      header: "Size",
+      render: (e) => formatBytes(e.size_bytes),
+    },
+    {
+      key: "completed_at",
+      header: "Completed",
+      render: (e) => (
+        <span className="whitespace-nowrap text-sm">{formatDateTime(e.completed_at)}</span>
+      ),
+    },
+    {
+      key: "details",
+      header: "",
+      className: "w-10 text-right",
+      render: (e) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          aria-label={`View details for backup run #${e.id}`}
+          onClick={(ev) => {
+            ev.stopPropagation();
+            setDetailEntry(e);
+          }}
+        >
+          <Info className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      ),
+    },
+  ];
 
   const runBackupButton = (
     <Button
@@ -328,6 +433,12 @@ export function BackupStatusPage() {
           </section>
         </>
       )}
+
+      <BackupDetailsDialog
+        entry={detailEntry}
+        open={detailEntry != null}
+        onClose={() => setDetailEntry(null)}
+      />
     </div>
   );
 }
