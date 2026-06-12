@@ -28,6 +28,7 @@ from app.modules.visits.schemas import (
     VisitCreateRequest,
     VisitListItemOut,
     VisitOut,
+    VisitQueueItem,
     VisitUpdateRequest,
 )
 
@@ -152,6 +153,37 @@ def _check_future_date(visit_date: date, is_scheduled: bool) -> None:
 
 def _snapshot(obj: Any, schema: type) -> dict:
     return schema.model_validate(obj).model_dump(mode="json")
+
+
+def get_visit_queue(
+    db: Session,
+    *,
+    doctor_id: uuid.UUID | None,
+    visit_date: date | None,
+    status: str | None,
+) -> list[VisitQueueItem]:
+    """Return today's visit queue items for the given filters."""
+    rows = repo.list_visits_for_queue(
+        db,
+        doctor_id=doctor_id,
+        visit_date=visit_date,
+        status=status,
+    )
+    return [
+        VisitQueueItem(
+            id=v.id,
+            patient_id=v.patient_id,
+            patient_name=patient_name,
+            op_number=op_number,
+            visit_date=v.visit_date,
+            visit_type_code=v.visit_type_code,
+            consultation_category=v.consultation_category,
+            status=v.status,
+            reason=v.reason,
+            doctor_name=doctor_name,
+        )
+        for v, patient_name, op_number, doctor_name in rows
+    ]
 
 
 # ── Visit service (BE-T6.1) ────────────────────────────────────────────────────

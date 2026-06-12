@@ -5,6 +5,7 @@ All queries return counts/timestamps only — no PII/PHI in results.
 
 from __future__ import annotations
 
+import uuid
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import func, select, text
@@ -33,20 +34,27 @@ def count_registrations(db: Session, today: date) -> tuple[int, int]:
     return today_count, week_count
 
 
-def count_visits_by_status(db: Session, today: date) -> tuple[int, int]:
-    """Return (open_today, completed_today) for visits on today's date."""
+def count_visits_by_status(
+    db: Session,
+    today: date,
+    doctor_id: uuid.UUID | None = None,
+) -> tuple[int, int]:
+    """Return (open_today, completed_today) for visits on today's date.
+
+    Pass doctor_id to restrict counts to a single doctor's visits.
+    """
+    base_conditions_open = [Visit.visit_date == today, Visit.status == "OPEN"]
+    base_conditions_comp = [Visit.visit_date == today, Visit.status == "COMPLETED"]
+    if doctor_id is not None:
+        base_conditions_open.append(Visit.doctor_id == doctor_id)
+        base_conditions_comp.append(Visit.doctor_id == doctor_id)
+
     open_count: int = db.execute(
-        select(func.count(Visit.id)).where(
-            Visit.visit_date == today,
-            Visit.status == "OPEN",
-        )
+        select(func.count(Visit.id)).where(*base_conditions_open)
     ).scalar_one()
 
     completed_count: int = db.execute(
-        select(func.count(Visit.id)).where(
-            Visit.visit_date == today,
-            Visit.status == "COMPLETED",
-        )
+        select(func.count(Visit.id)).where(*base_conditions_comp)
     ).scalar_one()
 
     return open_count, completed_count

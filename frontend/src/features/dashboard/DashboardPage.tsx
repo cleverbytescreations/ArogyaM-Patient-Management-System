@@ -27,6 +27,7 @@ export function DashboardPage() {
 
   const isAdmin = roles.includes("ADMIN");
   const isDoctor = roles.includes("DOCTOR");
+  const isStaff = !isDoctor && (roles.includes("RECEPTION") || roles.includes("DATA_ENTRY"));
 
   return (
     <div className="space-y-6">
@@ -98,14 +99,22 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {/* ── Doctor: today's scheduled follow-ups table ──────────────────── */}
+      {/* ── Doctor: today's patients (own queue) ────────────────────────── */}
       {isDoctor && user && (
-        <WidgetGuard permission={PERMISSIONS.MANAGE_FOLLOWUPS}>
-          <section aria-labelledby="doctor-followups-section">
-            <h2 id="doctor-followups-section" className="sr-only">
-              Today's scheduled follow-ups
-            </h2>
+        <WidgetGuard permission={PERMISSIONS.VIEW_PATIENT}>
+          <section aria-labelledby="doctor-queue-section">
+            <h2 id="doctor-queue-section" className="sr-only">Today's patients</h2>
             <TodayFollowupsWidget doctorId={user.id} />
+          </section>
+        </WidgetGuard>
+      )}
+
+      {/* ── Staff: today's queue across all doctors ──────────────────────── */}
+      {isStaff && (
+        <WidgetGuard permission={PERMISSIONS.VIEW_PATIENT}>
+          <section aria-labelledby="staff-queue-section">
+            <h2 id="staff-queue-section" className="sr-only">Today's queue — all doctors</h2>
+            <TodayFollowupsWidget />
           </section>
         </WidgetGuard>
       )}

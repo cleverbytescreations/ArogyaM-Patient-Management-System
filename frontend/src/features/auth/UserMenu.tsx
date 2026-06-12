@@ -70,7 +70,7 @@ export function UserMenu() {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem disabled>
+        <DropdownMenuItem onClick={() => navigate("/profile")}>
           <User className="mr-2 h-4 w-4" aria-hidden="true" />
           <span>Profile</span>
         </DropdownMenuItem>

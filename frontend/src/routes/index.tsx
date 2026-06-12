@@ -70,6 +70,12 @@ const BackupStatusPage = lazy(
     }))
 );
 
+const UserProfilePage = lazy(
+  () =>
+    import("@/features/auth/UserProfilePage").then((m) => ({
+      default: m.UserProfilePage,
+    }))
+);
 
 export function AppRoutes() {
   return (
@@ -163,6 +169,9 @@ export function AppRoutes() {
                       </RequirePermission>
                     }
                   />
+
+                  {/* User profile — available to all authenticated users */}
+                  <Route path="/profile" element={<UserProfilePage />} />
 
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

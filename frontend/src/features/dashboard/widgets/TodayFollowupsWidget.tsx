@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Clock,
-  CheckCircle2,
-  PhoneOff,
-  Phone,
-  RefreshCw,
-  CalendarCheck,
-} from "lucide-react";
+import { Clock, CheckCircle2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -21,103 +14,71 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { WidgetCard, WidgetCardSkeleton } from "../WidgetCard";
-import { followupsApi } from "@/api/followupsApi";
-import type { FollowUpStatusCode } from "@/types/followups";
-
-const OPEN_STATUSES = new Set<FollowUpStatusCode>([
-  "PENDING",
-  "CONTACTED",
-  "NOT_REACHABLE",
-]);
-
-const STATUS_CONFIG: Record<
-  FollowUpStatusCode,
-  {
-    label: string;
-    icon: React.ReactNode;
-    variant: "warning" | "success" | "secondary" | "destructive";
-  }
-> = {
-  PENDING: {
-    label: "Pending",
-    icon: <Clock className="h-3 w-3" aria-hidden="true" />,
-    variant: "warning",
-  },
-  CONTACTED: {
-    label: "Contacted",
-    icon: <Phone className="h-3 w-3" aria-hidden="true" />,
-    variant: "secondary",
-  },
-  NOT_REACHABLE: {
-    label: "Not Reachable",
-    icon: <PhoneOff className="h-3 w-3" aria-hidden="true" />,
-    variant: "destructive",
-  },
-  COMPLETED: {
-    label: "Completed",
-    icon: <CheckCircle2 className="h-3 w-3" aria-hidden="true" />,
-    variant: "success",
-  },
-  RESCHEDULED: {
-    label: "Rescheduled",
-    icon: <RefreshCw className="h-3 w-3" aria-hidden="true" />,
-    variant: "secondary",
-  },
-};
+import { visitsApi } from "@/api/visitsApi";
 
 interface Props {
-  doctorId: string;
+  /** When provided, filters to this doctor's visits only. Omit for all-doctors view. */
+  doctorId?: string;
 }
 
 export function TodayFollowupsWidget({ doctorId }: Props) {
   const [showCompleted, setShowCompleted] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
+  const allDoctors = !doctorId;
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["followups", "today-doctor", doctorId, today],
+  const { data: openVisits = [], isLoading: loadingOpen } = useQuery({
+    queryKey: ["visits", "queue", doctorId ?? "all", today, "OPEN"],
     queryFn: () =>
-      followupsApi.list({
-        from: today,
-        to: today,
-        assigned_to: doctorId,
-        page_size: 100,
+      visitsApi.queue({
+        ...(doctorId ? { doctor_id: doctorId } : {}),
+        visit_date: today,
+        status: "OPEN",
       }),
     staleTime: 60_000,
   });
 
+  const { data: completedVisits = [], isLoading: loadingCompleted } = useQuery({
+    queryKey: ["visits", "queue", doctorId ?? "all", today, "COMPLETED"],
+    queryFn: () =>
+      visitsApi.queue({
+        ...(doctorId ? { doctor_id: doctorId } : {}),
+        visit_date: today,
+        status: "COMPLETED",
+      }),
+    staleTime: 60_000,
+    enabled: showCompleted,
+  });
+
+  const isLoading = loadingOpen || (showCompleted && loadingCompleted);
   if (isLoading) return <WidgetCardSkeleton rows={5} />;
 
-  const allFollowups = data?.items ?? [];
-  const followups = showCompleted
-    ? allFollowups
-    : allFollowups.filter((f) => OPEN_STATUSES.has(f.status_code));
-
-  const openCount = allFollowups.filter((f) =>
-    OPEN_STATUSES.has(f.status_code)
-  ).length;
-  const completedCount = allFollowups.length - openCount;
+  const rows = showCompleted ? completedVisits : openVisits;
 
   return (
     <WidgetCard
-      title="Today's Follow-ups"
-      actionLabel="View register"
-      actionTo="/follow-ups"
+      title={allDoctors ? "Today's Queue" : "Today's Patients"}
+      actionLabel="Search patients"
+      actionTo="/patients/search"
     >
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          {openCount === 0 && !showCompleted
-            ? "No open follow-ups for today."
-            : `${openCount} open${completedCount > 0 ? `, ${completedCount} completed` : ""}`}
+          {showCompleted
+            ? completedVisits.length === 0
+              ? "No completed visits for today."
+              : `${completedVisits.length} completed`
+            : openVisits.length === 0
+              ? "No open visits for today."
+              : `${openVisits.length} open`}
         </p>
         <div className="flex items-center gap-2">
           <Switch
-            id="show-completed-toggle"
+            id="show-completed-visits"
             checked={showCompleted}
             onCheckedChange={setShowCompleted}
-            aria-label="Show completed follow-ups"
+            aria-label="Show completed visits"
           />
           <Label
-            htmlFor="show-completed-toggle"
+            htmlFor="show-completed-visits"
             className="cursor-pointer text-xs text-muted-foreground"
           >
             Show completed
@@ -125,17 +86,15 @@ export function TodayFollowupsWidget({ doctorId }: Props) {
         </div>
       </div>
 
-      {followups.length === 0 ? (
+      {rows.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center py-10 text-muted-foreground"
           role="status"
           aria-live="polite"
         >
-          <CalendarCheck className="mb-2 h-8 w-8 opacity-40" aria-hidden="true" />
+          <Users className="mb-2 h-8 w-8 opacity-40" aria-hidden="true" />
           <p className="text-sm">
-            {showCompleted
-              ? "No follow-ups scheduled for today."
-              : "All clear — no open follow-ups for today."}
+            {showCompleted ? "No completed visits for today." : "No open visits for today."}
           </p>
         </div>
       ) : (
@@ -144,40 +103,56 @@ export function TodayFollowupsWidget({ doctorId }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead>Patient</TableHead>
+                <TableHead>OP No.</TableHead>
+                <TableHead>Type</TableHead>
+                {allDoctors && <TableHead>Doctor</TableHead>}
                 <TableHead>Reason</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {followups.map((f) => {
-                const cfg = STATUS_CONFIG[f.status_code] ?? STATUS_CONFIG.PENDING;
-                return (
-                  <TableRow key={f.id}>
-                    <TableCell className="font-medium">
-                      <Link
-                        to={`/patients/${f.patient_id}`}
-                        className="text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-                      >
-                        {f.patient_name ?? "Unknown"}
-                      </Link>
+              {rows.map((v) => (
+                <TableRow key={v.id}>
+                  <TableCell className="font-medium">
+                    <Link
+                      to={`/patients/${v.patient_id}`}
+                      className="text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                    >
+                      {v.patient_name}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {v.op_number}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {v.visit_type_code}
+                    {v.consultation_category ? ` · ${v.consultation_category}` : ""}
+                  </TableCell>
+                  {allDoctors && (
+                    <TableCell className="text-sm text-muted-foreground">
+                      {v.doctor_name ?? "—"}
                     </TableCell>
-                    <TableCell>
-                      <span className="block max-w-[240px] truncate text-sm text-muted-foreground">
-                        {f.reason ?? "—"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={cfg.variant}
-                        className="flex w-fit items-center gap-1"
-                      >
-                        {cfg.icon}
-                        <span>{cfg.label}</span>
+                  )}
+                  <TableCell>
+                    <span className="block max-w-[200px] truncate text-sm text-muted-foreground">
+                      {v.reason ?? "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {v.status === "OPEN" ? (
+                      <Badge variant="warning" className="flex w-fit items-center gap-1">
+                        <Clock className="h-3 w-3" aria-hidden="true" />
+                        <span>Open</span>
                       </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                    ) : (
+                      <Badge variant="success" className="flex w-fit items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                        <span>Completed</span>
+                      </Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>

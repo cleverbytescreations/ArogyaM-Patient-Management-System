@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -36,6 +37,43 @@ def list_visits_for_patient(db: Session, patient_id: uuid.UUID) -> list[Visit]:
 def save_visit(db: Session, visit: Visit) -> Visit:
     db.flush()
     return visit
+
+
+def list_visits_for_queue(
+    db: Session,
+    *,
+    doctor_id: uuid.UUID | None = None,
+    visit_date: date | None = None,
+    status: str | None = None,
+) -> list[tuple[Visit, str, str, str | None]]:
+    """Return (Visit, patient_full_name, patient_op_number, doctor_full_name) tuples."""
+    from sqlalchemy import and_
+    from sqlalchemy.orm import aliased
+
+    from app.modules.auth.models import User
+    from app.modules.patients.models import Patient
+
+    DoctorUser = aliased(User)
+
+    conditions = []
+    if doctor_id is not None:
+        conditions.append(Visit.doctor_id == doctor_id)
+    if visit_date is not None:
+        conditions.append(Visit.visit_date == visit_date)
+    if status is not None:
+        conditions.append(Visit.status == status)
+
+    q = (
+        select(Visit, Patient.full_name, Patient.op_number, DoctorUser.full_name)
+        .join(Patient, Patient.id == Visit.patient_id)
+        .outerjoin(DoctorUser, DoctorUser.id == Visit.doctor_id)
+    )
+    if conditions:
+        q = q.where(and_(*conditions))
+    q = q.order_by(Visit.created_at.asc())
+
+    rows = db.execute(q).all()
+    return [(row[0], row[1], row[2], row[3]) for row in rows]
 
 
 def doctor_has_visit_for_patient(

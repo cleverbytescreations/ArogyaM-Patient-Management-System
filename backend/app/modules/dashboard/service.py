@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -32,11 +33,15 @@ def get_summary(db: Session, actor_payload: dict) -> DashboardSummary:
     today = date.today()
     result = DashboardSummary()
 
+    roles: list[str] = actor_payload.get("roles", [])
+    is_doctor = "DOCTOR" in roles and "ADMIN" not in roles
+    doctor_id: uuid.UUID | None = uuid.UUID(actor_payload["sub"]) if is_doctor else None
+
     if PERM_VIEW_PATIENT in perms:
         today_reg, week_reg = repo.count_registrations(db, today)
         result.registrations = RegistrationsSummary(today=today_reg, this_week=week_reg)
 
-        open_v, completed_v = repo.count_visits_by_status(db, today)
+        open_v, completed_v = repo.count_visits_by_status(db, today, doctor_id=doctor_id)
         result.visits = VisitsSummary(open_today=open_v, completed_today=completed_v)
 
     if PERM_MANAGE_FOLLOWUPS in perms:

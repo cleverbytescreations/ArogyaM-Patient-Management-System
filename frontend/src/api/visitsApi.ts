@@ -3,6 +3,7 @@ import type {
   Visit,
   VisitCreateRequest,
   VisitUpdateRequest,
+  VisitQueueItem,
   CaseSheet,
   CaseSheetUpsertRequest,
   ConsultationNote,
@@ -11,6 +12,11 @@ import type {
 } from "@/types/visits";
 
 export const visitsApi = {
+  queue: (params?: { doctor_id?: string; visit_date?: string; status?: string }) =>
+    apiClient
+      .get<VisitQueueItem[]>("/visits/queue", { params })
+      .then((r) => r.data),
+
   list: (patientId: string) =>
     apiClient.get<Visit[]>(`/patients/${patientId}/visits`).then((r) => r.data),
 

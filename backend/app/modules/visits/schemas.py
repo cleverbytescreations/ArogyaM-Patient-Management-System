@@ -75,6 +75,23 @@ class VisitListItemOut(VisitOut):
     consultation_notes_count: int = 0
 
 
+class VisitQueueItem(BaseModel):
+    """Compact visit row for the daily queue — no PHI beyond patient name/OP."""
+
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    patient_id: uuid.UUID
+    patient_name: str
+    op_number: str
+    visit_date: date
+    visit_type_code: str
+    consultation_category: str | None = None
+    status: str
+    reason: str | None = None
+    doctor_name: str | None = None
+
+
 # ── Case sheet ─────────────────────────────────────────────────────────────────
 
 # All content fields are marked optional so a partial upsert is possible.

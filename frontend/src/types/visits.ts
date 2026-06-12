@@ -1,6 +1,19 @@
 export type VisitStatus = "OPEN" | "COMPLETED" | "CANCELLED";
 export type PatientAliasSource = "MERGE" | "HISTORICAL" | "CORRECTION";
 
+export interface VisitQueueItem {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  op_number: string;
+  visit_date: string;
+  visit_type_code: string;
+  consultation_category: string | null;
+  status: VisitStatus;
+  reason: string | null;
+  doctor_name: string | null;
+}
+
 export interface Visit {
   id: string;
   patient_id: string;

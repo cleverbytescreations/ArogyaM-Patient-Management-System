@@ -15,6 +15,7 @@ Routes:
 from __future__ import annotations
 
 import uuid
+from datetime import date
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Request, Response, status
@@ -39,6 +40,7 @@ from app.modules.visits.schemas import (
     VisitCreateRequest,
     VisitListItemOut,
     VisitOut,
+    VisitQueueItem,
     VisitUpdateRequest,
 )
 
@@ -97,6 +99,26 @@ def list_visits(
 # ── Visit-scoped routes ────────────────────────────────────────────────────────
 
 visits_router = APIRouter(prefix="/visits", tags=["visits"])
+
+
+@visits_router.get(
+    "/queue",
+    response_model=list[VisitQueueItem],
+    summary="Visit queue — filter by doctor, date, or status",
+)
+def get_visit_queue(
+    payload: ViewPatient,
+    db: Annotated[Session, Depends(get_db)],
+    doctor_id: uuid.UUID | None = None,
+    visit_date: date | None = None,
+    status: str | None = None,
+) -> list[VisitQueueItem]:
+    return svc.get_visit_queue(
+        db,
+        doctor_id=doctor_id,
+        visit_date=visit_date,
+        status=status,
+    )
 
 
 @visits_router.get("/{visit_id}", response_model=VisitOut, summary="Get a visit by ID")
