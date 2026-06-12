@@ -23,10 +23,108 @@ widgets for each of the four roles:
 | Data Entry Staff | `DATA_ENTRY` | create_patient, view_patient, edit_patient, manage_followups, request_merge |
 
 ### Design principle
-The dashboard is **one component composing permission-guarded widgets**, not four
-hand-built pages. Each widget declares the permission it needs; a role sees the
-subset its `/me/permissions` unlocks. This preserves the deny-by-default rule and
-means changing the role→permission map automatically changes the dashboard.
+The dashboard is a **permission-driven shell, not four hand-built pages**. Build one
+`<Dashboard>` that composes widgets, each guarded by a permission check. A role simply
+sees the subset of widgets its permissions unlock. This keeps you honest with the
+deny-by-default rule and means adding a permission to a role automatically lights up
+its widget.
+
+---
+
+### 1. Administrator (ADMIN — all 15 permissions)
+The oversight cockpit. Admin does little clinical data entry; the dashboard is about
+system health, governance, and people.
+
+- **Top KPI row:** patients registered today / this week, active users online, pending
+  merge requests, last backup status + age.
+- **Audit trail panel** (`view_audit`): live feed of recent sensitive actions (logins,
+  profile views, exports, merges) with a "View full audit" link. This is the marquee
+  admin widget.
+- **User management card** (`manage_users`): count of active/locked accounts, "Add
+  user", recent role changes.
+- **Backup & system health** (`backup_control`): last backup time, success/fail, "Run
+  backup now", storage usage.
+- **Master data** (`manage_master_data`): quick links to manage categories, OP-sequence
+  config, departments.
+- **Merge queue** (`merge_records`): pending merge requests awaiting approval — admin is
+  the approver.
+- **Reports** (`view_reports` / `export`): registration trends, visit volume, export
+  buttons.
+- **Hide:** nothing structurally, but keep clinical entry actions secondary — admin
+  isn't the consultation author.
+
+---
+
+### 2. Doctor (DOCTOR)
+A clinical worklist. Doctors view patients and author consultations/prescriptions; they
+have no create/edit-patient, user, backup, or audit access.
+
+- **My patient queue / today's visits** (`view_patient` + visits): patients checked in
+  and waiting, ordered by arrival. This is the primary widget — the doctor's working
+  list.
+- **Quick patient search** (`view_patient`): jump to any record by OP number / name /
+  mobile.
+- **Pending consultations:** visits registered but not yet consulted → deep-link
+  straight into the consultation form (`add_consultation`, `add_prescription`).
+- **Follow-ups due** (`manage_followups`): patients with follow-up visits due
+  today/this week.
+- **Reports** (`view_reports`): personal/clinic consultation counts; Export (`export`)
+  for discharge summaries.
+- On opening a patient: full medical history timeline (`view_medical_history`).
+- **Hide:** register-patient button, user mgmt, backup, audit, master data, merge
+  approval (doctor can't request or approve merges per the matrix).
+
+---
+
+### 3. Receptionist (RECEPTION)
+The front-desk intake console. Permissions: `create_patient`, `view_patient`,
+`edit_patient`, `manage_followups`, `request_merge`.
+
+- **Big primary CTA: "Register New Patient"** (`create_patient`) — front and center,
+  this is the role's main job.
+- **Today's registrations / live OP queue:** patients registered today with their
+  generated OP numbers and visit status.
+- **Patient search + quick edit** (`view_patient`, `edit_patient`): correct
+  demographics, contact details.
+- **Follow-up scheduling** (`manage_followups`): today's expected follow-ups, register
+  a follow-up visit. (`RegisterFollowUpVisitDialog.tsx` in active development — surface
+  it here.)
+- **Possible duplicates → "Request merge"** (`request_merge`): flags likely duplicate
+  registrations; reception requests, admin approves.
+- **Hide:** all clinical content (no `view_medical_history`, `add_consultation` — they
+  see the patient record but not clinical detail), users, backup, audit, reports,
+  master data.
+
+---
+
+### 4. Data Entry Staff (DATA_ENTRY)
+> ⚠️ **Important:** Data Entry has an identical permission set to Reception
+> (`create_patient`, `view_patient`, `edit_patient`, `manage_followups`,
+> `request_merge`). By RBAC they can see the same widgets. Differentiate by **workflow
+> emphasis and layout**, not by locking things down — otherwise the two dashboards are
+> technically the same page.
+
+- **Bulk / backlog entry focus:** lead with a "Register Patient" form optimised for
+  fast keyboard entry and a "Records pending completion" worklist (registrations missing
+  fields) rather than a live front-desk queue.
+- **Data quality widget:** incomplete-profile count, "Request merge" for duplicates
+  spotted during entry.
+- **Recently entered by me:** lets them review/correct their own entries (`edit_patient`).
+- **De-emphasize** the real-time today's-arrivals queue (that's reception's live view);
+  emphasize batch correctness.
+- **Recommendation:** since the permission sets are identical, consider whether
+  `DATA_ENTRY` should keep `manage_followups`/`request_merge` or whether Reception
+  should have something extra. Right now any "difference" lives only in the UI, which is
+  cosmetic and bypassable. If the business intends them to differ, the permission matrix
+  must reflect it. **Decision needed before Phase 2** (see §9).
+
+---
+
+### Shared shell (all roles)
+Every authenticated user gets the same outer shell (`AppShell`, nav, header). The
+dashboard itself renders only the widgets whose `permission` check passes for that
+user's effective permission set — no role-switch logic in the shell, no duplicated
+page components.
 
 ### ⚠️ Known constraint — RECEPTION and DATA_ENTRY are identical at the RBAC layer
 The two roles share an identical permission set in
