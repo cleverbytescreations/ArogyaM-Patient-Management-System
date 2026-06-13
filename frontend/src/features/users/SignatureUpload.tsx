@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { usersApi } from "./usersApi";
 import { getApiErrorMessage } from "@/api/errors";
 import type { User } from "@/types/users";
@@ -22,6 +23,7 @@ export function SignatureUpload({ user }: SignatureUploadProps) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // The `user` prop is a snapshot from the list query and is not refreshed
   // while the dialog stays open, so we track signature presence locally and

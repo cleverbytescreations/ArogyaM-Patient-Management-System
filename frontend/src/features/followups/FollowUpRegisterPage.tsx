@@ -57,8 +57,10 @@ export function FollowUpRegisterPage() {
   const { user, roles } = useAuth();
   const isDoctor = roles.includes("DOCTOR") && !roles.includes("ADMIN");
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [fromFilter, setFromFilter] = useState("");
+  const [fromFilter, setFromFilter] = useState(today);
   const [toFilter, setToFilter] = useState("");
   const [assignedToFilter, setAssignedToFilter] = useState<string>(
     isDoctor && user ? user.id : "all"
