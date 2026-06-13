@@ -138,8 +138,11 @@ export function ConsultationNotesTab({ selectedVisit, onSelectVisitTab }: Consul
         yoga_advice: values.yoga_advice?.trim() || null,
         review_date: values.review_date?.trim() || null,
       }),
-    onSuccess: () => {
+    onSuccess: (_, values) => {
       void queryClient.invalidateQueries({ queryKey: ["consultation-notes", selectedVisit?.id] });
+      if (values.review_date?.trim()) {
+        void queryClient.invalidateQueries({ queryKey: ["follow-ups", selectedVisit?.patient_id] });
+      }
       toast.success("Consultation note added.");
       form.reset(defaultNoteValues(selectedVisit));
     },

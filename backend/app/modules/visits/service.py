@@ -14,6 +14,8 @@ from app.core.concurrency import bump_version, ensure_current_version
 from app.core.errors import NotFoundError, ValidationAppError, VersionConflictError
 from app.core.permissions import PERM_VIEW_MEDICAL_HISTORY, ROLE_ADMIN, ROLE_DOCTOR
 from app.modules.auth.models import User
+from app.modules.followups import repository as followup_repo
+from app.modules.followups.models import FollowUp
 from app.modules.masterdata import repository as master_repo
 from app.modules.patients import repository as patient_repo
 from app.modules.patients.models import Patient
@@ -555,6 +557,33 @@ def add_consultation_note(
         user_agent=ua,
         request_id=rid,
     )
+
+    if body.review_date is not None:
+        followup = FollowUp(
+            patient_id=visit.patient_id,
+            follow_up_date=body.review_date,
+            reason=visit.reason,
+            assigned_to=body.doctor_id,
+            status_code="PENDING",
+            created_by=actor_id,
+            updated_by=actor_id,
+        )
+        followup_repo.create_followup(db, followup)
+        write_audit(
+            db,
+            action="FOLLOWUP_CREATE",
+            user_id=actor_id,
+            user_role=_role_snapshot(actor_payload),
+            entity_type="follow_up",
+            entity_id=str(followup.id),
+            patient_id=visit.patient_id,
+            new_value={"follow_up_date": str(body.review_date), "status_code": "PENDING"},
+            description="Created follow-up from consultation note review date",
+            ip_address=ip,
+            user_agent=ua,
+            request_id=rid,
+        )
+
     db.commit()
     return _filtered_note(note, actor_payload)
 
