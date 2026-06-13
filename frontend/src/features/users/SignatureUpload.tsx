@@ -81,10 +81,7 @@ export function SignatureUpload({ user }: SignatureUploadProps) {
 
   const isPending = uploadMutation.isPending || deleteMutation.isPending;
 
-  const handleFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
+  const validateAndUpload = (file: File) => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
       toast.error("Signature must be a PNG or JPEG image.");
       return;
@@ -96,6 +93,32 @@ export function SignatureUpload({ user }: SignatureUploadProps) {
     uploadMutation.mutate(file);
   };
 
+  const handleFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    validateAndUpload(file);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!isPending) setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    if (isPending) return;
+    const file = event.dataTransfer.files?.[0];
+    if (!file) return;
+    validateAndUpload(file);
+  };
+
   return (
     <div className="space-y-2 rounded-lg border p-3">
       <div>
@@ -105,19 +128,32 @@ export function SignatureUpload({ user }: SignatureUploadProps) {
         </p>
       </div>
 
-      {hasSignature && previewUrl && (
-        <img
-          src={previewUrl}
-          alt="Doctor signature preview"
-          className="max-h-20 max-w-[200px] rounded border bg-white object-contain p-1"
-        />
-      )}
-      {hasSignature && signatureQuery.isLoading && (
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-      )}
-      {!hasSignature && (
-        <p className="text-sm text-muted-foreground">No signature uploaded yet.</p>
-      )}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={cn(
+          "flex flex-col items-center gap-2 rounded-md border-2 border-dashed p-3 text-center transition-colors",
+          isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+        )}
+      >
+        {hasSignature && previewUrl && (
+          <img
+            src={previewUrl}
+            alt="Doctor signature preview"
+            className="max-h-20 max-w-[200px] rounded border bg-white object-contain p-1"
+          />
+        )}
+        {hasSignature && signatureQuery.isLoading && (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        )}
+        {!hasSignature && (
+          <p className="text-sm text-muted-foreground">No signature uploaded yet.</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Drag and drop a PNG or JPEG here, or use the button below.
+        </p>
+      </div>
 
       <input
         ref={inputRef}
