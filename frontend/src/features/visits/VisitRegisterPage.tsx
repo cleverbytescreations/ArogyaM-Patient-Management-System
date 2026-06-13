@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
-import { CheckCircle2, Clock, XCircle, CalendarCheck } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectTrigger,
@@ -14,6 +16,24 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { DataTable, type Column } from "@/components/DataTable";
 import { PageHeader } from "@/components/PageHeader";
 import { visitsApi } from "@/api/visitsApi";
@@ -36,6 +56,7 @@ const ALL_STATUSES: VisitStatus[] = ["OPEN", "COMPLETED", "CANCELLED"];
 
 export function VisitRegisterPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { roles } = useAuth();
   const isDoctor = roles.includes("DOCTOR") && !roles.includes("ADMIN");
 
@@ -46,6 +67,10 @@ export function VisitRegisterPage() {
   const [doctorFilter, setDoctorFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("OPEN");
   const [page, setPage] = useState(1);
+
+  const [completeTarget, setCompleteTarget] = useState<VisitRegisterItem | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<VisitRegisterItem | null>(null);
+  const [cancellationReason, setCancellationReason] = useState("");
 
   const params = {
     from_date: fromFilter || undefined,
@@ -68,6 +93,38 @@ export function VisitRegisterPage() {
     staleTime: 5 * 60 * 1000,
   });
   const doctors = doctorsPage?.items ?? [];
+
+  const { mutate: completeVisit, isPending: isCompleting } = useMutation({
+    mutationFn: (visit: VisitRegisterItem) =>
+      visitsApi.update(visit.id, { version: visit.version, status: "COMPLETED" }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["visit-register"] });
+      toast.success("Visit marked as completed.");
+      setCompleteTarget(null);
+    },
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err, "Could not complete the visit."));
+      setCompleteTarget(null);
+    },
+  });
+
+  const { mutate: cancelVisit, isPending: isCancelling } = useMutation({
+    mutationFn: (visit: VisitRegisterItem) =>
+      visitsApi.update(visit.id, {
+        version: visit.version,
+        status: "CANCELLED",
+        cancellation_reason: cancellationReason.trim(),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["visit-register"] });
+      toast.success("Visit cancelled.");
+      setCancelTarget(null);
+      setCancellationReason("");
+    },
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err, "Could not cancel the visit."));
+    },
+  });
 
   const visits = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -137,9 +194,40 @@ export function VisitRegisterPage() {
     {
       key: "reason",
       header: "Reason",
-      render: (v) =>
-        v.reason ? (
+      render: (v) => {
+        if (v.status === "CANCELLED" && v.cancellation_reason) {
+          return <span className="max-w-[200px] truncate block">Cancelled: {v.cancellation_reason}</span>;
+        }
+        return v.reason ? (
           <span className="max-w-[200px] truncate block">{v.reason}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (v) =>
+        v.status === "OPEN" ? (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCompleteTarget(v)}
+              aria-label={`Mark visit for ${v.patient_name} as completed`}
+            >
+              Complete
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCancelTarget(v)}
+              aria-label={`Cancel visit for ${v.patient_name}`}
+            >
+              Cancel
+            </Button>
+          </div>
         ) : (
           <span className="text-muted-foreground">—</span>
         ),
@@ -241,6 +329,84 @@ export function VisitRegisterPage() {
         getRowKey={(v) => v.id}
         emptyMessage="No visits match the current filters."
       />
+
+      <AlertDialog open={completeTarget !== null} onOpenChange={(open) => { if (!open) setCompleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark visit as completed?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {completeTarget && (
+                <>This will mark {completeTarget.patient_name}&apos;s visit on {formatDate(completeTarget.visit_date)} as completed.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCompleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isCompleting}
+              onClick={(e) => {
+                e.preventDefault();
+                if (completeTarget) completeVisit(completeTarget);
+              }}
+            >
+              {isCompleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+              Mark completed
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog
+        open={cancelTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !isCancelling) {
+            setCancelTarget(null);
+            setCancellationReason("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel visit</DialogTitle>
+            <DialogDescription>
+              {cancelTarget && (
+                <>Cancel {cancelTarget.patient_name}&apos;s visit on {formatDate(cancelTarget.visit_date)}. Provide a reason for the record.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-1">
+            <Label htmlFor="vr-cancel-reason">Cancellation reason <span aria-hidden="true">*</span></Label>
+            <Textarea
+              id="vr-cancel-reason"
+              rows={3}
+              value={cancellationReason}
+              onChange={(e) => setCancellationReason(e.target.value)}
+              aria-required="true"
+              disabled={isCancelling}
+              placeholder="e.g. Patient unable to attend, rescheduled by clinic"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setCancelTarget(null); setCancellationReason(""); }}
+              disabled={isCancelling}
+            >
+              Close
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isCancelling || !cancellationReason.trim()}
+              onClick={() => { if (cancelTarget) cancelVisit(cancelTarget); }}
+            >
+              {isCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+              Cancel visit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

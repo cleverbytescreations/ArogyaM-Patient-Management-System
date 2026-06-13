@@ -46,6 +46,7 @@ class VisitUpdateRequest(BaseModel):
     is_scheduled: bool | None = None
     status: str | None = Field(default=None, pattern="^(OPEN|COMPLETED|CANCELLED)$")
     reason: str | None = Field(default=None, max_length=255)
+    cancellation_reason: str | None = Field(default=None, max_length=255)
     version: int = Field(..., ge=1)
 
 
@@ -61,6 +62,7 @@ class VisitOut(BaseModel):
     is_scheduled: bool
     status: str
     reason: str | None = None
+    cancellation_reason: str | None = None
     version: int
     created_at: datetime
     updated_at: datetime
@@ -107,6 +109,8 @@ class VisitRegisterItem(BaseModel):
     is_scheduled: bool
     status: str
     reason: str | None = None
+    cancellation_reason: str | None = None
+    version: int
     doctor_id: uuid.UUID | None = None
     doctor_name: str | None = None
 

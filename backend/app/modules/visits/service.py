@@ -156,6 +156,32 @@ def _snapshot(obj: Any, schema: type) -> dict:
     return schema.model_validate(obj).model_dump(mode="json")
 
 
+def _validate_status_transition(visit: Visit, body: VisitUpdateRequest) -> None:
+    """Visits can only be marked COMPLETED or CANCELLED from OPEN; CANCELLED requires a reason."""
+    if body.status is None or body.status == visit.status:
+        return
+
+    if visit.status != "OPEN":
+        raise ValidationAppError(
+            "Visit status can only be changed from OPEN",
+            details=[{
+                "field": "status",
+                "code": "invalid_status_transition",
+                "message": f"Cannot change status from {visit.status} to {body.status}",
+            }],
+        )
+
+    if body.status == "CANCELLED" and not (body.cancellation_reason or "").strip():
+        raise ValidationAppError(
+            "A reason is required to cancel a visit",
+            details=[{
+                "field": "cancellation_reason",
+                "code": "required",
+                "message": "Provide a reason for cancelling this visit",
+            }],
+        )
+
+
 def get_visit_queue(
     db: Session,
     *,
@@ -224,6 +250,8 @@ def get_visit_register(
             is_scheduled=v.is_scheduled,
             status=v.status,
             reason=v.reason,
+            cancellation_reason=v.cancellation_reason,
+            version=v.version,
             doctor_id=doctor_user_id,
             doctor_name=doctor_name,
         )
@@ -330,6 +358,7 @@ def update_visit(
     if visit is None:
         raise NotFoundError(f"Visit {visit_id} not found")
     ensure_current_version(visit, body.version)
+    _validate_status_transition(visit, body)
 
     _validate_visit_lookups(db, body)
 

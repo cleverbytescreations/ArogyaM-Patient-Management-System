@@ -11,7 +11,7 @@ interface Props {
 export function TodaysQueueWidget({ data, loading }: Props) {
   if (loading) return <WidgetCardSkeleton rows={2} />;
   return (
-    <WidgetCard title="Today's Visits" actionLabel="Search patients" actionTo="/patients/search">
+    <WidgetCard title="Today's Visits" actionLabel="Visit Register" actionTo="/visit-register">
       <ul className="space-y-3" role="list">
         <li className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-sm text-muted-foreground">

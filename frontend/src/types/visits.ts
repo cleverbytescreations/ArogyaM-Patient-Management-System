@@ -12,6 +12,8 @@ export interface VisitRegisterItem {
   is_scheduled: boolean;
   status: VisitStatus;
   reason: string | null;
+  cancellation_reason: string | null;
+  version: number;
   doctor_id: string | null;
   doctor_name: string | null;
 }
@@ -39,6 +41,7 @@ export interface Visit {
   is_scheduled: boolean;
   status: VisitStatus;
   reason: string | null;
+  cancellation_reason: string | null;
   version: number;
   created_at: string;
   updated_at: string;
@@ -60,6 +63,7 @@ export interface VisitUpdateRequest {
   status?: VisitStatus;
   doctor_id?: string | null;
   reason?: string | null;
+  cancellation_reason?: string | null;
 }
 
 export interface CaseSheet {
