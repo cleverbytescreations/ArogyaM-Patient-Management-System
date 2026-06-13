@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { followupsApi } from "@/api/followupsApi";
 import { masterDataApi } from "@/api/masterDataApi";
+import { visitsApi } from "@/api/visitsApi";
 import { usersApi } from "@/features/users/usersApi";
 import { visitSchema, type VisitFormValues } from "@/lib/validation/visits";
 import { getApiErrorCode, getApiErrorMessage, getFieldErrors } from "@/api/errors";
@@ -77,14 +78,21 @@ export function RegisterFollowUpVisitDialog({
   });
   const doctors = doctorsPage?.items ?? [];
 
+  const { data: visits } = useQuery({
+    queryKey: ["visits", followUp.patient_id],
+    queryFn: () => visitsApi.list(followUp.patient_id),
+    enabled: open,
+  });
+  const lastVisit = visits?.[0];
+
   const form = useForm<VisitFormValues>({
     resolver: zodResolver(visitSchema),
     defaultValues: {
-      visit_date: today,
+      visit_date: followUp.follow_up_date,
       visit_type_code: "",
       consultation_category: "",
       doctor_id: followUp.assigned_to ?? "",
-      is_scheduled: false,
+      is_scheduled: followUp.follow_up_date > today,
       reason: followUp.reason ?? "",
     },
   });
@@ -92,15 +100,15 @@ export function RegisterFollowUpVisitDialog({
   useEffect(() => {
     if (open) {
       form.reset({
-        visit_date: today,
-        visit_type_code: "",
-        consultation_category: "",
+        visit_date: followUp.follow_up_date,
+        visit_type_code: lastVisit?.visit_type_code ?? "",
+        consultation_category: lastVisit?.consultation_category ?? "",
         doctor_id: followUp.assigned_to ?? "",
-        is_scheduled: false,
+        is_scheduled: followUp.follow_up_date > today,
         reason: followUp.reason ?? "",
       });
     }
-  }, [open, followUp.assigned_to, followUp.reason, today, form]);
+  }, [open, followUp.assigned_to, followUp.reason, followUp.follow_up_date, today, lastVisit, form]);
 
   const isScheduled = form.watch("is_scheduled");
 
