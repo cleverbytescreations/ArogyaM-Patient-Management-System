@@ -74,7 +74,7 @@ Pedda Kondamari Village and Post,
 Chowdepalle Mandal, Chittoor District,
 Andhra Pradesh, India – 517257
 
-+91 8340932384, +91 8333981305 | wellnesscenter@satsang-foundation.org
++91 8333981305 | wellnesscenter@satsang-foundation.org
 ```
 Below the header band:
 - Title, centered, bold, underlined: **`ONLINE CONSULTATIONS – CASE SHEET`**

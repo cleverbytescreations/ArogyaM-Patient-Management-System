@@ -46,7 +46,6 @@ export function AppShell({ children }: AppShellProps) {
             aria-label={`${APP_NAME} — go to dashboard`}
             className="flex items-center gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <BrandLogo variant="mark" decorative className="h-8 w-8" />
             <BrandLogo variant="wordmark" decorative className="h-6 w-auto" />
             <span className="sr-only">{APP_NAME}</span>
           </Link>
