@@ -71,6 +71,10 @@ export function VisitRegisterPage() {
   const [completeTarget, setCompleteTarget] = useState<VisitRegisterItem | null>(null);
   const [cancelTarget, setCancelTarget] = useState<VisitRegisterItem | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
+  const [editTarget, setEditTarget] = useState<VisitRegisterItem | null>(null);
+  const [editDoctorId, setEditDoctorId] = useState<string>("");
+  const [editVisitDate, setEditVisitDate] = useState<string>("");
+  const [editChangeReason, setEditChangeReason] = useState<string>("");
 
   const params = {
     from_date: fromFilter || undefined,
@@ -105,6 +109,26 @@ export function VisitRegisterPage() {
     onError: (err: unknown) => {
       toast.error(getApiErrorMessage(err, "Could not complete the visit."));
       setCompleteTarget(null);
+    },
+  });
+
+  const { mutate: updateVisit, isPending: isUpdatingVisit } = useMutation({
+    mutationFn: (visit: VisitRegisterItem) =>
+      visitsApi.update(visit.id, {
+        version: visit.version,
+        doctor_id: editDoctorId || null,
+        visit_date: editVisitDate,
+        is_scheduled: editVisitDate > today ? true : visit.is_scheduled,
+        change_reason: editChangeReason.trim() || null,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["visit-register"] });
+      toast.success("Visit updated.");
+      setEditTarget(null);
+      setEditChangeReason("");
+    },
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err, "Could not update the visit."));
     },
   });
 
@@ -211,9 +235,26 @@ export function VisitRegisterPage() {
       render: (v) =>
         v.status === "OPEN" ? (
           <div className="flex items-center gap-2">
+            {v.visit_date >= today && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700 dark:text-yellow-400 dark:hover:bg-yellow-950"
+                onClick={() => {
+                  setEditTarget(v);
+                  setEditDoctorId(v.doctor_id ?? "");
+                  setEditVisitDate(v.visit_date);
+                  setEditChangeReason("");
+                }}
+                aria-label={`Edit assigned doctor for ${v.patient_name}`}
+              >
+                Edit
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
+              className="border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-950"
               onClick={() => setCompleteTarget(v)}
               aria-label={`Mark visit for ${v.patient_name} as completed`}
             >
@@ -222,6 +263,7 @@ export function VisitRegisterPage() {
             <Button
               variant="outline"
               size="sm"
+              className="border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950"
               onClick={() => setCancelTarget(v)}
               aria-label={`Cancel visit for ${v.patient_name}`}
             >
@@ -355,6 +397,88 @@ export function VisitRegisterPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={editTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !isUpdatingVisit) {
+            setEditTarget(null);
+            setEditDoctorId("");
+            setEditVisitDate("");
+            setEditChangeReason("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit visit</DialogTitle>
+            <DialogDescription>
+              {editTarget && (
+                <>Update the visit date or assigned doctor for {editTarget.patient_name}&apos;s visit on {formatDate(editTarget.visit_date)}.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="vr-edit-visit-date">Visit date</Label>
+              <Input
+                id="vr-edit-visit-date"
+                type="date"
+                value={editVisitDate}
+                min={today}
+                onChange={(e) => setEditVisitDate(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="vr-edit-doctor">Assigned doctor</Label>
+              <Select value={editDoctorId || "none"} onValueChange={(v) => setEditDoctorId(v === "none" ? "" : v)}>
+                <SelectTrigger id="vr-edit-doctor" aria-label="Assigned doctor">
+                  <SelectValue placeholder="Select doctor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {doctors.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="vr-edit-reason">Reason for change <span aria-hidden="true">*</span></Label>
+              <Textarea
+                id="vr-edit-reason"
+                rows={3}
+                value={editChangeReason}
+                onChange={(e) => setEditChangeReason(e.target.value)}
+                aria-required="true"
+                placeholder="e.g. Patient requested a different doctor / rescheduled"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setEditTarget(null); setEditDoctorId(""); setEditVisitDate(""); setEditChangeReason(""); }}
+              disabled={isUpdatingVisit}
+            >
+              Close
+            </Button>
+            <Button
+              disabled={isUpdatingVisit || !editVisitDate || !editChangeReason.trim()}
+              onClick={() => { if (editTarget) updateVisit(editTarget); }}
+            >
+              {isUpdatingVisit && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={cancelTarget !== null}

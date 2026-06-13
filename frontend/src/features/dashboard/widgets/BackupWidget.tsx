@@ -22,7 +22,7 @@ export function BackupWidget({ data, loading }: Props) {
 
   const neverRun = !data?.last_run_at;
   const formattedDate = data?.last_run_at
-    ? format(parseISO(data.last_run_at), "dd MMM yyyy, HH:mm")
+    ? format(parseISO(data.last_run_at), "dd MMM yyyy, hh:mm a")
     : "Never";
   const ageText =
     data?.age_hours != null

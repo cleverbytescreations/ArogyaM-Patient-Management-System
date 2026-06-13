@@ -364,6 +364,16 @@ def update_visit(
 
     _validate_visit_lookups(db, body)
 
+    if body.visit_date is not None and body.visit_date < date.today():
+        raise ValidationAppError(
+            "Visit date cannot be in the past",
+            details=[{
+                "field": "visit_date",
+                "code": "past_visit_date",
+                "message": "Visit date must be today or a future date",
+            }],
+        )
+
     # Resolve effective is_scheduled and visit_date for date validation
     effective_scheduled = body.is_scheduled if body.is_scheduled is not None else visit.is_scheduled
     effective_date = body.visit_date if body.visit_date is not None else visit.visit_date
@@ -372,7 +382,7 @@ def update_visit(
     actor_id = _actor_id(actor_payload)
     old_snap = _snapshot(visit, VisitOut)
 
-    changes = body.model_dump(exclude={"version"}, exclude_unset=True)
+    changes = body.model_dump(exclude={"version", "change_reason"}, exclude_unset=True)
     for field, value in changes.items():
         setattr(visit, field, value)
     visit.updated_by = actor_id
@@ -390,7 +400,7 @@ def update_visit(
         patient_id=visit.patient_id,
         old_value=old_snap,
         new_value=_snapshot(visit, VisitOut),
-        description="Updated visit",
+        description=f"Updated visit: {body.change_reason}" if body.change_reason else "Updated visit",
         ip_address=ip,
         user_agent=ua,
         request_id=rid,

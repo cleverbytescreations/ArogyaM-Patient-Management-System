@@ -60,10 +60,13 @@ export interface VisitCreateRequest {
 
 export interface VisitUpdateRequest {
   version: number;
+  visit_date?: string;
+  is_scheduled?: boolean;
   status?: VisitStatus;
   doctor_id?: string | null;
   reason?: string | null;
   cancellation_reason?: string | null;
+  change_reason?: string | null;
 }
 
 export interface CaseSheet {

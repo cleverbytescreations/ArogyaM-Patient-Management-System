@@ -47,6 +47,7 @@ class VisitUpdateRequest(BaseModel):
     status: str | None = Field(default=None, pattern="^(OPEN|COMPLETED|CANCELLED)$")
     reason: str | None = Field(default=None, max_length=255)
     cancellation_reason: str | None = Field(default=None, max_length=255)
+    change_reason: str | None = Field(default=None, max_length=255)
     version: int = Field(..., ge=1)
 
 
